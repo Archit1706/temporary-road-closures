@@ -2,7 +2,7 @@
 Pydantic schemas for closure data validation and serialization.
 """
 
-from pydantic import BaseModel, Field, validator, root_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
@@ -16,7 +16,8 @@ class GeoJSONGeometry(BaseModel):
     type: str = Field(..., description="Geometry type")
     coordinates: List[List[float]] = Field(..., description="Coordinate array")
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_geometry_type(cls, v):
         """Validate geometry type."""
         allowed_types = ["LineString", "Point", "Polygon"]
@@ -24,10 +25,13 @@ class GeoJSONGeometry(BaseModel):
             raise ValueError(f"Geometry type must be one of {allowed_types}")
         return v
 
-    @validator("coordinates")
-    def validate_coordinates(cls, v, values):
+    @field_validator("coordinates")
+    @classmethod
+    def validate_coordinates(cls, v, info):
         """Validate coordinates based on geometry type."""
-        geometry_type = values.get("type")
+        # Get the geometry type from the validated data
+        data = info.data if hasattr(info, "data") else {}
+        geometry_type = data.get("type")
 
         if geometry_type == "LineString":
             if len(v) < 2:
@@ -64,15 +68,17 @@ class ClosureBase(BaseModel):
     )
     osm_way_ids: Optional[str] = Field(None, description="Comma-separated OSM way IDs")
 
-    @validator("end_time")
-    def validate_end_time(cls, v, values):
+    @field_validator("end_time")
+    @classmethod
+    def validate_end_time(cls, v, info):
         """Validate that end_time is after start_time."""
-        if v is not None and "start_time" in values:
-            if v <= values["start_time"]:
+        if v is not None and hasattr(info, "data") and "start_time" in info.data:
+            if v <= info.data["start_time"]:
                 raise ValueError("end_time must be after start_time")
         return v
 
-    @validator("description")
+    @field_validator("description")
+    @classmethod
     def validate_description(cls, v):
         """Validate description content."""
         if not v.strip():
@@ -85,8 +91,8 @@ class ClosureCreate(ClosureBase):
 
     geometry: GeoJSONGeometry = Field(..., description="Closure geometry as GeoJSON")
 
-    class Config:
-        schema_extra = {
+    model_config = {
+        "json_schema_extra": {
             "example": {
                 "geometry": {
                     "type": "LineString",
@@ -101,6 +107,7 @@ class ClosureCreate(ClosureBase):
                 "osm_way_ids": "123456,789012",
             }
         }
+    }
 
 
 class ClosureUpdate(BaseModel):
@@ -122,17 +129,13 @@ class ClosureUpdate(BaseModel):
     )
     osm_way_ids: Optional[str] = Field(None, description="Updated OSM way IDs")
 
-    @root_validator
-    def validate_time_consistency(cls, values):
+    @model_validator(mode="after")
+    def validate_time_consistency(self):
         """Validate time consistency when both times are provided."""
-        start_time = values.get("start_time")
-        end_time = values.get("end_time")
-
-        if start_time is not None and end_time is not None:
-            if end_time <= start_time:
+        if self.start_time is not None and self.end_time is not None:
+            if self.end_time <= self.start_time:
                 raise ValueError("end_time must be after start_time")
-
-        return values
+        return self
 
 
 class ClosureResponse(ClosureBase):
@@ -150,9 +153,9 @@ class ClosureResponse(ClosureBase):
         None, description="Closure duration in hours"
     )
 
-    class Config:
-        from_attributes = True
-        schema_extra = {
+    model_config = {
+        "from_attributes": True,
+        "json_schema_extra": {
             "example": {
                 "id": 123,
                 "geometry": {
@@ -173,7 +176,8 @@ class ClosureResponse(ClosureBase):
                 "source": "City of Chicago",
                 "confidence_level": 9,
             }
-        }
+        },
+    }
 
 
 class ClosureListResponse(BaseModel):
@@ -185,27 +189,12 @@ class ClosureListResponse(BaseModel):
     size: int = Field(..., description="Page size")
     pages: int = Field(..., description="Total number of pages")
 
-    class Config:
-        schema_extra = {
-            "example": {
-                "items": [
-                    # ... ClosureResponse examples
-                ],
-                "total": 150,
-                "page": 1,
-                "size": 50,
-                "pages": 3,
-            }
-        }
-
 
 class ClosureQueryParams(BaseModel):
     """Schema for closure query parameters."""
 
     bbox: Optional[str] = Field(
-        None,
-        description="Bounding box as 'min_lon,min_lat,max_lon,max_lat'",
-        regex=r"^-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*$",
+        None, description="Bounding box as 'min_lon,min_lat,max_lon,max_lat'"
     )
     active_only: bool = Field(True, description="Return only active closures")
     closure_type: Optional[ClosureType] = Field(
@@ -221,41 +210,6 @@ class ClosureQueryParams(BaseModel):
     page: int = Field(1, ge=1, description="Page number")
     size: int = Field(50, ge=1, le=1000, description="Page size")
 
-    @validator("bbox")
-    def validate_bbox(cls, v):
-        """Validate bounding box format and values."""
-        if v is None:
-            return v
-
-        try:
-            coords = [float(x) for x in v.split(",")]
-            if len(coords) != 4:
-                raise ValueError("Bounding box must have exactly 4 coordinates")
-
-            min_lon, min_lat, max_lon, max_lat = coords
-
-            # Validate coordinate ranges
-            if not (-180 <= min_lon <= 180) or not (-180 <= max_lon <= 180):
-                raise ValueError("Longitude values must be between -180 and 180")
-            if not (-90 <= min_lat <= 90) or not (-90 <= max_lat <= 90):
-                raise ValueError("Latitude values must be between -90 and 90")
-
-            # Validate that min < max
-            if min_lon >= max_lon:
-                raise ValueError("min_lon must be less than max_lon")
-            if min_lat >= max_lat:
-                raise ValueError("min_lat must be less than max_lat")
-
-            # Validate reasonable area size (prevent abuse)
-            area = (max_lon - min_lon) * (max_lat - min_lat)
-            if area > 100:  # Arbitrary large area limit
-                raise ValueError("Bounding box area is too large")
-
-            return v
-
-        except (ValueError, IndexError) as e:
-            raise ValueError(f"Invalid bounding box format: {e}")
-
 
 class ClosureStatsResponse(BaseModel):
     """Schema for closure statistics."""
@@ -267,19 +221,3 @@ class ClosureStatsResponse(BaseModel):
     avg_duration_hours: Optional[float] = Field(
         None, description="Average closure duration in hours"
     )
-
-    class Config:
-        schema_extra = {
-            "example": {
-                "total_closures": 1250,
-                "active_closures": 45,
-                "by_type": {
-                    "construction": 800,
-                    "accident": 200,
-                    "event": 150,
-                    "maintenance": 100,
-                },
-                "by_status": {"active": 45, "expired": 1100, "cancelled": 105},
-                "avg_duration_hours": 12.5,
-            }
-        }
