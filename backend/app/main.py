@@ -180,11 +180,28 @@ async def detailed_health_check():
         dict: Detailed system health information
     """
     from app.core.database import db_manager
-    import psutil
     import platform
 
     db_info = db_manager.get_database_info()
     db_healthy = "error" not in db_info
+
+    try:
+        # import psutil
+
+        system_info = {
+            "platform": platform.platform(),
+            "python_version": platform.python_version(),
+            "cpu_count": psutil.cpu_count(),
+            "memory_total": psutil.virtual_memory().total,
+            "memory_available": psutil.virtual_memory().available,
+            "disk_usage": psutil.disk_usage("/").percent,
+        }
+    except ImportError:
+        system_info = {
+            "platform": platform.platform(),
+            "python_version": platform.python_version(),
+            "note": "psutil not available for detailed system metrics",
+        }
 
     return {
         "status": "healthy" if db_healthy else "unhealthy",
@@ -192,14 +209,7 @@ async def detailed_health_check():
         "version": settings.VERSION,
         "environment": "development" if settings.DEBUG else "production",
         "database": db_info,
-        "system": {
-            "platform": platform.platform(),
-            "python_version": platform.python_version(),
-            "cpu_count": psutil.cpu_count(),
-            "memory_total": psutil.virtual_memory().total,
-            "memory_available": psutil.virtual_memory().available,
-            "disk_usage": psutil.disk_usage("/").percent,
-        },
+        "system": system_info,
     }
 
 
