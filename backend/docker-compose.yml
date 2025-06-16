@@ -1,0 +1,82 @@
+services:
+    # PostgreSQL database with PostGIS
+    db:
+        image: postgis/postgis:15-3.5
+        container_name: osm_closures_db
+        environment:
+            POSTGRES_DB: osm_closures_dev
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: postgres
+            POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+            - "5432:5432"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+            - ./scripts/init_postgis.sql:/docker-entrypoint-initdb.d/init_postgis.sql
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # Redis for caching and rate limiting (optional)
+    redis:
+        image: redis:7-alpine
+        container_name: osm_closures_redis
+        ports:
+            - "6379:6379"
+        volumes:
+            - redis_data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # FastAPI backend application
+    api:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        container_name: osm_closures_api
+        environment:
+            DATABASE_URL: postgresql://postgres:postgres@db:5432/osm_closures_dev
+            REDIS_URL: redis://redis:6379/0
+            DEBUG: "true"
+            ENVIRONMENT: development
+        ports:
+            - "8000:8000"
+        volumes:
+            - .:/app
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # Adminer for database management (optional)
+    adminer:
+        image: adminer:4.8.1
+        container_name: osm_closures_adminer
+        ports:
+            - "8080:8080"
+        depends_on:
+            - db
+        environment:
+            ADMINER_DEFAULT_SERVER: db
+
+volumes:
+    postgres_data:
+        driver: local
+    redis_data:
+        driver: local
+
+networks:
+    default:
+        name: osm_closures_network
