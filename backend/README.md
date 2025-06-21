@@ -334,8 +334,8 @@ This project creates a centralized system for collecting and disseminating tempo
 
 ```bash
 # Clone the repository
-git clone <your-repo-url>
-cd osm-road-closures-backend
+git clone https://github.com/Archit1706/temporary-road-closures
+cd backend
 
 # Copy environment configuration
 cp .env.example .env
