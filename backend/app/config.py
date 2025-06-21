@@ -73,6 +73,36 @@ class Settings(BaseSettings):
     # File upload limits (for future features)
     MAX_UPLOAD_SIZE: int = 10 * 1024 * 1024  # 10MB
 
+    # OAuth Configuration
+    OAUTH_ENABLED: bool = True
+
+    # Google OAuth
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_SECRET: Optional[str] = None
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+
+    # GitHub OAuth
+    GITHUB_CLIENT_ID: Optional[str] = None
+    GITHUB_CLIENT_SECRET: Optional[str] = None
+    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/github/callback"
+
+    # OAuth URLs
+    GOOGLE_OAUTH_URL: str = "https://accounts.google.com/o/oauth2/auth"
+    GOOGLE_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
+    GOOGLE_USER_INFO_URL: str = "https://www.googleapis.com/oauth2/v1/userinfo"
+
+    GITHUB_OAUTH_URL: str = "https://github.com/login/oauth/authorize"
+    GITHUB_TOKEN_URL: str = "https://github.com/login/oauth/access_token"
+    GITHUB_USER_INFO_URL: str = "https://api.github.com/user"
+
+    # Frontend URLs for OAuth redirect
+    FRONTEND_URL: str = "http://localhost:3000"
+    OAUTH_SUCCESS_REDIRECT: str = "/dashboard"
+    OAUTH_ERROR_REDIRECT: str = "/login?error=oauth_failed"
+
+    # OAuth session configuration
+    OAUTH_STATE_EXPIRE_MINUTES: int = 10
+
     class Config:
         env_file = ".env"
         case_sensitive = True
