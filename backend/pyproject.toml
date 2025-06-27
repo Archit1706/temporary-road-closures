@@ -19,6 +19,7 @@ pydantic = {extras = ["email"], version = "^2.5.0"}
 pydantic-settings = "^2.1.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
+bcrypt = "3.2.0"
 python-multipart = "^0.0.6"
 redis = "^5.0.1"
 shapely = "^2.0.2"
@@ -26,6 +27,8 @@ geojson = "^3.1.0"
 requests = "^2.31.0"
 httpx = "^0.25.2"
 email-validator = "^2.1.0"
+xmltodict = "^0.13.0"
+pyproj = "^3.6.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.4.3"
