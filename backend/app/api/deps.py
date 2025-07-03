@@ -1,86 +1,189 @@
 """
-Dependency injection functions for API endpoints.
+Dependency injection functions for API endpoints with proper Swagger UI authentication.
 """
 
-from fastapi import Depends, HTTPException, status, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, status, Security, Header
+from fastapi.security import (
+    OAuth2PasswordBearer,
+    HTTPBearer,
+    HTTPAuthorizationCredentials,
+)
 from sqlalchemy.orm import Session
 from typing import Optional, Generator
 import jwt
 from datetime import datetime, timezone
 
 from app.core.database import get_db
-from app.core.security import verify_token, verify_api_key
+from app.core.security import verify_token
 from app.core.exceptions import AuthenticationException, AuthorizationException
 from app.models.user import User
 from app.config import settings
 
 
-# Security schemes
+# OAuth2 scheme for Swagger UI - this is the key fix!
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl=f"{settings.API_V1_STR}/auth/login",
+    auto_error=False,  # Don't auto-error, let us handle it
+)
+
+# Alternative HTTPBearer scheme for API key auth
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
-async def get_current_user(
+async def get_current_user_from_token(
+    token: Optional[str] = Depends(oauth2_scheme),
     db: Session = Depends(get_db),
-    credentials: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
 ) -> Optional[User]:
     """
-    Get current authenticated user from JWT token.
+    Get current user from OAuth2 token (works with Swagger UI).
 
     Args:
+        token: JWT token from OAuth2PasswordBearer
         db: Database session
-        credentials: Bearer token credentials
 
     Returns:
-        User: Current authenticated user or None
-
-    Raises:
-        AuthenticationException: If token is invalid
+        User or None: Authenticated user if token is valid
     """
-    if not credentials:
+    if not token:
         return None
 
     try:
-        payload = verify_token(credentials.credentials)
+        # Verify the JWT token
+        payload = verify_token(token)
         user_id = payload.get("sub")
 
         if user_id is None:
-            raise AuthenticationException("Invalid token: missing user ID")
+            return None
 
+        # Get user from database
         user = User.get_by_id(db, int(user_id))
-        if user is None:
-            raise AuthenticationException("User not found")
-
-        if not user.is_active:
-            raise AuthenticationException("User account is disabled")
-
-        return user
+        if user and user.is_active:
+            return user
 
     except jwt.ExpiredSignatureError:
-        raise AuthenticationException("Token has expired")
+        return None
     except jwt.InvalidTokenError:
-        raise AuthenticationException("Invalid token")
-    except ValueError:
-        raise AuthenticationException("Invalid user ID in token")
+        return None
+    except (ValueError, TypeError):
+        return None
+    except Exception:
+        return None
+
+    return None
+
+
+async def get_current_user_from_bearer(
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(bearer_scheme),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Get current user from Bearer token (alternative method).
+
+    Args:
+        credentials: Bearer token credentials
+        db: Database session
+
+    Returns:
+        User or None: Authenticated user if token is valid
+    """
+    if not credentials or not credentials.credentials:
+        return None
+
+    try:
+        token = credentials.credentials
+        payload = verify_token(token)
+        user_id = payload.get("sub")
+
+        if user_id is None:
+            return None
+
+        user = User.get_by_id(db, int(user_id))
+        if user and user.is_active:
+            return user
+
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+    except (ValueError, TypeError):
+        return None
+    except Exception:
+        return None
+
+    return None
+
+
+async def get_current_user_from_api_key(
+    api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """
+    Get current user from API key.
+
+    Args:
+        api_key: API key from header
+        db: Database session
+
+    Returns:
+        User or None: Authenticated user if API key is valid
+    """
+    if not api_key:
+        return None
+
+    try:
+        user = User.get_by_api_key(db, api_key)
+        if user and user.is_active:
+            return user
+    except Exception:
+        pass
+
+    return None
+
+
+async def get_current_user(
+    # Try OAuth2 token first (for Swagger UI)
+    user_from_oauth: Optional[User] = Depends(get_current_user_from_token),
+    # Try Bearer token (for direct API calls)
+    user_from_bearer: Optional[User] = Depends(get_current_user_from_bearer),
+    # Try API key (alternative auth)
+    user_from_api_key: Optional[User] = Depends(get_current_user_from_api_key),
+) -> Optional[User]:
+    """
+    Get current authenticated user from any valid authentication method.
+
+    This function tries multiple authentication methods in order:
+    1. OAuth2PasswordBearer token (Swagger UI)
+    2. HTTPBearer token (direct API calls)
+    3. API key (alternative auth)
+
+    Returns:
+        User or None: Current authenticated user
+    """
+    # Return the first valid user found
+    return user_from_oauth or user_from_bearer or user_from_api_key
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
 ) -> User:
     """
     Get current active user (authentication required).
 
     Args:
-        current_user: Current user from token
+        current_user: Current user from authentication
 
     Returns:
         User: Current authenticated user
 
     Raises:
-        AuthenticationException: If no user is authenticated
+        HTTPException: If no user is authenticated
     """
     if current_user is None:
-        raise AuthenticationException("Authentication required")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return current_user
 
@@ -92,7 +195,7 @@ async def get_current_user_optional(
     Get current user optionally (authentication not required).
 
     Args:
-        current_user: Current user from token (optional)
+        current_user: Current user from authentication (optional)
 
     Returns:
         User or None: Current user if authenticated, None otherwise
@@ -113,59 +216,15 @@ async def get_current_moderator(
         User: Current user with moderator privileges
 
     Raises:
-        AuthorizationException: If user is not a moderator
+        HTTPException: If user is not a moderator
     """
     if not current_user.is_moderator:
-        raise AuthorizationException("Moderator privileges required")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Moderator privileges required",
+        )
 
     return current_user
-
-
-async def get_user_from_api_key(
-    api_key: str, db: Session = Depends(get_db)
-) -> Optional[User]:
-    """
-    Get user from API key.
-
-    Args:
-        api_key: API key string
-        db: Database session
-
-    Returns:
-        User or None: User associated with API key
-    """
-    if not api_key:
-        return None
-
-    user = User.get_by_api_key(db, api_key)
-    if user and user.is_active:
-        return user
-
-    return None
-
-
-def require_permission(permission: str):
-    """
-    Dependency factory for requiring specific permissions.
-
-    Args:
-        permission: Permission name to require
-
-    Returns:
-        Dependency function that checks permission
-    """
-
-    async def permission_checker(
-        current_user: User = Depends(get_current_active_user),
-    ) -> User:
-        if not current_user.has_permission(permission):
-            raise AuthorizationException(
-                f"Permission '{permission}' required",
-                details={"required_permission": permission},
-            )
-        return current_user
-
-    return permission_checker
 
 
 def get_pagination_params(
@@ -248,26 +307,11 @@ def validate_bbox(bbox: str) -> tuple[float, float, float, float]:
         )
 
 
-async def rate_limit_check(
-    request, current_user: Optional[User] = Depends(get_current_user_optional)
-):
-    """
-    Check rate limits for API requests.
-
-    Args:
-        request: FastAPI request object
-        current_user: Current user (optional)
-
-    Raises:
-        HTTPException: If rate limit exceeded
-    """
-    if not settings.RATE_LIMIT_ENABLED:
-        return
-
-    # Implementation would typically use Redis or similar
-    # For now, this is a placeholder
-    # In production, you'd implement actual rate limiting logic here
-    pass
+# Convenience dependency combinations
+RequireAuth = Depends(get_current_active_user)
+RequireModerator = Depends(get_current_moderator)
+OptionalAuth = Depends(get_current_user_optional)
+PaginationParams = Depends(get_pagination_params)
 
 
 class CommonQueryParams:
@@ -293,29 +337,4 @@ class CommonQueryParams:
         self.sort_order = sort_order
 
 
-def get_db_with_error_handling() -> Generator[Session, None, None]:
-    """
-    Get database session with enhanced error handling.
-
-    Yields:
-        Session: Database session
-
-    Raises:
-        HTTPException: If database connection fails
-    """
-    try:
-        db = next(get_db())
-        yield db
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection failed",
-        )
-
-
-# Convenience dependency combinations
-RequireAuth = Depends(get_current_active_user)
-RequireModerator = Depends(get_current_moderator)
-OptionalAuth = Depends(get_current_user_optional)
-PaginationParams = Depends(get_pagination_params)
 CommonParams = Depends(CommonQueryParams)
