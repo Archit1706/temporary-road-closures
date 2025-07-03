@@ -7,6 +7,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import Optional
 import urllib.parse
+from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.database import get_db
 from app.core.exceptions import (
@@ -74,17 +75,72 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     "/login",
     response_model=TokenResponse,
     summary="User login",
-    description="Authenticate user and return access token.",
+    description="Authenticate user and return access token (OAuth2 compatible).",
 )
-async def login(login_data: UserLogin, db: Session = Depends(get_db)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+):
     """
-    Authenticate user with username/email and password.
+    Authenticate user with username/email and password (OAuth2 compatible).
 
-    - **username**: Username or email address
-    - **password**: User password
+    This endpoint is compatible with both:
+    - OAuth2PasswordRequestForm (for Swagger UI)
+    - Direct JSON requests
 
-    Returns an access token that can be used for authenticated API requests.
-    Include the token in the Authorization header: `Bearer <token>`
+    Args:
+        form_data: OAuth2 form data with username and password
+        db: Database session
+
+    Returns:
+        TokenResponse: Access token and user information
+
+    Raises:
+        HTTPException: If authentication fails
+    """
+    try:
+        user_service = UserService(db)
+
+        # Create UserLogin object from OAuth2 form data
+        login_data = UserLogin(username=form_data.username, password=form_data.password)
+
+        user = user_service.authenticate_user(login_data)
+
+        # Create access token
+        token_data = user_service.create_access_token_for_user(user)
+
+        return TokenResponse(
+            access_token=token_data["access_token"],
+            token_type=token_data["token_type"],
+            expires_in=token_data["expires_in"],
+            user=UserResponse.from_orm(token_data["user"]),
+        )
+
+    except AuthenticationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+
+@router.post(
+    "/login-json",
+    response_model=TokenResponse,
+    summary="User login (JSON)",
+    description="Authenticate user with JSON data (backward compatibility).",
+)
+async def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
+    """
+    Authenticate user with username/email and password using JSON.
+
+    This endpoint maintains backward compatibility for direct JSON requests.
+
+    Args:
+        login_data: Login credentials as JSON
+        db: Database session
+
+    Returns:
+        TokenResponse: Access token and user information
     """
     try:
         user_service = UserService(db)
@@ -101,7 +157,11 @@ async def login(login_data: UserLogin, db: Session = Depends(get_db)):
         )
 
     except AuthenticationException as e:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 @router.get(
