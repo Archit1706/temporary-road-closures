@@ -1,5 +1,5 @@
 """
-FastAPI application for OSM Road Closures API.
+FastAPI application for OSM Road Closures API with proper Swagger authentication.
 """
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -8,6 +8,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.security import HTTPBearer
 import time
 import logging
 from contextlib import asynccontextmanager
@@ -16,6 +17,7 @@ from app.config import settings
 from app.core.database import init_database, close_database
 from app.core.exceptions import APIException, ValidationException
 from app.api import closures, users, auth
+from app.api import openlr  # Import OpenLR endpoints
 
 
 # Configure logging
@@ -23,6 +25,9 @@ logging.basicConfig(
     level=getattr(logging, settings.LOG_LEVEL), format=settings.LOG_FORMAT
 )
 logger = logging.getLogger(__name__)
+
+# Security scheme for Swagger UI
+security = HTTPBearer()
 
 
 @asynccontextmanager
@@ -35,6 +40,13 @@ async def lifespan(app: FastAPI):
     try:
         await init_database()
         logger.info("Database initialized successfully")
+
+        # Log OpenLR status
+        if settings.OPENLR_ENABLED:
+            logger.info(f"OpenLR service enabled - Format: {settings.OPENLR_FORMAT}")
+        else:
+            logger.info("OpenLR service disabled")
+
     except Exception as e:
         logger.error(f"Failed to initialize database: {e}")
         raise
@@ -168,6 +180,10 @@ async def health_check():
         "timestamp": time.time(),
         "version": settings.VERSION,
         "database": "connected" if db_healthy else "disconnected",
+        "openlr": {
+            "enabled": settings.OPENLR_ENABLED,
+            "format": settings.OPENLR_FORMAT if settings.OPENLR_ENABLED else None,
+        },
     }
 
 
@@ -186,7 +202,7 @@ async def detailed_health_check():
     db_healthy = "error" not in db_info
 
     try:
-        # import psutil
+        import psutil
 
         system_info = {
             "platform": platform.platform(),
@@ -210,6 +226,11 @@ async def detailed_health_check():
         "environment": "development" if settings.DEBUG else "production",
         "database": db_info,
         "system": system_info,
+        "openlr": {
+            "enabled": settings.OPENLR_ENABLED,
+            "format": settings.OPENLR_FORMAT if settings.OPENLR_ENABLED else None,
+            "settings": settings.openlr_settings if settings.OPENLR_ENABLED else {},
+        },
     }
 
 
@@ -226,10 +247,20 @@ async def root():
         "version": settings.VERSION,
         "docs_url": f"{settings.API_V1_STR}/docs",
         "openapi_url": f"{settings.API_V1_STR}/openapi.json",
+        "features": {
+            "openlr_enabled": settings.OPENLR_ENABLED,
+            "oauth_enabled": settings.OAUTH_ENABLED,
+        },
         "endpoints": {
             "closures": f"{settings.API_V1_STR}/closures",
             "users": f"{settings.API_V1_STR}/users",
             "auth": f"{settings.API_V1_STR}/auth",
+        },
+        "demo_instructions": {
+            "step_1": "Register a user at /auth/register",
+            "step_2": "Login at /auth/login to get access token",
+            "step_3": "Click 'Authorize' button in docs and enter: Bearer <your_token>",
+            "step_4": "Use authenticated endpoints",
         },
     }
 
@@ -245,11 +276,21 @@ app.include_router(
     auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["authentication"]
 )
 
+# Add OpenLR router if exists
+try:
+    from app.api import openlr
 
-# Custom OpenAPI schema
+    app.include_router(
+        openlr.router, prefix=f"{settings.API_V1_STR}/openlr", tags=["openlr"]
+    )
+except ImportError:
+    logger.warning("OpenLR router not found, skipping...")
+
+
+# Custom OpenAPI schema with proper authentication
 def custom_openapi():
     """
-    Custom OpenAPI schema with enhanced documentation.
+    Custom OpenAPI schema with proper OAuth2PasswordBearer authentication.
     """
     if app.openapi_schema:
         return app.openapi_schema
@@ -260,55 +301,161 @@ def custom_openapi():
         description=f"""
         {settings.DESCRIPTION}
         
-        ## Features
+        ## 🚀 Getting Started
         
-        - 🗺️ **Geospatial Support**: Store and query road closures with PostGIS
-        - 📍 **OpenLR Integration**: Location referencing compatible with navigation systems
-        - 🔐 **Authentication**: Secure API access with JWT tokens
-        - 📊 **Statistics**: Closure analytics and reporting
-        - 🚀 **High Performance**: Optimized for real-time navigation applications
+        1. **Register**: Create a user account using `/auth/register`
+        2. **Login**: Click the 🔒 **Authorize** button below and use OAuth2 login
+        3. **Explore**: Use any authenticated endpoint!
         
-        ## Usage
+        ## 🔑 Authentication
         
-        1. **Authentication**: Obtain an access token via `/auth/login`
-        2. **Submit Closures**: POST to `/closures` with GeoJSON geometry
-        3. **Query Closures**: GET from `/closures` with spatial and temporal filters
-        4. **Integration**: Use OpenLR codes for cross-platform compatibility
+        This API uses **OAuth2 Password Bearer** authentication with JWT tokens.
         
-        ## Rate Limits
+        **Quick Demo Flow:**
+        1. Use `/auth/register` to create an account (if needed)
+        2. Click the **Authorize** button below
+        3. Enter your username and password in the OAuth2 form
+        4. Now you can test all authenticated endpoints!
         
-        - **Authenticated**: {settings.RATE_LIMIT_REQUESTS} requests per hour
-        - **Public endpoints**: Limited rate for anonymous access
+        ## 🗺️ Features
         
-        ## Support
+        - **🗄️ Geospatial Support**: Store and query road closures with PostGIS
+        - **📍 OpenLR Integration**: Location referencing compatible with navigation systems  
+        - **🔐 Secure Authentication**: OAuth2 + JWT tokens with user management
+        - **📊 Rich Querying**: Spatial, temporal, and type-based filtering
+        - **🚀 High Performance**: Optimized for real-time navigation applications
         
-        For issues and questions, please visit the project repository or contact the development team.
+        ## 📋 Example Usage
+        
+        **Create a Closure:**
+        ```json
+        {{
+          "geometry": {{
+            "type": "LineString", 
+            "coordinates": [[-87.6298, 41.8781], [-87.6290, 41.8785]]
+          }},
+          "description": "Water main repair blocking eastbound traffic",
+          "closure_type": "construction",
+          "start_time": "2025-07-03T08:00:00Z",
+          "end_time": "2025-07-03T18:00:00Z"
+        }}
+        ```
+        
+        ## 🔗 Quick Links
+        
+        - **Health Check**: [/health](/health)
+        - **Database Admin**: http://localhost:8080
+        - **GitHub**: https://github.com/Archit1706/temporary-road-closures
+        
+        ---
+        
+        **💡 Tip**: After authenticating with OAuth2, try creating a closure and then querying it with different filters!
         """,
         routes=app.routes,
     )
 
-    # Add custom schema extensions
+    # Enhanced contact and license info
     openapi_schema["info"]["contact"] = {
         "name": "OSM Road Closures API Support",
-        "url": "https://github.com/your-repo/osm-road-closures",
-        "email": "support@example.com",
+        "url": "https://github.com/Archit1706/temporary-road-closures",
+        "email": "architrathod77@gmail.com",
     }
 
     openapi_schema["info"]["license"] = {
-        "name": "MIT License",
-        "url": "https://opensource.org/licenses/MIT",
+        "name": "GNU Affero General Public License v3.0",
+        "url": "https://www.gnu.org/licenses/agpl-3.0.en.html",
     }
 
     # Add server information
     openapi_schema["servers"] = [
         {"url": "http://localhost:8000", "description": "Development server"},
-        {"url": "https://api.osmclosures.org", "description": "Production server"},
+        {
+            "url": "https://api.osmclosures.org",
+            "description": "Production server (future)",
+        },
     ]
 
-    # Add security schemes
+    # CORRECTED: Proper OAuth2PasswordBearer security scheme
     openapi_schema["components"]["securitySchemes"] = {
-        "BearerAuth": {"type": "http", "scheme": "bearer", "bearerFormat": "JWT"},
-        "ApiKeyAuth": {"type": "apiKey", "in": "header", "name": "X-API-Key"},
+        "OAuth2PasswordBearer": {
+            "type": "oauth2",
+            "flows": {
+                "password": {
+                    "tokenUrl": f"{settings.API_V1_STR}/auth/login",
+                    "scopes": {},
+                }
+            },
+            "description": """
+            **OAuth2 Password Bearer Authentication**
+            
+            Enter your username and password to get authenticated.
+            
+            Test credentials:
+            - Username: chicago_mapper
+            - Password: SecurePass123
+            """,
+        },
+        "BearerAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+            "description": """
+            **HTTP Bearer Token Authentication** (Alternative)
+            
+            For direct API calls, include:
+            Header: Authorization: Bearer <your_access_token>
+            """,
+        },
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "X-API-Key",
+            "description": """
+            **API Key Authentication** (Alternative to JWT)
+            
+            Get your API key from /auth/me after login, then include:
+            Header: X-API-Key: osm_closures_<your_key>
+            """,
+        },
+    }
+
+    # CORRECTED: Include OAuth2PasswordBearer in global security
+    openapi_schema["security"] = [
+        {"OAuth2PasswordBearer": []},
+        {"BearerAuth": []},
+        {"ApiKeyAuth": []},
+    ]
+
+    # Add example schemas
+    openapi_schema["components"]["examples"] = {
+        "UserRegistration": {
+            "summary": "User Registration Example",
+            "value": {
+                "username": "chicago_mapper",
+                "email": "mapper@chicago.gov",
+                "password": "SecurePass123",
+                "full_name": "Chicago City Mapper",
+            },
+        },
+        "UserLogin": {
+            "summary": "User Login Example",
+            "value": {"username": "chicago_mapper", "password": "SecurePass123"},
+        },
+        "ClosureExample": {
+            "summary": "Construction Closure Example",
+            "value": {
+                "geometry": {
+                    "type": "LineString",
+                    "coordinates": [[-87.6298, 41.8781], [-87.6290, 41.8785]],
+                },
+                "description": "Water main repair blocking eastbound traffic on Madison Street",
+                "closure_type": "construction",
+                "start_time": "2025-07-03T08:00:00Z",
+                "end_time": "2025-07-03T18:00:00Z",
+                "source": "City of Chicago",
+                "confidence_level": 9,
+            },
+        },
     }
 
     app.openapi_schema = openapi_schema
