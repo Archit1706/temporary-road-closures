@@ -1,5 +1,5 @@
 """
-FastAPI application for OSM Road Closures API with proper Swagger authentication.
+FastAPI application for OSM Road Closures API with proper Swagger authentication and OpenLR integration.
 """
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -295,62 +295,63 @@ def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
 
+    # Create the detailed description with proper markdown formatting
+    api_description = f"""{settings.DESCRIPTION}
+
+## 🚀 Getting Started
+
+1. **Register**: Create a user account using `/auth/register`
+2. **Login**: Click the 🔒 **Authorize** button below and use OAuth2 login
+3. **Explore**: Use any authenticated endpoint!
+
+## 🔑 Authentication
+
+This API uses **OAuth2 Password Bearer** authentication with JWT tokens.
+
+**Quick Demo Flow:**
+1. Use `/auth/register` to create an account (if needed)
+2. Click the **Authorize** button below
+3. Enter your username and password in the OAuth2 form
+4. Now you can test all authenticated endpoints!
+
+## 🗺️ Features
+
+- **🗄️ Geospatial Support**: Store and query road closures with PostGIS
+- **📍 OpenLR Integration**: Location referencing compatible with navigation systems  
+- **🔐 Secure Authentication**: OAuth2 + JWT tokens with user management
+- **📊 Rich Querying**: Spatial, temporal, and type-based filtering
+- **🚀 High Performance**: Optimized for real-time navigation applications
+
+## 📋 Example Usage
+
+**Create a Closure:**
+```json
+{{
+  "geometry": {{
+    "type": "LineString", 
+    "coordinates": [[-87.6298, 41.8781], [-87.6290, 41.8785]]
+  }},
+  "description": "Water main repair blocking eastbound traffic",
+  "closure_type": "construction",
+  "start_time": "2025-07-03T08:00:00Z",
+  "end_time": "2025-07-03T18:00:00Z"
+}}
+```
+
+## 🔗 Quick Links
+
+- **Health Check**: [/health](/health)
+- **Database Admin**: http://localhost:8080
+- **GitHub**: https://github.com/Archit1706/temporary-road-closures
+
+---
+
+**💡 Tip**: After authenticating with OAuth2, try creating a closure and then querying it with different filters!"""
+
     openapi_schema = get_openapi(
         title=settings.PROJECT_NAME,
         version=settings.VERSION,
-        description=f"""
-        {settings.DESCRIPTION}
-        
-        ## 🚀 Getting Started
-        
-        1. **Register**: Create a user account using `/auth/register`
-        2. **Login**: Click the 🔒 **Authorize** button below and use OAuth2 login
-        3. **Explore**: Use any authenticated endpoint!
-        
-        ## 🔑 Authentication
-        
-        This API uses **OAuth2 Password Bearer** authentication with JWT tokens.
-        
-        **Quick Demo Flow:**
-        1. Use `/auth/register` to create an account (if needed)
-        2. Click the **Authorize** button below
-        3. Enter your username and password in the OAuth2 form
-        4. Now you can test all authenticated endpoints!
-        
-        ## 🗺️ Features
-        
-        - **🗄️ Geospatial Support**: Store and query road closures with PostGIS
-        - **📍 OpenLR Integration**: Location referencing compatible with navigation systems  
-        - **🔐 Secure Authentication**: OAuth2 + JWT tokens with user management
-        - **📊 Rich Querying**: Spatial, temporal, and type-based filtering
-        - **🚀 High Performance**: Optimized for real-time navigation applications
-        
-        ## 📋 Example Usage
-        
-        **Create a Closure:**
-        ```json
-        {{
-          "geometry": {{
-            "type": "LineString", 
-            "coordinates": [[-87.6298, 41.8781], [-87.6290, 41.8785]]
-          }},
-          "description": "Water main repair blocking eastbound traffic",
-          "closure_type": "construction",
-          "start_time": "2025-07-03T08:00:00Z",
-          "end_time": "2025-07-03T18:00:00Z"
-        }}
-        ```
-        
-        ## 🔗 Quick Links
-        
-        - **Health Check**: [/health](/health)
-        - **Database Admin**: http://localhost:8080
-        - **GitHub**: https://github.com/Archit1706/temporary-road-closures
-        
-        ---
-        
-        **💡 Tip**: After authenticating with OAuth2, try creating a closure and then querying it with different filters!
-        """,
+        description=api_description,
         routes=app.routes,
     )
 
@@ -385,37 +386,31 @@ def custom_openapi():
                     "scopes": {},
                 }
             },
-            "description": """
-            **OAuth2 Password Bearer Authentication**
-            
-            Enter your username and password to get authenticated.
-            
-            Test credentials:
-            - Username: chicago_mapper
-            - Password: SecurePass123
-            """,
+            "description": """**OAuth2 Password Bearer Authentication**
+
+Enter your username and password to get authenticated.
+
+Test credentials:
+- Username: chicago_mapper  
+- Password: SecurePass123""",
         },
         "BearerAuth": {
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
-            "description": """
-            **HTTP Bearer Token Authentication** (Alternative)
-            
-            For direct API calls, include:
-            Header: Authorization: Bearer <your_access_token>
-            """,
+            "description": """**HTTP Bearer Token Authentication** (Alternative)
+
+For direct API calls, include:
+Header: Authorization: Bearer <your_access_token>""",
         },
         "ApiKeyAuth": {
             "type": "apiKey",
             "in": "header",
             "name": "X-API-Key",
-            "description": """
-            **API Key Authentication** (Alternative to JWT)
-            
-            Get your API key from /auth/me after login, then include:
-            Header: X-API-Key: osm_closures_<your_key>
-            """,
+            "description": """**API Key Authentication** (Alternative to JWT)
+
+Get your API key from /auth/me after login, then include:
+Header: X-API-Key: osm_closures_<your_key>""",
         },
     }
 
