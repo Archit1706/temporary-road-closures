@@ -59,6 +59,9 @@ class ClosureService:
             geometry_geojson = closure_data.geometry.dict()
             self._validate_geometry(geometry_geojson)
 
+            # Round coordinates to 5 decimal places
+            geometry_geojson = self._round_geometry_coordinates(geometry_geojson)
+
             # Convert GeoJSON to PostGIS geometry
             geometry_wkt = self.spatial_service.geojson_to_wkt(geometry_geojson)
 
@@ -71,7 +74,6 @@ class ClosureService:
                 end_time=closure_data.end_time,
                 source=closure_data.source,
                 confidence_level=closure_data.confidence_level,
-                osm_way_ids=closure_data.osm_way_ids,
                 submitter_id=user_id,
                 status=ClosureStatus.ACTIVE.value,
             )
@@ -144,6 +146,10 @@ class ClosureService:
             if "geometry" in update_data and update_data["geometry"]:
                 geometry_geojson = update_data["geometry"]
                 self._validate_geometry(geometry_geojson)
+
+                # Round coordinates to 5 decimal places
+                geometry_geojson = self._round_geometry_coordinates(geometry_geojson)
+
                 geometry_wkt = self.spatial_service.geojson_to_wkt(geometry_geojson)
                 closure.geometry = func.ST_GeomFromText(geometry_wkt, 4326)
                 geometry_updated = True
@@ -250,7 +256,7 @@ class ClosureService:
             bbox_geom = func.ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)
             query = query.filter(ST_Intersects(Closure.geometry, bbox_geom))
 
-        if params.active_only:
+        if params.valid_only:
             now = datetime.now(timezone.utc)
             query = query.filter(
                 Closure.status == ClosureStatus.ACTIVE,
@@ -304,6 +310,9 @@ class ClosureService:
 
         if geometry_result and geometry_result[0]:
             geometry = json.loads(geometry_result[0])
+
+            # Round coordinates in the geometry
+            geometry = self._round_geometry_coordinates(geometry)
             closure_dict["geometry"] = geometry
 
             # Add OpenLR validation info if OpenLR code exists
@@ -347,6 +356,11 @@ class ClosureService:
         for closure in closures:
             closure_dict = closure.to_dict()
             geometry = geometry_map.get(closure.id)
+
+            if geometry:
+                # Round coordinates in the geometry
+                geometry = self._round_geometry_coordinates(geometry)
+
             closure_dict["geometry"] = geometry
 
             # Add OpenLR validation info if enabled and code exists
@@ -381,8 +395,8 @@ class ClosureService:
         # Total closures
         total_closures = self.db.query(Closure).count()
 
-        # Active closures
-        active_closures = (
+        # Valid closures
+        valid_closures = (
             self.db.query(Closure)
             .filter(
                 Closure.status == ClosureStatus.ACTIVE,
@@ -448,7 +462,7 @@ class ClosureService:
 
         return {
             "total_closures": total_closures,
-            "active_closures": active_closures,
+            "valid_closures": valid_closures,
             "by_type": by_type,
             "by_status": by_status,
             "avg_duration_hours": avg_duration_hours,
@@ -489,6 +503,7 @@ class ClosureService:
             }
 
         geometry = json.loads(geometry_result[0])
+        geometry = self._round_geometry_coordinates(geometry)
         return self._validate_openlr_code(closure.openlr_code, geometry)
 
     def regenerate_openlr_codes(self, force: bool = False) -> Dict[str, Any]:
@@ -529,6 +544,7 @@ class ClosureService:
 
                 if geometry_result and geometry_result[0]:
                     geometry = json.loads(geometry_result[0])
+                    geometry = self._round_geometry_coordinates(geometry)
 
                     # Encode to OpenLR
                     openlr_result = self._encode_geometry_to_openlr(geometry)
@@ -561,6 +577,29 @@ class ClosureService:
             results["error"] = f"Failed to commit changes: {str(e)}"
 
         return results
+
+    def _round_geometry_coordinates(self, geometry: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Round all coordinates in a geometry to 5 decimal places.
+
+        Args:
+            geometry: GeoJSON geometry
+
+        Returns:
+            dict: Geometry with rounded coordinates
+        """
+        if not geometry or "coordinates" not in geometry:
+            return geometry
+
+        def round_coord_array(coords):
+            if isinstance(coords[0], list):
+                return [round_coord_array(coord) for coord in coords]
+            else:
+                return [round(coords[0], 5), round(coords[1], 5)]
+
+        rounded_geometry = geometry.copy()
+        rounded_geometry["coordinates"] = round_coord_array(geometry["coordinates"])
+        return rounded_geometry
 
     def _encode_geometry_to_openlr(self, geometry: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -722,19 +761,19 @@ class ClosureService:
 
     def _parse_bbox(self, bbox: str) -> Tuple[float, float, float, float]:
         """
-        Parse bounding box string.
+        Parse bounding box string and round coordinates.
 
         Args:
             bbox: Bounding box string "min_lon,min_lat,max_lon,max_lat"
 
         Returns:
-            tuple: Parsed coordinates
+            tuple: Parsed coordinates rounded to 5 decimal places
 
         Raises:
             ValidationException: If bbox format is invalid
         """
         try:
-            coords = [float(x.strip()) for x in bbox.split(",")]
+            coords = [round(float(x.strip()), 5) for x in bbox.split(",")]
             if len(coords) != 4:
                 raise ValueError("Must have exactly 4 coordinates")
             return tuple(coords)
