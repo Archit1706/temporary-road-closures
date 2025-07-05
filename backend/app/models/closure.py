@@ -112,11 +112,6 @@ class Closure(BaseModel):
         Integer, nullable=True, doc="Confidence level of the closure information (1-10)"
     )
 
-    # OSM-specific fields
-    osm_way_ids = Column(
-        Text, nullable=True, doc="Comma-separated list of affected OSM way IDs"
-    )
-
     # Relationships
     submitter = relationship(
         "User", back_populates="closures", doc="User who submitted this closure"
@@ -128,12 +123,12 @@ class Closure(BaseModel):
         self.update_status_if_needed()
 
     @property
-    def is_active(self) -> bool:
+    def is_valid(self) -> bool:
         """
-        Check if the closure is currently active.
+        Check if the closure is currently valid (active and within time bounds).
 
         Returns:
-            bool: True if closure is active
+            bool: True if closure is valid
         """
         now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -220,11 +215,11 @@ class Closure(BaseModel):
         }
 
     @classmethod
-    def get_active_closures(
+    def get_valid_closures(
         cls, db: Session, skip: int = 0, limit: int = 100
     ) -> List["Closure"]:
         """
-        Get all currently active closures.
+        Get all currently valid closures.
 
         Args:
             db: Database session
@@ -232,7 +227,7 @@ class Closure(BaseModel):
             limit: Maximum number of records to return
 
         Returns:
-            List[Closure]: List of active closures
+            List[Closure]: List of valid closures
         """
         now = datetime.datetime.now(datetime.timezone.utc)
 
@@ -256,7 +251,7 @@ class Closure(BaseModel):
         min_lat: float,
         max_lon: float,
         max_lat: float,
-        active_only: bool = True,
+        valid_only: bool = True,
         skip: int = 0,
         limit: int = 100,
     ) -> List["Closure"]:
@@ -269,13 +264,19 @@ class Closure(BaseModel):
             min_lat: Minimum latitude
             max_lon: Maximum longitude
             max_lat: Maximum latitude
-            active_only: Whether to return only active closures
+            valid_only: Whether to return only valid closures
             skip: Number of records to skip
             limit: Maximum number of records to return
 
         Returns:
             List[Closure]: List of closures in the bounding box
         """
+        # Round coordinates to 5 decimal places
+        min_lon = round(min_lon, 5)
+        min_lat = round(min_lat, 5)
+        max_lon = round(max_lon, 5)
+        max_lat = round(max_lat, 5)
+
         # Create bounding box geometry
         bbox_wkt = f"POLYGON(({min_lon} {min_lat}, {max_lon} {min_lat}, {max_lon} {max_lat}, {min_lon} {max_lat}, {min_lon} {min_lat}))"
 
@@ -283,7 +284,7 @@ class Closure(BaseModel):
             ST_Intersects(cls.geometry, func.ST_GeomFromText(bbox_wkt, 4326))
         )
 
-        if active_only:
+        if valid_only:
             now = datetime.datetime.now(datetime.timezone.utc)
             query = query.filter(
                 cls.status == ClosureStatus.ACTIVE,
@@ -323,7 +324,7 @@ class Closure(BaseModel):
         cls,
         db: Session,
         closure_type: ClosureType,
-        active_only: bool = True,
+        valid_only: bool = True,
         skip: int = 0,
         limit: int = 100,
     ) -> List["Closure"]:
@@ -333,7 +334,7 @@ class Closure(BaseModel):
         Args:
             db: Database session
             closure_type: Type of closure
-            active_only: Whether to return only active closures
+            valid_only: Whether to return only valid closures
             skip: Number of records to skip
             limit: Maximum number of records to return
 
@@ -342,7 +343,7 @@ class Closure(BaseModel):
         """
         query = db.query(cls).filter(cls.closure_type == closure_type)
 
-        if active_only:
+        if valid_only:
             now = datetime.datetime.now(datetime.timezone.utc)
             query = query.filter(
                 cls.status == ClosureStatus.ACTIVE,
@@ -380,7 +381,7 @@ class Closure(BaseModel):
             )
 
         # Add computed properties
-        data["is_active"] = self.is_active
+        data["is_valid"] = self.is_valid
         data["duration_hours"] = self.duration_hours
 
         return data

@@ -53,7 +53,6 @@ async def create_closure(
     - **end_time**: When the closure ends (optional for indefinite closures)
     - **source**: Source of the closure information (optional)
     - **confidence_level**: Confidence in the information (1-10, optional)
-    - **osm_way_ids**: Comma-separated OSM way IDs (optional)
 
     Returns the created closure with generated ID and OpenLR code.
     """
@@ -78,9 +77,7 @@ async def query_closures(
         description="Bounding box filter: 'min_lon,min_lat,max_lon,max_lat'",
         example="-87.7,41.8,-87.6,41.9",
     ),
-    active_only: bool = Query(
-        True, description="Return only currently active closures"
-    ),
+    valid_only: bool = Query(True, description="Return only currently valid closures"),
     closure_type: Optional[ClosureType] = Query(
         None, description="Filter by closure type"
     ),
@@ -106,7 +103,7 @@ async def query_closures(
     - Format: "min_longitude,min_latitude,max_longitude,max_latitude"
 
     **Temporal Filtering:**
-    - `active_only=true` (default): Only return currently active closures
+    - `valid_only=true` (default): Only return currently valid closures
     - `start_time`: Filter closures that start after the specified time
     - `end_time`: Filter closures that end before the specified time
 
@@ -149,7 +146,7 @@ async def query_closures(
     # Create query parameters
     query_params = ClosureQueryParams(
         bbox=bbox,
-        active_only=active_only,
+        valid_only=valid_only,
         closure_type=closure_type,
         start_time=start_datetime,
         end_time=end_datetime,
@@ -193,7 +190,7 @@ async def get_closure(
     - Full geometry as GeoJSON
     - Metadata and timestamps
     - OpenLR location reference code
-    - Current status and activity state
+    - Current status and validity state
     """
     service = ClosureService(db)
 
@@ -302,7 +299,7 @@ async def get_closure_statistics(
 
     Returns:
     - Total number of closures
-    - Number of currently active closures
+    - Number of currently valid closures
     - Breakdown by closure type
     - Breakdown by status
     - Average closure duration
@@ -325,7 +322,7 @@ async def get_user_closures(
     user_id: int,
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=1000, description="Page size"),
-    active_only: bool = Query(False, description="Return only active closures"),
+    valid_only: bool = Query(False, description="Return only valid closures"),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -337,11 +334,11 @@ async def get_user_closures(
     - User information is not included in the response
 
     **Filtering:**
-    - Use `active_only=true` to see only currently active closures
+    - Use `valid_only=true` to see only currently valid closures
     - Results are ordered by creation date (newest first)
     """
     query_params = ClosureQueryParams(
-        submitter_id=user_id, active_only=active_only, page=page, size=size
+        submitter_id=user_id, valid_only=valid_only, page=page, size=size
     )
 
     service = ClosureService(db)

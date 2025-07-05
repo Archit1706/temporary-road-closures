@@ -36,6 +36,9 @@ class GeoJSONGeometry(BaseModel):
         if geometry_type == "LineString":
             if len(v) < 2:
                 raise ValueError("LineString must have at least 2 coordinates")
+
+            # Round coordinates to 5 decimal places and validate ranges
+            rounded_coords = []
             for coord in v:
                 if len(coord) != 2:
                     raise ValueError(
@@ -47,6 +50,11 @@ class GeoJSONGeometry(BaseModel):
                     raise ValueError(f"Longitude {lon} is out of range [-180, 180]")
                 if not (-90 <= lat <= 90):
                     raise ValueError(f"Latitude {lat} is out of range [-90, 90]")
+
+                # Round to 5 decimal places
+                rounded_coords.append([round(lon, 5), round(lat, 5)])
+
+            return rounded_coords
 
         return v
 
@@ -66,7 +74,6 @@ class ClosureBase(BaseModel):
     confidence_level: Optional[int] = Field(
         None, ge=1, le=10, description="Confidence level (1-10)"
     )
-    osm_way_ids: Optional[str] = Field(None, description="Comma-separated OSM way IDs")
 
     @field_validator("end_time")
     @classmethod
@@ -96,7 +103,7 @@ class ClosureCreate(ClosureBase):
             "example": {
                 "geometry": {
                     "type": "LineString",
-                    "coordinates": [[-87.6298, 41.8781], [-87.6290, 41.8785]],
+                    "coordinates": [[-87.62980, 41.87810], [-87.62900, 41.87850]],
                 },
                 "description": "Water main repair blocking eastbound traffic",
                 "closure_type": "construction",
@@ -104,7 +111,6 @@ class ClosureCreate(ClosureBase):
                 "end_time": "2025-06-01T18:00:00Z",
                 "source": "City of Chicago",
                 "confidence_level": 9,
-                "osm_way_ids": "123456,789012",
             }
         }
     }
@@ -127,7 +133,6 @@ class ClosureUpdate(BaseModel):
     confidence_level: Optional[int] = Field(
         None, ge=1, le=10, description="Updated confidence level"
     )
-    osm_way_ids: Optional[str] = Field(None, description="Updated OSM way IDs")
 
     @model_validator(mode="after")
     def validate_time_consistency(self):
@@ -148,7 +153,7 @@ class ClosureResponse(ClosureBase):
     submitter_id: int = Field(..., description="ID of user who submitted this closure")
     created_at: datetime = Field(..., description="Creation timestamp")
     updated_at: datetime = Field(..., description="Last update timestamp")
-    is_active: bool = Field(..., description="Whether closure is currently active")
+    is_valid: bool = Field(..., description="Whether closure is currently valid")
     duration_hours: Optional[float] = Field(
         None, description="Closure duration in hours"
     )
@@ -160,7 +165,7 @@ class ClosureResponse(ClosureBase):
                 "id": 123,
                 "geometry": {
                     "type": "LineString",
-                    "coordinates": [[-87.6298, 41.8781], [-87.6290, 41.8785]],
+                    "coordinates": [[-87.62980, 41.87810], [-87.62900, 41.87850]],
                 },
                 "description": "Water main repair blocking eastbound traffic",
                 "closure_type": "construction",
@@ -171,7 +176,7 @@ class ClosureResponse(ClosureBase):
                 "submitter_id": 456,
                 "created_at": "2025-05-29T14:30:00Z",
                 "updated_at": "2025-05-29T14:30:00Z",
-                "is_active": True,
+                "is_valid": True,
                 "duration_hours": 10.0,
                 "source": "City of Chicago",
                 "confidence_level": 9,
@@ -196,7 +201,7 @@ class ClosureQueryParams(BaseModel):
     bbox: Optional[str] = Field(
         None, description="Bounding box as 'min_lon,min_lat,max_lon,max_lat'"
     )
-    active_only: bool = Field(True, description="Return only active closures")
+    valid_only: bool = Field(True, description="Return only valid closures")
     closure_type: Optional[ClosureType] = Field(
         None, description="Filter by closure type"
     )
@@ -215,7 +220,7 @@ class ClosureStatsResponse(BaseModel):
     """Schema for closure statistics."""
 
     total_closures: int = Field(..., description="Total number of closures")
-    active_closures: int = Field(..., description="Number of active closures")
+    valid_closures: int = Field(..., description="Number of valid closures")
     by_type: Dict[str, int] = Field(..., description="Closures by type")
     by_status: Dict[str, int] = Field(..., description="Closures by status")
     avg_duration_hours: Optional[float] = Field(
