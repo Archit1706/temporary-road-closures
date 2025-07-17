@@ -1,302 +1,317 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { Database, Wifi, WifiOff, RotateCcw, Info, LogIn, Shield, AlertTriangle } from 'lucide-react';
-import { closuresApi, authApi } from '@/services/api';
-import { useClosures } from '@/context/ClosuresContext';
+"use client"
+import React, { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { UserPlus, Construction, ArrowLeft, Eye, EyeOff, User, Mail, Lock } from 'lucide-react';
+import { ClosuresProvider, useClosures } from '@/context/ClosuresContext';
 import toast from 'react-hot-toast';
 
-interface DemoControlPanelProps {
-    className?: string;
+interface RegisterFormData {
+    username: string;
+    email: string;
+    full_name: string;
+    password: string;
+    confirmPassword: string;
 }
 
-const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) => {
-    const { state } = useClosures();
-    const { isAuthenticated } = state;
-    const [apiStatus, setApiStatus] = useState(closuresApi.getApiStatus());
-    const [isResetting, setIsResetting] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [isMounted, setIsMounted] = useState(false);
+function RegisterContent() {
+    const { register: registerUser, login, state } = useClosures();
+    const { loading, isAuthenticated } = state;
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const redirectTo = searchParams.get('redirect') || '/';
 
-    // Ensure component only shows client-side data
+    const {
+        register,
+        handleSubmit,
+        formState: { errors },
+        watch,
+    } = useForm<RegisterFormData>();
+
+    const password = watch('password');
+
+    // Redirect if already authenticated
     useEffect(() => {
-        setIsMounted(true);
-    }, []);
+        if (isAuthenticated) {
+            router.push(redirectTo);
+        }
+    }, [isAuthenticated, router, redirectTo]);
 
-    useEffect(() => {
-        if (!isMounted) return;
+    const onSubmit = async (data: RegisterFormData) => {
+        try {
+            // Register the user
+            await registerUser({
+                username: data.username,
+                email: data.email,
+                full_name: data.full_name,
+                password: data.password,
+            });
 
-        // Update status periodically
-        const interval = setInterval(() => {
-            setApiStatus(closuresApi.getApiStatus());
-        }, 5000);
+            toast.success('Registration successful! Logging you in...');
 
-        return () => clearInterval(interval);
-    }, [isMounted]);
+            // Automatically log in the user after successful registration
+            await login(data.username, data.password);
 
-    useEffect(() => {
-        if (!isMounted) return;
+            // The useEffect above will handle the redirect
+        } catch (error) {
+            // Error handling is done in the context
+        }
+    };
 
-        // Update status when authentication changes
-        setApiStatus(closuresApi.getApiStatus());
-    }, [isAuthenticated, isMounted]);
-
-    // Don't render until mounted to avoid hydration mismatch
-    if (!isMounted) {
-        return null;
+    if (isAuthenticated) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">Redirecting...</p>
+                </div>
+            </div>
+        );
     }
 
-    const handleResetData = async () => {
-        if (!apiStatus.usingMock) {
-            toast.error('Reset is only available in demo mode');
-            return;
-        }
-
-        setIsResetting(true);
-        try {
-            await closuresApi.resetMockData();
-            toast.success('Demo data has been reset to initial state');
-            // Trigger a refresh of the closures
-            window.location.reload();
-        } catch (error) {
-            toast.error('Failed to reset demo data');
-        } finally {
-            setIsResetting(false);
-        }
-    };
-
-    const getConnectionStatus = () => {
-        if (isAuthenticated && !apiStatus.usingMock) {
-            return {
-                icon: Shield,
-                text: 'Backend API',
-                color: 'text-green-600',
-                bgColor: 'bg-green-100',
-                borderColor: 'border-green-200'
-            };
-        } else if (apiStatus.backendAvailable && !isAuthenticated) {
-            return {
-                icon: LogIn,
-                text: 'Login Required',
-                color: 'text-blue-600',
-                bgColor: 'bg-blue-100',
-                borderColor: 'border-blue-200'
-            };
-        } else if (apiStatus.usingMock) {
-            return {
-                icon: Database,
-                text: 'Demo Mode',
-                color: 'text-orange-600',
-                bgColor: 'bg-orange-100',
-                borderColor: 'border-orange-200'
-            };
-        } else {
-            return {
-                icon: AlertTriangle,
-                text: 'Offline',
-                color: 'text-red-600',
-                bgColor: 'bg-red-100',
-                borderColor: 'border-red-200'
-            };
-        }
-    };
-
-    const connectionStatus = getConnectionStatus();
-
     return (
-        <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
-            {/* Collapsed state - just the indicator */}
-            {!isExpanded && (
-                <button
-                    onClick={() => setIsExpanded(true)}
-                    className={`
-                        flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm
-                        ${connectionStatus.bgColor} ${connectionStatus.color} border ${connectionStatus.borderColor}
-                        hover:shadow-xl transition-all duration-200
-                    `}
-                >
-                    <connectionStatus.icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                        {connectionStatus.text}
-                    </span>
-                </button>
-            )}
-
-            {/* Expanded state - full panel */}
-            {isExpanded && (
-                <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[320px]">
-                    {/* Header */}
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center space-x-2">
-                            <Info className="w-4 h-4 text-blue-500" />
-                            <h3 className="text-sm font-semibold text-gray-900">System Status</h3>
-                        </div>
-                        <button
-                            onClick={() => setIsExpanded(false)}
-                            className="text-gray-400 hover:text-gray-600 p-1"
-                        >
-                            ×
-                        </button>
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+            {/* Header */}
+            <div className="sm:mx-auto sm:w-full sm:max-w-md">
+                <Link href="/" className="flex items-center justify-center space-x-3 mb-6">
+                    <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-lg">
+                        <Construction className="w-7 h-7 text-white" />
                     </div>
+                    <div className="text-center">
+                        <h1 className="text-2xl font-bold text-gray-900">OSM Road Closures</h1>
+                    </div>
+                </Link>
 
-                    {/* Status Information */}
-                    <div className="space-y-3">
-                        {/* Authentication Status */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Authentication:</span>
-                            <div className="flex items-center space-x-1">
-                                {isAuthenticated ? (
-                                    <>
-                                        <Shield className="w-3 h-3 text-green-500" />
-                                        <span className="text-sm text-green-600">Authenticated</span>
-                                    </>
-                                ) : authApi.getToken() ? (
-                                    <>
-                                        <AlertTriangle className="w-3 h-3 text-orange-500" />
-                                        <span className="text-sm text-orange-600">Token Expired</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <LogIn className="w-3 h-3 text-gray-500" />
-                                        <span className="text-sm text-gray-600">Not Logged In</span>
-                                    </>
-                                )}
+                <h2 className="text-center text-3xl font-bold text-gray-900 mb-2">
+                    Create your account
+                </h2>
+                <p className="text-center text-sm text-gray-600">
+                    Already have an account?{' '}
+                    <Link
+                        href={`/login${redirectTo !== '/' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}
+                        className="font-medium text-blue-600 hover:text-blue-500"
+                    >
+                        Sign in here
+                    </Link>
+                </p>
+            </div>
+
+            {/* Form */}
+            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+                <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                        {/* Full Name */}
+                        <div>
+                            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700">
+                                Full Name
+                            </label>
+                            <div className="mt-1 relative">
+                                <input
+                                    id="full_name"
+                                    type="text"
+                                    autoComplete="name"
+                                    {...register('full_name', {
+                                        required: 'Full name is required',
+                                        minLength: { value: 2, message: 'Full name must be at least 2 characters' }
+                                    })}
+                                    className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                    placeholder="Enter your full name"
+                                />
+                                <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                             </div>
+                            {errors.full_name && (
+                                <p className="mt-2 text-sm text-red-600">{errors.full_name.message}</p>
+                            )}
                         </div>
 
-                        {/* Connection Status */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Connection:</span>
-                            <div className="flex items-center space-x-1">
-                                {apiStatus.backendAvailable === null ? (
-                                    <>
-                                        <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
-                                        <span className="text-sm text-yellow-600">Checking...</span>
-                                    </>
-                                ) : apiStatus.backendAvailable ? (
-                                    <>
-                                        <Wifi className="w-3 h-3 text-green-500" />
-                                        <span className="text-sm text-green-600">Backend Available</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <WifiOff className="w-3 h-3 text-red-500" />
-                                        <span className="text-sm text-red-600">Backend Offline</span>
-                                    </>
-                                )}
+                        {/* Username */}
+                        <div>
+                            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+                                Username
+                            </label>
+                            <div className="mt-1 relative">
+                                <input
+                                    id="username"
+                                    type="text"
+                                    autoComplete="username"
+                                    {...register('username', {
+                                        required: 'Username is required',
+                                        minLength: { value: 3, message: 'Username must be at least 3 characters' },
+                                        pattern: {
+                                            value: /^[a-zA-Z0-9_]+$/,
+                                            message: 'Username can only contain letters, numbers, and underscores'
+                                        }
+                                    })}
+                                    className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                    placeholder="Choose a username"
+                                />
+                                <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                             </div>
+                            {errors.username && (
+                                <p className="mt-2 text-sm text-red-600">{errors.username.message}</p>
+                            )}
                         </div>
 
-                        {/* Data Source */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Data Source:</span>
-                            <div className="flex items-center space-x-1">
-                                {apiStatus.usingMock ? (
-                                    <>
-                                        <Database className="w-3 h-3 text-orange-500" />
-                                        <span className="text-sm text-orange-600">Mock Data</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Wifi className="w-3 h-3 text-blue-500" />
-                                        <span className="text-sm text-blue-600">Live API</span>
-                                    </>
-                                )}
+                        {/* Email */}
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                Email Address
+                            </label>
+                            <div className="mt-1 relative">
+                                <input
+                                    id="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    {...register('email', {
+                                        required: 'Email is required',
+                                        pattern: {
+                                            value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                                            message: 'Invalid email address'
+                                        }
+                                    })}
+                                    className="appearance-none relative block w-full px-3 py-2 pl-10 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                    placeholder="Enter your email"
+                                />
+                                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                             </div>
+                            {errors.email && (
+                                <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>
+                            )}
                         </div>
 
-                        {/* Backend URL */}
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Backend:</span>
-                            <span className="text-xs text-gray-500 font-mono max-w-[140px] truncate">
-                                {apiStatus.backendUrl}
-                            </span>
-                        </div>
-
-                        {/* Backend Integration Notice */}
-                        {isAuthenticated && !apiStatus.usingMock && (
-                            <div className="bg-green-50 border border-green-200 rounded-md p-3 mt-3">
-                                <div className="flex items-start space-x-2">
-                                    <Shield className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-green-700">
-                                        <p className="font-medium mb-1">Backend Connected</p>
-                                        <p>Using live FastAPI backend with PostgreSQL/PostGIS database. All closures are saved persistently with OpenLR encoding.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Demo Mode Notice */}
-                        {apiStatus.usingMock && (
-                            <div className="bg-orange-50 border border-orange-200 rounded-md p-3 mt-3">
-                                <div className="flex items-start space-x-2">
-                                    <Database className="w-4 h-4 text-orange-500 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-orange-700">
-                                        <p className="font-medium mb-1">Demo Mode Active</p>
-                                        <p>Using sample data with 25+ closures in Chicago area. {isAuthenticated ? 'Login to backend for live data.' : 'All changes are temporary and reset on page refresh.'}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Login Required Notice */}
-                        {apiStatus.backendAvailable && !isAuthenticated && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mt-3">
-                                <div className="flex items-start space-x-2">
-                                    <LogIn className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-blue-700">
-                                        <p className="font-medium mb-1">Backend Available</p>
-                                        <p>Backend API is running but authentication is required. Click Login in the header to connect.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Actions */}
-                        {apiStatus.usingMock && (
-                            <div className="pt-3 border-t border-gray-200">
+                        {/* Password */}
+                        <div>
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <div className="mt-1 relative">
+                                <input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    autoComplete="new-password"
+                                    {...register('password', {
+                                        required: 'Password is required',
+                                        minLength: { value: 8, message: 'Password must be at least 8 characters' },
+                                        pattern: {
+                                            value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
+                                            message: 'Password must contain at least one lowercase letter, one uppercase letter, and one number'
+                                        }
+                                    })}
+                                    className="appearance-none relative block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                    placeholder="Create a password"
+                                />
+                                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                                 <button
-                                    onClick={handleResetData}
-                                    disabled={isResetting}
-                                    className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-orange-100 text-orange-700 rounded-md hover:bg-orange-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm"
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
                                 >
-                                    <RotateCcw className={`w-3 h-3 ${isResetting ? 'animate-spin' : ''}`} />
-                                    <span>{isResetting ? 'Resetting...' : 'Reset Demo Data'}</span>
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4 text-gray-400" />
+                                    ) : (
+                                        <Eye className="h-4 w-4 text-gray-400" />
+                                    )}
                                 </button>
                             </div>
-                        )}
-
-                        {/* Instructions */}
-                        <div className="pt-3 border-t border-gray-200">
-                            <div className="text-xs text-gray-500 space-y-1">
-                                <p>• Create new closures using the form</p>
-                                <p>• Click closures on map for details</p>
-                                <p>• Select multiple points for LineString</p>
-                                {!isAuthenticated && <p>• Login for persistent storage</p>}
-                                {apiStatus.usingMock && (
-                                    <p className="text-orange-600">• Demo changes reset on refresh</p>
-                                )}
-                            </div>
+                            {errors.password && (
+                                <p className="mt-2 text-sm text-red-600">{errors.password.message}</p>
+                            )}
                         </div>
 
-                        {/* API Endpoints Info */}
-                        {isAuthenticated && (
-                            <div className="pt-3 border-t border-gray-200">
-                                <div className="text-xs text-gray-500">
-                                    <p className="font-medium mb-1">API Endpoints:</p>
-                                    <div className="space-y-1 font-mono">
-                                        <p>GET /api/v1/closures/</p>
-                                        <p>POST /api/v1/closures/</p>
-                                        <p>PUT /api/v1/closures/:id</p>
-                                    </div>
-                                </div>
+                        {/* Confirm Password */}
+                        <div>
+                            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                                Confirm Password
+                            </label>
+                            <div className="mt-1 relative">
+                                <input
+                                    id="confirmPassword"
+                                    type={showConfirmPassword ? 'text' : 'password'}
+                                    autoComplete="new-password"
+                                    {...register('confirmPassword', {
+                                        required: 'Please confirm your password',
+                                        validate: (value) => value === password || 'Passwords do not match'
+                                    })}
+                                    className="appearance-none relative block w-full px-3 py-2 pl-10 pr-10 border border-gray-300 rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                                    placeholder="Confirm your password"
+                                />
+                                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                                >
+                                    {showConfirmPassword ? (
+                                        <EyeOff className="h-4 w-4 text-gray-400" />
+                                    ) : (
+                                        <Eye className="h-4 w-4 text-gray-400" />
+                                    )}
+                                </button>
                             </div>
-                        )}
-                    </div>
+                            {errors.confirmPassword && (
+                                <p className="mt-2 text-sm text-red-600">{errors.confirmPassword.message}</p>
+                            )}
+                        </div>
+
+                        {/* Submit Button */}
+                        <div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            >
+                                {loading ? (
+                                    <>
+                                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                                        Creating account...
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserPlus className="w-5 h-5 mr-2" />
+                                        Create account
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Back to Home */}
+                        <div className="text-center">
+                            <Link
+                                href="/"
+                                className="inline-flex items-center text-sm text-gray-600 hover:text-gray-900"
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-1" />
+                                Back to Home
+                            </Link>
+                        </div>
+                    </form>
                 </div>
-            )}
+
+                {/* Terms */}
+                <div className="mt-6 text-center text-xs text-gray-500">
+                    <p>
+                        By creating an account, you agree to contribute to the OpenStreetMap community
+                        and follow the project guidelines.
+                    </p>
+                </div>
+            </div>
         </div>
     );
-};
+}
 
-export default DemoControlPanel;
+export default function RegisterPage() {
+    return (
+        <ClosuresProvider>
+            <Suspense fallback={
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+            }>
+                <RegisterContent />
+            </Suspense>
+        </ClosuresProvider>
+    );
+}
