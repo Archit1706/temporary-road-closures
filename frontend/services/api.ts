@@ -21,17 +21,40 @@ api.interceptors.request.use((config) => {
         const token = authApi.getToken();
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
+            console.log('🔑 Auth token added to request:', token.substring(0, 20) + '...');
+        } else {
+            console.warn('⚠️ No auth token found for API request');
         }
     }
     return config;
+}, (error) => {
+    console.error('❌ Request interceptor error:', error);
+    return Promise.reject(error);
 });
+
+// Add response interceptor for auth errors
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            console.error('🚫 401 Unauthorized - Token may be expired');
+            // Clear invalid token
+            if (typeof window !== 'undefined') {
+                authApi.clearToken();
+                // Dispatch custom event to notify components
+                window.dispatchEvent(new CustomEvent('auth:token-expired'));
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 // Updated types to match backend API
 export interface Closure {
     id: number;
     geometry: {
         type: 'LineString' | 'Point';
-        coordinates: number[][]; // Backend always returns array of coordinate pairs
+        coordinates: number[][];
     };
     start_time: string;
     end_time: string;
@@ -91,7 +114,6 @@ export interface PaginatedResponse<T> {
 // Check if we're in the browser
 const isBrowser = typeof window !== 'undefined';
 
-// Updated types to match your backend response
 interface LoginResponse {
     access_token: string;
     token_type: string;
@@ -109,8 +131,42 @@ interface LoginResponse {
     };
 }
 
+interface RegisterRequest {
+    email: string;
+    full_name: string;
+    password: string;
+    username: string;
+}
+
+interface RegisterResponse {
+    username: string;
+    email: string;
+    full_name: string;
+    id: number;
+    is_active: boolean;
+    is_moderator: boolean;
+    is_verified: boolean;
+    last_login_at: string;
+    created_at: string;
+}
+
 // Authentication functions
 export const authApi = {
+    register: async (userData: RegisterRequest): Promise<RegisterResponse> => {
+        try {
+            const response = await api.post('/api/v1/auth/register', userData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Registration error:', error);
+            throw error;
+        }
+    },
+
     login: async (username: string, password: string): Promise<LoginResponse> => {
         try {
             // Create form data for OAuth2 login
@@ -128,9 +184,10 @@ export const authApi = {
                     'Accept': 'application/json'
                 }
             });
+            console.log('✅ Login successful, token received');
             return response.data;
         } catch (error) {
-            console.error('Login error:', error);
+            console.error('❌ Login error:', error);
             throw error;
         }
     },
@@ -138,12 +195,19 @@ export const authApi = {
     setToken: (token: string) => {
         if (isBrowser) {
             localStorage.setItem('auth_token', token);
+            console.log('💾 Token stored in localStorage');
         }
     },
 
     getToken: (): string | null => {
         if (isBrowser) {
-            return localStorage.getItem('auth_token');
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                console.log('🔍 Token retrieved from localStorage:', token.substring(0, 20) + '...');
+            } else {
+                console.log('❌ No token found in localStorage');
+            }
+            return token;
         }
         return null;
     },
@@ -152,12 +216,14 @@ export const authApi = {
         if (isBrowser) {
             localStorage.removeItem('auth_token');
             localStorage.removeItem('user_data');
+            console.log('🗑️ Token and user data cleared from localStorage');
         }
     },
 
     setUserData: (user: LoginResponse['user']) => {
         if (isBrowser) {
             localStorage.setItem('user_data', JSON.stringify(user));
+            console.log('💾 User data stored:', user.username);
         }
     },
 
@@ -167,6 +233,35 @@ export const authApi = {
             return userData ? JSON.parse(userData) : null;
         }
         return null;
+    },
+
+    // Check if token is expired (basic check)
+    isTokenValid: (): boolean => {
+        const token = authApi.getToken();
+        if (!token) {
+            console.log('❌ No token found');
+            return false;
+        }
+
+        try {
+            // Basic JWT payload check (not secure, just for UX)
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const now = Math.floor(Date.now() / 1000);
+            const isValid = payload.exp > now;
+
+            if (!isValid) {
+                console.warn('🕐 Token has expired at:', new Date(payload.exp * 1000));
+                authApi.clearToken();
+            } else {
+                console.log('✅ Token is valid, expires at:', new Date(payload.exp * 1000));
+            }
+
+            return isValid;
+        } catch (error) {
+            console.error('❌ Error checking token validity:', error);
+            authApi.clearToken();
+            return false;
+        }
     }
 };
 
@@ -180,16 +275,10 @@ const realApi = {
                 size
             };
 
-            // Note: Backend doesn't seem to support bbox filtering yet
-            // You might need to add this to the backend API
-            if (bbox) {
-                // params.bbox = `${bbox.west},${bbox.south},${bbox.east},${bbox.north}`;
-            }
-
             const response = await api.get('/api/v1/closures/', { params });
             return response.data;
         } catch (error) {
-            console.error('Error fetching closures:', error);
+            console.error('❌ Error fetching closures:', error);
             throw error;
         }
     },
@@ -199,48 +288,66 @@ const realApi = {
             const response = await api.get(`/api/v1/closures/${id}`);
             return response.data;
         } catch (error) {
-            console.error('Error fetching closure:', error);
+            console.error('❌ Error fetching closure:', error);
             throw error;
         }
     },
 
     createClosure: async (data: CreateClosureData): Promise<Closure> => {
         try {
+            console.log('📤 Creating closure with data:', JSON.stringify(data, null, 2));
+
+            // Check token before making request
+            if (!authApi.isTokenValid()) {
+                throw new Error('Authentication token is missing or expired. Please log in again.');
+            }
+
             const response = await api.post('/api/v1/closures/', data);
+            console.log('✅ Closure created successfully:', response.data);
             return response.data;
         } catch (error) {
-            console.error('Error creating closure:', error);
+            if (error.response?.status === 401) {
+                console.error('🚫 Authentication failed - token may be expired');
+                throw new Error('Authentication failed. Please log in again.');
+            }
+            console.error('❌ Error creating closure:', error);
             throw error;
         }
     },
 
     updateClosure: async (id: number, data: Partial<CreateClosureData>): Promise<Closure> => {
         try {
+            if (!authApi.isTokenValid()) {
+                throw new Error('Authentication token is missing or expired. Please log in again.');
+            }
+
             const response = await api.put(`/api/v1/closures/${id}`, data);
             return response.data;
         } catch (error) {
-            console.error('Error updating closure:', error);
+            console.error('❌ Error updating closure:', error);
             throw error;
         }
     },
 
     deleteClosure: async (id: number): Promise<void> => {
         try {
+            if (!authApi.isTokenValid()) {
+                throw new Error('Authentication token is missing or expired. Please log in again.');
+            }
+
             await api.delete(`/api/v1/closures/${id}`);
         } catch (error) {
-            console.error('Error deleting closure:', error);
+            console.error('❌ Error deleting closure:', error);
             throw error;
         }
     },
 
     getClosureStats: async (): Promise<ClosureStats> => {
         try {
-            // This endpoint might not exist yet, you may need to implement it
             const response = await api.get('/api/v1/closures/stats');
             return response.data;
         } catch (error) {
-            console.error('Error fetching closure stats:', error);
-            // Return calculated stats from closures if stats endpoint doesn't exist
+            console.error('❌ Error fetching closure stats:', error);
             const closuresResponse = await realApi.getClosures();
             return calculateStatsFromClosures(closuresResponse.items);
         }
@@ -308,24 +415,26 @@ const checkBackendAvailability = async (): Promise<boolean> => {
         const response = await fetch(`${API_BASE_URL}/health`, {
             method: 'GET',
             headers: { 'Content-Type': 'application/json' },
-            signal: AbortSignal.timeout(5000) // 5 second timeout
+            signal: AbortSignal.timeout(5000)
         });
         backendAvailable = response.ok;
+        console.log('🏥 Backend health check:', backendAvailable ? 'Available' : 'Unavailable');
     } catch (error) {
-        console.log('Backend not available, using mock data for demo');
+        console.log('🏥 Backend not available, using mock data for demo');
         backendAvailable = false;
     }
 
-    useRealApi = backendAvailable && !USE_MOCK_API && !!authApi.getToken();
+    useRealApi = backendAvailable && !USE_MOCK_API;
     return backendAvailable;
 };
 
 // Main API object that switches between real and mock
 export const closuresApi = {
     getClosures: async (bbox?: BoundingBox, page: number = 1, size: number = 50): Promise<Closure[]> => {
-        if (USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.getToken()) {
+        const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
+
+        if (shouldUseMock) {
             console.log('📍 Using mock data for closures');
-            // Convert mock API response to match new format
             const mockResponse = await mockClosuresApi.getClosures(bbox);
             return mockResponse.map(convertMockToBackendFormat);
         }
@@ -335,7 +444,9 @@ export const closuresApi = {
     },
 
     getClosure: async (id: number): Promise<Closure> => {
-        if (USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.getToken()) {
+        const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
+
+        if (shouldUseMock) {
             const mockResponse = await mockClosuresApi.getClosure(id.toString());
             return convertMockToBackendFormat(mockResponse);
         }
@@ -343,17 +454,23 @@ export const closuresApi = {
     },
 
     createClosure: async (data: CreateClosureData): Promise<Closure> => {
-        if (USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.getToken()) {
+        const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
+
+        if (shouldUseMock) {
             console.log('📝 Creating closure with mock API');
             const mockData = convertBackendToMockFormat(data);
             const mockResponse = await mockClosuresApi.createClosure(mockData);
             return convertMockToBackendFormat(mockResponse);
         }
+
+        console.log('📝 Creating closure with real API');
         return realApi.createClosure(data);
     },
 
     updateClosure: async (id: number, data: Partial<CreateClosureData>): Promise<Closure> => {
-        if (USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.getToken()) {
+        const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
+
+        if (shouldUseMock) {
             const mockData = convertBackendToMockFormat(data as CreateClosureData);
             const mockResponse = await mockClosuresApi.updateClosure(id.toString(), mockData);
             return convertMockToBackendFormat(mockResponse);
@@ -362,14 +479,18 @@ export const closuresApi = {
     },
 
     deleteClosure: async (id: number): Promise<void> => {
-        if (USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.getToken()) {
+        const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
+
+        if (shouldUseMock) {
             return mockClosuresApi.deleteClosure(id.toString());
         }
         return realApi.deleteClosure(id);
     },
 
     getClosureStats: async (): Promise<ClosureStats> => {
-        if (USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.getToken()) {
+        const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
+
+        if (shouldUseMock) {
             console.log('📊 Using mock data for statistics');
             const mockStats = await mockClosuresApi.getClosureStats();
             return convertMockStatsToBackendFormat(mockStats);
@@ -379,7 +500,7 @@ export const closuresApi = {
 
     // Utility functions for demo
     isUsingMockData: (): boolean => {
-        return USE_MOCK_API || !useRealApi || !authApi.getToken();
+        return USE_MOCK_API || !useRealApi || !authApi.isTokenValid();
     },
 
     resetMockData: async (): Promise<void> => {
@@ -395,33 +516,33 @@ export const closuresApi = {
         forceMock: boolean;
         backendAvailable: boolean | null;
         hasAuthToken: boolean;
+        tokenValid: boolean;
     } => {
+        const hasToken = !!authApi.getToken();
+        const tokenValid = authApi.isTokenValid();
+
         return {
-            usingMock: USE_MOCK_API || !useRealApi || !authApi.getToken(),
+            usingMock: USE_MOCK_API || !useRealApi || !tokenValid,
             backendUrl: API_BASE_URL,
             forceMock: USE_MOCK_API,
             backendAvailable,
-            hasAuthToken: !!authApi.getToken()
+            hasAuthToken: hasToken,
+            tokenValid
         };
     }
 };
 
 // Conversion functions between mock and backend formats
 function convertMockToBackendFormat(mockClosure: any): Closure {
-    // Ensure coordinates are in the correct format for backend
     let coordinates: number[][];
 
     if (mockClosure.geometry.type === 'Point') {
-        // Convert Point coordinates from [lng, lat] to [[lng, lat]]
         if (Array.isArray(mockClosure.geometry.coordinates[0])) {
-            // Already in correct format
             coordinates = mockClosure.geometry.coordinates;
         } else {
-            // Convert from [lng, lat] to [[lng, lat]]
             coordinates = [mockClosure.geometry.coordinates];
         }
     } else {
-        // LineString coordinates should already be [[lng, lat], [lng, lat], ...]
         coordinates = mockClosure.geometry.coordinates;
     }
 
@@ -448,18 +569,15 @@ function convertMockToBackendFormat(mockClosure: any): Closure {
 }
 
 function convertBackendToMockFormat(backendData: any): any {
-    // Convert coordinates back to mock format if needed
     let coordinates;
 
     if (backendData.geometry.type === 'Point') {
-        // Convert from [[lng, lat]] to [lng, lat] for mock format
         if (Array.isArray(backendData.geometry.coordinates[0])) {
             coordinates = backendData.geometry.coordinates[0];
         } else {
             coordinates = backendData.geometry.coordinates;
         }
     } else {
-        // LineString coordinates stay the same
         coordinates = backendData.geometry.coordinates;
     }
 
@@ -473,7 +591,7 @@ function convertBackendToMockFormat(backendData: any): any {
         description: backendData.description,
         reason: backendData.closure_type,
         submitter: backendData.source,
-        severity: 'medium', // Default since backend doesn't have this
+        severity: 'medium',
     };
 }
 
