@@ -26,14 +26,17 @@ const Layout: React.FC<LayoutProps> = ({ children, onToggleForm, isFormOpen }) =
 
             {/* Main Content Area */}
             <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar */}
+                {/* Left Sidebar */}
                 <Sidebar
                     isOpen={isSidebarOpen}
                     onClose={() => setIsSidebarOpen(false)}
                 />
 
-                {/* Main Content */}
-                <main className="flex-1 relative">
+                {/* Main Content - Adjust right margin when form is open */}
+                <main className={`
+                    flex-1 relative transition-all duration-300 ease-in-out
+                    ${isFormOpen ? 'mr-96' : 'mr-0'}
+                `}>
                     {children}
 
                     {/* Sidebar Toggle Button for Mobile */}
@@ -45,6 +48,18 @@ const Layout: React.FC<LayoutProps> = ({ children, onToggleForm, isFormOpen }) =
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                         </svg>
                     </button>
+
+                    {/* Form Toggle Hint - Show when form is closed and user is authenticated */}
+                    {!isFormOpen && (
+                        <div className="hidden md:block absolute top-4 right-4 z-20">
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg max-w-xs">
+                                <div className="text-sm text-blue-700">
+                                    <p className="font-medium mb-1">💡 Tip</p>
+                                    <p>Use the "Report Closure" button in the header to add new road closures.</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </main>
             </div>
         </div>
