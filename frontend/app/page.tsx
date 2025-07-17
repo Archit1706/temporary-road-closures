@@ -1,103 +1,175 @@
-import Image from "next/image";
+"use client"
+import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
+import { Toaster } from 'react-hot-toast';
+import { ClosuresProvider } from '@/context/ClosuresContext';
+import Layout from '@/components/Layout/Layout';
+import ClosureForm from '@/components/Forms/ClosureForm';
+import ClientOnly from '@/components/ClientOnly';
+import L from 'leaflet';
+
+// Dynamically import MapComponent to avoid SSR issues
+const MapComponent = dynamic(
+  () => import('@/components/Map/MapComponent'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading map...</p>
+        </div>
+      </div>
+    )
+  }
+);
+
+// Dynamically import DemoControlPanel to avoid SSR issues with localStorage
+const DemoControlPanel = dynamic(
+  () => import('@/components/Demo/DemoControlPanel'),
+  {
+    ssr: false,
+    loading: () => null
+  }
+);
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);
+  const [isSelectingPoints, setIsSelectingPoints] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+  // Handle custom events from the form
+  useEffect(() => {
+    const handleClearPoints = () => {
+      setSelectedPoints([]);
+    };
+
+    const handleFinishSelection = () => {
+      setIsSelectingPoints(false);
+    };
+
+    window.addEventListener('clearPoints', handleClearPoints);
+    window.addEventListener('finishSelection', handleFinishSelection);
+
+    return () => {
+      window.removeEventListener('clearPoints', handleClearPoints);
+      window.removeEventListener('finishSelection', handleFinishSelection);
+    };
+  }, []);
+
+  const handleToggleForm = () => {
+    if (isFormOpen) {
+      // Reset point selection when closing form
+      setSelectedPoints([]);
+      setIsSelectingPoints(false);
+    }
+    setIsFormOpen(!isFormOpen);
+  };
+
+  const handlePointsSelect = () => {
+    setIsSelectingPoints(true);
+  };
+
+  const handleMapClick = (latlng: L.LatLng) => {
+    if (isSelectingPoints) {
+      // Add point to the selection
+      setSelectedPoints(prev => [...prev, latlng]);
+    }
+  };
+
+  const handleClearPoints = () => {
+    setSelectedPoints([]);
+  };
+
+  const handleFinishSelection = () => {
+    setIsSelectingPoints(false);
+  };
+
+  return (
+    <ClosuresProvider>
+      <div className="h-screen">
+        <Layout
+          onToggleForm={handleToggleForm}
+          isFormOpen={isFormOpen}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          <MapComponent
+            onMapClick={handleMapClick}
+            selectedPoints={selectedPoints}
+            isSelecting={isSelectingPoints}
+            onClearPoints={handleClearPoints}
+            onFinishSelection={handleFinishSelection}
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
+
+          <ClosureForm
+            isOpen={isFormOpen}
+            onClose={handleToggleForm}
+            selectedPoints={selectedPoints}
+            onPointsSelect={handlePointsSelect}
+            isSelectingPoints={isSelectingPoints}
           />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+        </Layout>
+
+        {/* Demo Control Panel - Client-side only */}
+        <ClientOnly>
+          <DemoControlPanel />
+        </ClientOnly>
+
+        {/* Point Selection Instructions - only show when form is not open */}
+        {isSelectingPoints && !isFormOpen && (
+          <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 bg-blue-600 text-white px-6 py-3 rounded-lg shadow-lg">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-white rounded-full animate-pulse"></div>
+                <span className="font-medium">Selecting Points ({selectedPoints.length})</span>
+              </div>
+              <div className="text-sm opacity-90">
+                Click on the map to add points along the road segment
+              </div>
+              <div className="flex space-x-2">
+                {selectedPoints.length > 0 && (
+                  <button
+                    onClick={handleClearPoints}
+                    className="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded text-sm"
+                  >
+                    Clear ({selectedPoints.length})
+                  </button>
+                )}
+                <button
+                  onClick={handleFinishSelection}
+                  className="bg-white text-blue-600 hover:bg-gray-100 px-3 py-1 rounded text-sm font-medium"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#10b981',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              duration: 5000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+      </div>
+    </ClosuresProvider>
   );
 }
