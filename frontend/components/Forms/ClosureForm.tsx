@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { CreateClosureData, authApi } from '@/services/api';
 import L from 'leaflet';
@@ -21,6 +21,7 @@ interface FormData {
     end_time: string;
     geometry_type: 'Point' | 'LineString';
     confidence_level: number;
+    is_bidirectional: boolean; // New field for bidirectional closures
 }
 
 const CLOSURE_TYPES = [
@@ -69,12 +70,14 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             start_time: new Date().toISOString().slice(0, 16),
             end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16),
             confidence_level: 7,
+            is_bidirectional: false, // Default to unidirectional
         },
     });
 
     const watchedClosureType = watch('closure_type');
     const watchedGeometryType = watch('geometry_type');
     const watchedConfidenceLevel = watch('confidence_level');
+    const watchedIsBidirectional = watch('is_bidirectional');
 
     // Reset form when closing
     useEffect(() => {
@@ -134,6 +137,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             start_time: startTime,
             end_time: endTime,
             confidence_level: data.confidence_level,
+            is_bidirectional: data.geometry_type === 'LineString' ? data.is_bidirectional : undefined,
             geometry: {
                 type: data.geometry_type,
                 coordinates: data.geometry_type === 'Point'
@@ -161,7 +165,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         switch (currentStep) {
             case 1:
                 return (
-                    <div className="space-y-4 max-h-full overflow-y-auto">
+                    <div className="space-y-4">
                         {/* Description */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700">
@@ -186,7 +190,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             <label className="text-sm font-medium text-gray-700">
                                 Closure Type *
                             </label>
-                            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
+                            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto scrollbar-thin border border-gray-200 rounded-lg p-2">
                                 {CLOSURE_TYPES.map(type => (
                                     <label
                                         key={type.value}
@@ -220,37 +224,39 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <Zap className="w-4 h-4" />
                                 <span>Confidence Level *</span>
                             </label>
-                            <div className="space-y-1 max-h-64 overflow-y-auto scrollbar-thin">
-                                {CONFIDENCE_LEVELS.map(level => (
-                                    <label
-                                        key={level.value}
-                                        className={`
-                                            flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors
-                                            ${watchedConfidenceLevel === level.value
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-300 hover:border-gray-400'
-                                            }
-                                        `}
-                                    >
-                                        <input
-                                            type="radio"
-                                            value={level.value}
-                                            className="mt-0.5 text-blue-600"
-                                            {...register('confidence_level', {
-                                                required: 'Please select a confidence level',
-                                                valueAsNumber: true
-                                            })}
-                                        />
-                                        <div className="flex-1">
-                                            <div className="font-medium text-gray-900 text-sm">
-                                                {level.label}
+                            <div className="max-h-48 overflow-y-auto scrollbar-thin border border-gray-200 rounded-lg p-2">
+                                <div className="space-y-1">
+                                    {CONFIDENCE_LEVELS.map(level => (
+                                        <label
+                                            key={level.value}
+                                            className={`
+                                                flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors
+                                                ${watchedConfidenceLevel === level.value
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-300 hover:border-gray-400'
+                                                }
+                                            `}
+                                        >
+                                            <input
+                                                type="radio"
+                                                value={level.value}
+                                                className="mt-0.5 text-blue-600"
+                                                {...register('confidence_level', {
+                                                    required: 'Please select a confidence level',
+                                                    valueAsNumber: true
+                                                })}
+                                            />
+                                            <div className="flex-1">
+                                                <div className="font-medium text-gray-900 text-sm">
+                                                    {level.label}
+                                                </div>
+                                                <div className="text-xs text-gray-600">
+                                                    {level.description}
+                                                </div>
                                             </div>
-                                            <div className="text-xs text-gray-600">
-                                                {level.description}
-                                            </div>
-                                        </div>
-                                    </label>
-                                ))}
+                                        </label>
+                                    ))}
+                                </div>
                             </div>
                             {errors.confidence_level && (
                                 <p className="text-sm text-red-600">{errors.confidence_level.message}</p>
@@ -261,7 +267,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
             case 2:
                 return (
-                    <div className="space-y-4 max-h-full overflow-y-auto scrollbar-thin">
+                    <div className="space-y-4">
                         {/* Location Selection */}
                         <div className="space-y-2">
                             <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
@@ -278,6 +284,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             <li>Click "Start Selecting" below</li>
                                             <li>Click on the map to add points</li>
                                             <li>Need at least 2 points for LineString</li>
+                                            <li>Points define direction (first → last)</li>
                                             <li>Click "Done" when finished</li>
                                         </ol>
                                     </div>
@@ -309,7 +316,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             {selectedPoints.length > 0 && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
                                     <h4 className="text-xs font-medium text-gray-700 mb-1">Selected Points:</h4>
-                                    <div className="space-y-0.5 max-h-20 overflow-y-auto scrollbar-thin">
+                                    <div className="space-y-0.5 max-h-16 overflow-y-auto scrollbar-thin">
                                         {selectedPoints.slice(0, 3).map((point, index) => (
                                             <div key={index} className="text-xs text-gray-600 font-mono">
                                                 {index + 1}: [{point.lng.toFixed(4)}, {point.lat.toFixed(4)}]
@@ -329,6 +336,36 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 </div>
                             )}
                         </div>
+
+                        {/* Bidirectional Option - Only show for LineString with multiple points */}
+                        {selectedPoints.length >= 2 && (
+                            <div className="space-y-2">
+                                <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                                    <Navigation className="w-4 h-4" />
+                                    <span>Traffic Direction</span>
+                                </label>
+                                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                    <label className="flex items-start space-x-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            {...register('is_bidirectional')}
+                                            className="mt-1 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <div className="flex-1">
+                                            <div className="text-sm font-medium text-gray-900">
+                                                Bidirectional Closure
+                                            </div>
+                                            <div className="text-xs text-gray-600 mt-1">
+                                                {watchedIsBidirectional
+                                                    ? '↔ Affects traffic in both directions'
+                                                    : '→ Affects traffic in one direction only (based on point order)'
+                                                }
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Time Range */}
                         <div className="grid grid-cols-1 gap-3">
@@ -392,7 +429,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
             case 3:
                 return (
-                    <div className="space-y-4 max-h-full overflow-y-auto scrollbar-thin">
+                    <div className="space-y-4">
                         {/* Summary */}
                         <div className="bg-gray-50 p-3 rounded-lg">
                             <h4 className="font-medium text-gray-900 mb-3 text-sm">Closure Summary</h4>
@@ -415,6 +452,14 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         {selectedPoints.length} selected
                                     </span>
                                 </div>
+                                {selectedPoints.length >= 2 && (
+                                    <div>
+                                        <span className="font-medium text-gray-700">Direction: </span>
+                                        <span className="text-gray-900">
+                                            {watchedIsBidirectional ? 'Bidirectional ↔' : 'Unidirectional →'}
+                                        </span>
+                                    </div>
+                                )}
                                 <div>
                                     <span className="font-medium text-gray-700">Duration: </span>
                                     <span className="text-gray-900">
@@ -432,7 +477,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                 <div className="text-xs text-blue-700">
                                     <p className="font-medium mb-1">Backend API Integration</p>
-                                    <p>This closure will be submitted with OpenLR encoding and timezone-aware timestamps.</p>
+                                    <p>This closure will be submitted with OpenLR encoding, directional information, and timezone-aware timestamps.</p>
                                 </div>
                             </div>
                         </div>
@@ -469,7 +514,8 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <div className="text-xs text-gray-600 space-y-1">
                                     <div>Coordinates: {selectedPoints.length} points</div>
                                     <div>Geometry Type: LineString</div>
-                                    <div className="max-h-20 overflow-y-auto scrollbar-thin">
+                                    <div>Bidirectional: {watchedIsBidirectional ? 'Yes' : 'No'}</div>
+                                    <div className="max-h-16 overflow-y-auto scrollbar-thin border border-gray-300 rounded p-2 bg-white">
                                         <pre className="text-xs font-mono">
                                             {JSON.stringify(selectedPoints.map(p => [p.lng, p.lat]), null, 2)}
                                         </pre>
@@ -594,20 +640,23 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                         </div>
 
                         {/* Form Content */}
-                        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col">
-                            <div className="flex-1 p-4 overflow-y-auto form-section-scroll">
-                                {renderStepContent()}
+                        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                            {/* Scrollable Content Area */}
+                            <div className="flex-1 overflow-y-auto min-h-0">
+                                <div className="p-4 pb-6">
+                                    {renderStepContent()}
+                                </div>
                             </div>
 
-                            {/* Footer */}
-                            <div className="p-4 border-t border-gray-200 bg-gray-50">
+                            {/* Fixed Footer - Always Visible */}
+                            <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
                                 <div className="flex items-center justify-between space-x-2">
                                     <div className="flex space-x-2">
                                         {currentStep > 1 && (
                                             <button
                                                 type="button"
                                                 onClick={prevStep}
-                                                className="px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm"
+                                                className="px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors"
                                             >
                                                 Previous
                                             </button>
@@ -619,7 +668,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={nextStep}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm"
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors"
                                             >
                                                 Next
                                             </button>
@@ -627,7 +676,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             <button
                                                 type="submit"
                                                 disabled={loading || selectedPoints.length < 2}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm"
+                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
                                             >
                                                 {loading ? (
                                                     <>
