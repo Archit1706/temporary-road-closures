@@ -1,19 +1,13 @@
-// services/mockApi.ts
+// services/mockApi.ts - Updated with bidirectional support
 import {
     Closure,
     CreateClosureData,
     BoundingBox,
     ClosureStats
 } from './api';
-import {
-    mockClosures,
-    mockClosureStats,
-    filterClosuresByBounds,
-    simulateApiDelay
-} from '../data/mockClosures';
 
 // In-memory storage for demo (resets on page refresh)
-let closuresStorage: Closure[] = [...mockClosures];
+let closuresStorage: any[] = []; // Updated to include bidirectional field
 let nextId = 1000;
 
 // Generate a unique ID for new closures
@@ -38,15 +32,159 @@ const determineStatus = (startTime: string, endTime: string): 'active' | 'inacti
     return 'inactive';
 };
 
+// Initialize mock data with bidirectional field
+const initializeMockData = () => {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const twoHoursFromNow = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const fourHoursFromNow = new Date(now.getTime() + 4 * 60 * 60 * 1000);
+    const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+    closuresStorage = [
+        // Bidirectional closure example
+        {
+            id: "closure-001",
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [-87.6298, 41.8781], // Chicago downtown
+                    [-87.6280, 41.8770],
+                    [-87.6260, 41.8755]
+                ]
+            },
+            start_time: oneHourAgo.toISOString(),
+            end_time: fourHoursFromNow.toISOString(),
+            description: "Major construction - Both directions blocked on Michigan Avenue",
+            reason: "construction",
+            status: "active",
+            submitter: "CDOT Construction Division",
+            severity: "critical",
+            created_at: oneHourAgo.toISOString(),
+            updated_at: now.toISOString(),
+            openlr: "CwRbWyNG9RpsCQCaAL4=",
+            is_bidirectional: true
+        },
+        // Unidirectional closure example
+        {
+            id: "closure-002",
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [-87.6590, 41.9100],
+                    [-87.6580, 41.9090],
+                    [-87.6570, 41.9080],
+                    [-87.6560, 41.9070]
+                ]
+            },
+            start_time: now.toISOString(),
+            end_time: twoHoursFromNow.toISOString(),
+            description: "Northbound lane closure for utility work on Lincoln Avenue",
+            reason: "maintenance",
+            status: "active",
+            submitter: "ComEd Maintenance",
+            severity: "medium",
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
+            openlr: "CwRbWyNG9RpsCQCaAL5=",
+            is_bidirectional: false
+        },
+        // Point closure (no direction)
+        {
+            id: "closure-003",
+            geometry: {
+                type: "Point",
+                coordinates: [-87.6180, 41.8690] // South Loop
+            },
+            start_time: now.toISOString(),
+            end_time: oneDayFromNow.toISOString(),
+            description: "Intersection closure for water main repair",
+            reason: "emergency",
+            status: "active",
+            submitter: "Chicago Water Management",
+            severity: "high",
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
+            openlr: "CwRbWyNG9RpsCQCaAL6=",
+            is_bidirectional: undefined // Not applicable for points
+        },
+        // Another bidirectional example
+        {
+            id: "closure-004",
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [-87.6244, 41.8756],
+                    [-87.6200, 41.8742],
+                    [-87.6180, 41.8738]
+                ]
+            },
+            start_time: oneDayFromNow.toISOString(),
+            end_time: new Date(oneDayFromNow.getTime() + 8 * 60 * 60 * 1000).toISOString(),
+            description: "Street festival - Complete road closure both directions on State Street",
+            reason: "event",
+            status: "inactive",
+            submitter: "Chicago Special Events",
+            severity: "critical",
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
+            openlr: "CwRbWyNG9RpsCQCbBM6=",
+            is_bidirectional: true
+        },
+        // Unidirectional example with complex path
+        {
+            id: "closure-005",
+            geometry: {
+                type: "LineString",
+                coordinates: [
+                    [-87.6340, 41.8950], // Start point
+                    [-87.6320, 41.8945], // Northeast direction
+                    [-87.6300, 41.8940], // Continue northeast
+                    [-87.6280, 41.8935], // End point
+                    [-87.6260, 41.8930]  // Final segment
+                ]
+            },
+            start_time: twoHoursFromNow.toISOString(),
+            end_time: new Date(twoHoursFromNow.getTime() + 6 * 60 * 60 * 1000).toISOString(),
+            description: "Eastbound lane closure for street resurfacing on North Clark Street",
+            reason: "construction",
+            status: "inactive",
+            submitter: "Walsh Construction",
+            severity: "medium",
+            created_at: now.toISOString(),
+            updated_at: now.toISOString(),
+            openlr: "CwRbWyNG9RpsCQCcCN7=",
+            is_bidirectional: false
+        }
+    ];
+};
+
+// Initialize on load
+initializeMockData();
+
 export const mockClosuresApi = {
     // Get closures within a bounding box
-    getClosures: async (bbox?: BoundingBox): Promise<Closure[]> => {
-        await simulateApiDelay();
+    getClosures: async (bbox?: BoundingBox): Promise<any[]> => {
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 400));
 
         let filteredClosures = closuresStorage;
 
         if (bbox) {
-            filteredClosures = filterClosuresByBounds(closuresStorage, bbox);
+            filteredClosures = closuresStorage.filter(closure => {
+                if (closure.geometry.type === 'Point') {
+                    const [lng, lat] = closure.geometry.coordinates as number[];
+                    return lat >= bbox.south && lat <= bbox.north &&
+                        lng >= bbox.west && lng <= bbox.east;
+                } else if (closure.geometry.type === 'LineString') {
+                    // Check if any point in the LineString is within bounds
+                    const coordinates = closure.geometry.coordinates as number[][];
+                    return coordinates.some(([lng, lat]) =>
+                        lat >= bbox.south && lat <= bbox.north &&
+                        lng >= bbox.west && lng <= bbox.east
+                    );
+                }
+                return false;
+            });
         }
 
         // Update status based on current time
@@ -62,8 +200,8 @@ export const mockClosuresApi = {
     },
 
     // Get a specific closure by ID
-    getClosure: async (id: string): Promise<Closure> => {
-        await simulateApiDelay(300);
+    getClosure: async (id: string): Promise<any> => {
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         const closure = closuresStorage.find(c => c.id === id);
         if (!closure) {
@@ -77,11 +215,11 @@ export const mockClosuresApi = {
     },
 
     // Create a new closure
-    createClosure: async (data: CreateClosureData): Promise<Closure> => {
-        await simulateApiDelay(600);
+    createClosure: async (data: any): Promise<any> => {
+        await new Promise(resolve => setTimeout(resolve, 600));
 
         const now = getCurrentTimestamp();
-        const newClosure: Closure = {
+        const newClosure = {
             id: generateId(),
             geometry: data.geometry,
             start_time: data.start_time,
@@ -90,11 +228,11 @@ export const mockClosuresApi = {
             reason: data.reason,
             status: determineStatus(data.start_time, data.end_time),
             submitter: data.submitter,
-            severity: data.severity as 'low' | 'medium' | 'high' | 'critical',
+            severity: data.severity || 'medium',
             created_at: now,
             updated_at: now,
-            // Generate a mock OpenLR string
-            openlr: `CwRbWyNG9RpsCQC${Math.random().toString(36).substr(2, 4)}=`
+            openlr: `CwRbWyNG9RpsCQC${Math.random().toString(36).substr(2, 4)}=`,
+            is_bidirectional: data.is_bidirectional
         };
 
         closuresStorage.unshift(newClosure); // Add to beginning
@@ -102,8 +240,8 @@ export const mockClosuresApi = {
     },
 
     // Update a closure
-    updateClosure: async (id: string, data: Partial<CreateClosureData>): Promise<Closure> => {
-        await simulateApiDelay(500);
+    updateClosure: async (id: string, data: any): Promise<any> => {
+        await new Promise(resolve => setTimeout(resolve, 500));
 
         const closureIndex = closuresStorage.findIndex(c => c.id === id);
         if (closureIndex === -1) {
@@ -111,10 +249,9 @@ export const mockClosuresApi = {
         }
 
         const existingClosure = closuresStorage[closureIndex];
-        const updatedClosure: Closure = {
+        const updatedClosure = {
             ...existingClosure,
             ...data,
-            severity: data.severity as 'low' | 'medium' | 'high' | 'critical' | undefined,
             id: existingClosure.id, // Ensure ID doesn't change
             created_at: existingClosure.created_at, // Preserve creation time
             updated_at: getCurrentTimestamp(),
@@ -129,7 +266,7 @@ export const mockClosuresApi = {
 
     // Delete a closure
     deleteClosure: async (id: string): Promise<void> => {
-        await simulateApiDelay(400);
+        await new Promise(resolve => setTimeout(resolve, 400));
 
         const closureIndex = closuresStorage.findIndex(c => c.id === id);
         if (closureIndex === -1) {
@@ -141,7 +278,7 @@ export const mockClosuresApi = {
 
     // Get closure statistics
     getClosureStats: async (): Promise<ClosureStats> => {
-        await simulateApiDelay(400);
+        await new Promise(resolve => setTimeout(resolve, 400));
 
         const now = new Date();
         const currentClosures = closuresStorage;
@@ -174,6 +311,11 @@ export const mockClosuresApi = {
             return acc;
         }, {} as Record<string, number>);
 
+        // Calculate direction statistics
+        const lineStringClosures = currentClosures.filter(c => c.geometry.type === 'LineString');
+        const bidirectionalCount = lineStringClosures.filter(c => c.is_bidirectional === true).length;
+        const unidirectionalCount = lineStringClosures.filter(c => c.is_bidirectional === false).length;
+
         // Calculate average duration
         const durations = currentClosures.map(closure => {
             const start = new Date(closure.start_time);
@@ -201,14 +343,20 @@ export const mockClosuresApi = {
                 night: Math.floor(currentClosures.length * 0.1)
             },
             averageDuration: Math.round(averageDuration * 10) / 10,
-            totalDuration: Math.round(totalDuration * 10) / 10
+            totalDuration: Math.round(totalDuration * 10) / 10,
+            // Add direction statistics
+            byDirection: {
+                bidirectional: bidirectionalCount,
+                unidirectional: unidirectionalCount,
+                point: currentClosures.filter(c => c.geometry.type === 'Point').length
+            }
         };
     },
 
     // Reset data to initial state (useful for demo)
     resetData: async (): Promise<void> => {
-        await simulateApiDelay(200);
-        closuresStorage = [...mockClosures];
+        await new Promise(resolve => setTimeout(resolve, 200));
+        initializeMockData();
         nextId = 1000;
     }
 };
