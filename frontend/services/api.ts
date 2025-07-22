@@ -1,4 +1,3 @@
-// services/api.ts
 import axios from 'axios';
 import { mockClosuresApi } from './mockApi';
 
@@ -49,7 +48,7 @@ api.interceptors.response.use(
     }
 );
 
-// Updated types to match backend API
+// Updated types to match backend API with bidirectional support
 export interface Closure {
     id: number;
     geometry: {
@@ -69,6 +68,7 @@ export interface Closure {
     openlr_code?: string;
     is_valid: boolean;
     duration_hours: number;
+    is_bidirectional?: boolean; // New field for bidirectional closures
 }
 
 export interface CreateClosureData {
@@ -82,6 +82,7 @@ export interface CreateClosureData {
     closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
     source: string;
     confidence_level: number;
+    is_bidirectional?: boolean; // New field for bidirectional closures
 }
 
 export interface BoundingBox {
@@ -101,6 +102,11 @@ export interface ClosureStats {
     byTimeOfDay: Record<string, number>;
     averageDuration: number;
     totalDuration: number;
+    byDirection?: {
+        bidirectional: number;
+        unidirectional: number;
+        point: number;
+    };
 }
 
 export interface PaginatedResponse<T> {
@@ -110,6 +116,145 @@ export interface PaginatedResponse<T> {
     size: number;
     pages: number;
 }
+
+// Helper function to calculate bearing between two points (in degrees)
+export const calculateBearing = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    // Convert to radians
+    const lat1Rad = lat1 * Math.PI / 180;
+    const lat2Rad = lat2 * Math.PI / 180;
+    const deltaLng = (lng2 - lng1) * Math.PI / 180;
+
+    const y = Math.sin(deltaLng) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+        Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(deltaLng);
+
+    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+
+    // Normalize to 0-360 degrees
+    bearing = (bearing + 360) % 360;
+
+    return bearing;
+};
+
+export const calculateSimpleDirection = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const deltaLat = lat2 - lat1;  // Positive = North, Negative = South
+    const deltaLng = lng2 - lng1;  // Positive = East, Negative = West
+
+    // Calculate angle from coordinate differences
+    let angle = Math.atan2(deltaLng, deltaLat) * 180 / Math.PI;
+
+    // Convert to compass bearing (0° = North, 90° = East, 180° = South, 270° = West)
+    let bearing = (90 - angle) % 360;
+    if (bearing < 0) bearing += 360;
+
+    return bearing;
+};
+
+// Helper function to get direction label from bearing
+export const getDirectionFromBearing = (bearing: number): string => {
+    // Normalize bearing to 0-360
+    bearing = ((bearing % 360) + 360) % 360;
+
+    if (bearing >= 337.5 || bearing < 22.5) return 'N';
+    if (bearing >= 22.5 && bearing < 67.5) return 'NE';
+    if (bearing >= 67.5 && bearing < 112.5) return 'E';
+    if (bearing >= 112.5 && bearing < 157.5) return 'SE';
+    if (bearing >= 157.5 && bearing < 202.5) return 'S';
+    if (bearing >= 202.5 && bearing < 247.5) return 'SW';
+    if (bearing >= 247.5 && bearing < 292.5) return 'W';
+    if (bearing >= 292.5 && bearing < 337.5) return 'NW';
+    return 'N';
+};
+
+// Helper function to get arrow Unicode character for direction
+export const getDirectionArrow = (bearing: number): string => {
+    // Normalize bearing to 0-360
+    bearing = ((bearing % 360) + 360) % 360;
+
+    if (bearing >= 337.5 || bearing < 22.5) return '↑'; // North
+    if (bearing >= 22.5 && bearing < 67.5) return '↗'; // Northeast
+    if (bearing >= 67.5 && bearing < 112.5) return '→'; // East
+    if (bearing >= 112.5 && bearing < 157.5) return '↘'; // Southeast
+    if (bearing >= 157.5 && bearing < 202.5) return '↓'; // South
+    if (bearing >= 202.5 && bearing < 247.5) return '↙'; // Southwest
+    if (bearing >= 247.5 && bearing < 292.5) return '←'; // West
+    if (bearing >= 292.5 && bearing < 337.5) return '↖'; // Northwest
+    return '↑';
+};
+
+// Helper function to get direction description for a LineString
+export const getClosureDirection = (closure: Closure): string => {
+    if (closure.geometry.type === 'Point') {
+        return 'Point closure';
+    }
+
+    if (closure.is_bidirectional) {
+        return 'Bidirectional';
+    }
+
+    // Calculate overall direction for LineString
+    const coordinates = closure.geometry.coordinates;
+    if (coordinates.length >= 2) {
+        const [startLng, startLat] = coordinates[0];
+        const [endLng, endLat] = coordinates[coordinates.length - 1];
+        const bearing = calculateBearing(startLat, startLng, endLat, endLng);
+        const direction = getDirectionFromBearing(bearing);
+        return `${direction}bound`;
+    }
+
+    return 'Unidirectional';
+};
+
+export const debugDirections = () => {
+    console.log('=== Direction Debug Tests ===');
+
+    // Test horizontal movement (East - left to right)
+    const eastBearing = calculateSimpleDirection(41.8781, -87.6298, 41.8781, -87.6280);
+    console.log('East (left→right):', eastBearing, '→', getDirectionArrow(eastBearing));
+
+    // Test horizontal movement (West - right to left)
+    const westBearing = calculateSimpleDirection(41.8781, -87.6280, 41.8781, -87.6298);
+    console.log('West (right→left):', westBearing, '→', getDirectionArrow(westBearing));
+
+    // Test vertical movement (South - top to bottom)
+    const southBearing = calculateSimpleDirection(41.8781, -87.6298, 41.8760, -87.6298);
+    console.log('South (top→bottom):', southBearing, '→', getDirectionArrow(southBearing));
+
+    // Test vertical movement (North - bottom to top)
+    const northBearing = calculateSimpleDirection(41.8760, -87.6298, 41.8781, -87.6298);
+    console.log('North (bottom→top):', northBearing, '→', getDirectionArrow(northBearing));
+
+    console.log('=== End Debug Tests ===');
+};
+
+export const getDirectionArrowFromCoords = (lat1: number, lng1: number, lat2: number, lng2: number): string => {
+    const deltaLat = lat2 - lat1;  // Positive = North, Negative = South
+    const deltaLng = lng2 - lng1;  // Positive = East, Negative = West
+
+    // Determine primary direction based on larger delta
+    const absLat = Math.abs(deltaLat);
+    const absLng = Math.abs(deltaLng);
+
+    // If movement is primarily horizontal
+    if (absLng > absLat * 1.5) {
+        if (deltaLng > 0) return '→'; // East (left to right)
+        else return '←'; // West (right to left)
+    }
+    // If movement is primarily vertical
+    else if (absLat > absLng * 1.5) {
+        if (deltaLat > 0) return '↑'; // North (bottom to top)
+        else return '↓'; // South (top to bottom)
+    }
+    // Diagonal movement
+    else {
+        if (deltaLat > 0 && deltaLng > 0) return '↗'; // Northeast
+        if (deltaLat > 0 && deltaLng < 0) return '↖'; // Northwest
+        if (deltaLat < 0 && deltaLng > 0) return '↘'; // Southeast
+        if (deltaLat < 0 && deltaLng < 0) return '↙'; // Southwest
+    }
+
+    return '→'; // Default fallback
+};
 
 // Check if we're in the browser
 const isBrowser = typeof window !== 'undefined';
@@ -375,6 +520,12 @@ function calculateStatsFromClosures(closures: Closure[]): ClosureStats {
         return acc;
     }, {} as Record<string, number>);
 
+    // Calculate direction statistics
+    const lineStringClosures = closures.filter(c => c.geometry.type === 'LineString');
+    const bidirectionalCount = lineStringClosures.filter(c => c.is_bidirectional === true).length;
+    const unidirectionalCount = lineStringClosures.filter(c => c.is_bidirectional === false).length;
+    const pointCount = closures.filter(c => c.geometry.type === 'Point').length;
+
     const totalDuration = closures.reduce((sum, closure) => sum + closure.duration_hours, 0);
     const averageDuration = closures.length > 0 ? totalDuration / closures.length : 0;
 
@@ -392,7 +543,12 @@ function calculateStatsFromClosures(closures: Closure[]): ClosureStats {
             night: Math.floor(closures.length * 0.15)
         },
         averageDuration: Math.round(averageDuration * 10) / 10,
-        totalDuration: Math.round(totalDuration * 10) / 10
+        totalDuration: Math.round(totalDuration * 10) / 10,
+        byDirection: {
+            bidirectional: bidirectionalCount,
+            unidirectional: unidirectionalCount,
+            point: pointCount
+        }
     };
 }
 
@@ -564,7 +720,8 @@ function convertMockToBackendFormat(mockClosure: any): Closure {
         updated_at: mockClosure.updated_at,
         openlr_code: mockClosure.openlr,
         is_valid: true,
-        duration_hours: Math.round((new Date(mockClosure.end_time).getTime() - new Date(mockClosure.start_time).getTime()) / (1000 * 60 * 60))
+        duration_hours: Math.round((new Date(mockClosure.end_time).getTime() - new Date(mockClosure.start_time).getTime()) / (1000 * 60 * 60)),
+        is_bidirectional: mockClosure.is_bidirectional // Add bidirectional field
     };
 }
 
@@ -592,6 +749,7 @@ function convertBackendToMockFormat(backendData: any): any {
         reason: backendData.closure_type,
         submitter: backendData.source,
         severity: 'medium',
+        is_bidirectional: backendData.is_bidirectional // Add bidirectional field
     };
 }
 
@@ -609,7 +767,13 @@ function convertMockStatsToBackendFormat(mockStats: any): ClosureStats {
         },
         byTimeOfDay: mockStats.byTimeOfDay,
         averageDuration: mockStats.averageDuration,
-        totalDuration: mockStats.totalDuration
+        totalDuration: mockStats.totalDuration,
+        // Add direction statistics
+        byDirection: mockStats.byDirection || {
+            bidirectional: 0,
+            unidirectional: 0,
+            point: 0
+        }
     };
 }
 
