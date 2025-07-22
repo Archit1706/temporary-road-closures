@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useClosures } from '@/context/ClosuresContext';
-import { Closure, BoundingBox } from '@/services/api';
+import { Closure, BoundingBox, getDirectionArrowFromCoords, calculateSimpleDirection, debugDirections } from '@/services/api';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -87,6 +87,96 @@ function extractCoordinates(closure: Closure): { points: [number, number][], isV
     }
 }
 
+// Helper function to create direction arrow markers (FIXED VERSION)
+function createDirectionArrows(points: [number, number][], isBidirectional: boolean, color: string): L.Layer[] {
+    const arrows: L.Layer[] = [];
+
+    if (points.length < 2) return arrows;
+
+    // Debug the first segment to verify direction calculation
+    if (points.length >= 2) {
+        const [lat1, lng1] = points[0];
+        const [lat2, lng2] = points[1];
+        console.log(`Direction Debug: (${lat1.toFixed(4)}, ${lng1.toFixed(4)}) → (${lat2.toFixed(4)}, ${lng2.toFixed(4)})`);
+        const arrow = getDirectionArrowFromCoords(lat1, lng1, lat2, lng2);
+        console.log(`Arrow: ${arrow}`);
+    }
+
+    // Create arrows along the line segments
+    for (let i = 0; i < points.length - 1; i++) {
+        const [lat1, lng1] = points[i];
+        const [lat2, lng2] = points[i + 1];
+
+        // Use the improved direction calculation
+        const arrowSymbol = getDirectionArrowFromCoords(lat1, lng1, lat2, lng2);
+
+        // Calculate bearing for rotation (optional, but useful for fine-tuning)
+        const bearing = calculateSimpleDirection(lat1, lng1, lat2, lng2);
+
+        // Calculate midpoint of segment for arrow placement
+        const midLat = (lat1 + lat2) / 2;
+        const midLng = (lng1 + lng2) / 2;
+
+        // Create forward direction arrow
+        const forwardArrow = L.divIcon({
+            className: 'direction-arrow',
+            html: `
+                <div class="arrow-container">
+                    <div class="arrow-symbol" style="color: ${color}; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                        ${arrowSymbol}
+                    </div>
+                </div>
+            `,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+        });
+
+        const forwardMarker = L.marker([midLat, midLng], { icon: forwardArrow })
+            .bindTooltip(`Direction: ${arrowSymbol}`, {
+                permanent: false,
+                direction: 'top',
+                offset: [0, -10]
+            });
+
+        arrows.push(forwardMarker);
+
+        // Create backward direction arrow for bidirectional closures
+        if (isBidirectional) {
+            // Get reverse arrow
+            const reverseArrowSymbol = getDirectionArrowFromCoords(lat2, lng2, lat1, lng1);
+
+            const reverseArrow = L.divIcon({
+                className: 'direction-arrow bidirectional',
+                html: `
+                    <div class="arrow-container">
+                        <div class="arrow-symbol" style="color: ${color}; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">
+                            ${reverseArrowSymbol}
+                        </div>
+                    </div>
+                `,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+            });
+
+            // Offset the reverse arrow slightly to avoid overlap
+            const offsetDistance = 0.0002; // Small offset in degrees
+            const offsetLat = midLat + (lat2 - lat1) * offsetDistance;
+            const offsetLng = midLng + (lng2 - lng1) * offsetDistance;
+
+            const reverseMarker = L.marker([offsetLat, offsetLng], { icon: reverseArrow })
+                .bindTooltip(`Reverse Direction: ${reverseArrowSymbol}`, {
+                    permanent: false,
+                    direction: 'top',
+                    offset: [0, -10]
+                });
+
+            arrows.push(reverseMarker);
+        }
+    }
+
+    return arrows;
+}
+
 // Component to handle map events and render closures
 const MapEventHandler: React.FC<{
     onMapClick?: (latlng: L.LatLng) => void;
@@ -98,6 +188,13 @@ const MapEventHandler: React.FC<{
     const { closures, selectedClosure } = state;
     const closureLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
     const selectionLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
+
+    // Debug directions on component mount
+    useEffect(() => {
+        if (process.env.NODE_ENV === 'development') {
+            debugDirections();
+        }
+    }, []);
 
     // Handle map click events
     useMapEvents({
@@ -150,6 +247,10 @@ const MapEventHandler: React.FC<{
                 });
 
                 layerGroup.addLayer(polyline);
+
+                // Add direction preview arrows for selection
+                const previewArrows = createDirectionArrows(latlngs, false, '#3b82f6');
+                previewArrows.forEach(arrow => layerGroup.addLayer(arrow));
             }
         }
 
@@ -174,6 +275,7 @@ const MapEventHandler: React.FC<{
             }
 
             let layer: L.Layer | null = null;
+            const closureColor = getClosureColor(closure);
 
             if (closure.geometry.type === 'Point') {
                 const [lat, lng] = points[0];
@@ -193,11 +295,17 @@ const MapEventHandler: React.FC<{
                     .bindPopup(createClosurePopup(closure));
 
             } else if (closure.geometry.type === 'LineString') {
+                // Create the main polyline
                 layer = L.polyline(points, {
-                    color: getClosureColor(closure),
+                    color: closureColor,
                     weight: 6,
                     opacity: 0.8,
                 }).bindPopup(createClosurePopup(closure));
+
+                // Add direction arrows
+                const isBidirectional = closure.is_bidirectional || false;
+                const arrows = createDirectionArrows(points, isBidirectional, closureColor);
+                arrows.forEach(arrow => layerGroup.addLayer(arrow));
             }
 
             if (layer) {
@@ -277,6 +385,12 @@ function createClosurePopup(closure: Closure): string {
         return `${Math.round(hours / 24)} days`;
     };
 
+    const getDirectionText = (closure: Closure) => {
+        if (closure.geometry.type === 'Point') return '';
+        if (closure.is_bidirectional) return '<div><strong>Direction:</strong> Bidirectional ↔</div>';
+        return '<div><strong>Direction:</strong> Unidirectional →</div>';
+    };
+
     return `
         <div class="closure-popup">
             <h3 class="font-semibold text-gray-900 mb-2">${closure.description}</h3>
@@ -288,6 +402,7 @@ function createClosurePopup(closure: Closure): string {
                 <div><strong>Source:</strong> ${closure.source}</div>
                 <div><strong>Duration:</strong> ${getDurationText(closure.duration_hours)}</div>
                 <div><strong>Confidence:</strong> ${closure.confidence_level}/10</div>
+                ${getDirectionText(closure)}
                 <div class="text-xs text-gray-500 mt-2">
                     <div><strong>Start:</strong> ${formatDate(closure.start_time)}</div>
                     <div><strong>End:</strong> ${formatDate(closure.end_time)}</div>
@@ -375,6 +490,45 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 .leaflet-container.leaflet-dragging {
                     cursor: ${isSelecting ? 'crosshair' : 'grabbing'};
                 }
+
+                .direction-arrow {
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+
+                .arrow-container {
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transform-origin: center;
+                }
+
+                .arrow-symbol {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: rgba(255, 255, 255, 0.95);
+                    border-radius: 50%;
+                    width: 22px;
+                    height: 22px;
+                    border: 1px solid rgba(0, 0, 0, 0.3);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+                }
+
+                /* Bidirectional indicator styles */
+                .bidirectional .arrow-symbol {
+                    background: rgba(255, 215, 0, 0.95);
+                    border-color: rgba(218, 165, 32, 0.6);
+                }
+
+                /* Hover effect for direction arrows */
+                .direction-arrow:hover .arrow-symbol {
+                    transform: scale(1.1);
+                    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+                }
             `}</style>
 
             <MapContainer
@@ -404,7 +558,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         </div>
                         {selectedPoints.length >= 2 && (
                             <div className="text-xs text-green-600 font-medium">
-                                ✓ Ready for LineString
+                                ✓ Ready for directional LineString
                             </div>
                         )}
                         <div className="flex space-x-2">
@@ -422,6 +576,42 @@ const MapComponent: React.FC<MapComponentProps> = ({
                             </button>
                         </div>
                     </div>
+
+                    {/* Show direction preview if points are selected */}
+                    {selectedPoints.length >= 2 && (
+                        <div className="mt-2 text-xs text-gray-500 text-center">
+                            Direction: {getDirectionArrowFromCoords(
+                                selectedPoints[0].lat,
+                                selectedPoints[0].lng,
+                                selectedPoints[selectedPoints.length - 1].lat,
+                                selectedPoints[selectedPoints.length - 1].lng
+                            )} {getDirectionArrowFromCoords(
+                                selectedPoints[0].lat,
+                                selectedPoints[0].lng,
+                                selectedPoints[selectedPoints.length - 1].lat,
+                                selectedPoints[selectedPoints.length - 1].lng
+                            ) === '→' ? 'Eastbound' :
+                                getDirectionArrowFromCoords(
+                                    selectedPoints[0].lat,
+                                    selectedPoints[0].lng,
+                                    selectedPoints[selectedPoints.length - 1].lat,
+                                    selectedPoints[selectedPoints.length - 1].lng
+                                ) === '←' ? 'Westbound' :
+                                    getDirectionArrowFromCoords(
+                                        selectedPoints[0].lat,
+                                        selectedPoints[0].lng,
+                                        selectedPoints[selectedPoints.length - 1].lat,
+                                        selectedPoints[selectedPoints.length - 1].lng
+                                    ) === '↑' ? 'Northbound' :
+                                        getDirectionArrowFromCoords(
+                                            selectedPoints[0].lat,
+                                            selectedPoints[0].lng,
+                                            selectedPoints[selectedPoints.length - 1].lat,
+                                            selectedPoints[selectedPoints.length - 1].lng
+                                        ) === '↓' ? 'Southbound' : 'Diagonal'
+                            }
+                        </div>
+                    )}
                 </div>
             )}
         </>
