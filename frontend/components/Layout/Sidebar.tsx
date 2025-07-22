@@ -1,6 +1,6 @@
 "use client"
 import React from 'react';
-import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation } from 'lucide-react';
 import { format, isAfter, isBefore } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
@@ -50,6 +50,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         return `${Math.round(hours / 24)}d`;
     };
 
+    const getDirectionIcon = (closure: Closure) => {
+        if (closure.geometry.type === 'Point') return null;
+        if (closure.is_bidirectional) return '↔️';
+        return '→';
+    };
+
+    const getDirectionLabel = (closure: Closure) => {
+        if (closure.geometry.type === 'Point') return 'Point closure';
+        if (closure.is_bidirectional) return 'Bidirectional';
+        return 'Unidirectional';
+    };
+
     const handleClosureClick = (closure: Closure) => {
         selectClosure(closure);
         if (window.innerWidth < 768) {
@@ -60,6 +72,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const activeClosures = closures.filter(c => getClosureStatus(c) === 'active').length;
     const upcomingClosures = closures.filter(c => getClosureStatus(c) === 'upcoming').length;
     const expiredClosures = closures.filter(c => getClosureStatus(c) === 'expired').length;
+
+    // Calculate direction statistics
+    const lineStringClosures = closures.filter(c => c.geometry.type === 'LineString');
+    const bidirectionalClosures = lineStringClosures.filter(c => c.is_bidirectional === true).length;
+    const unidirectionalClosures = lineStringClosures.filter(c => c.is_bidirectional === false).length;
 
     return (
         <>
@@ -102,6 +119,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         </div>
                     </div>
 
+                    {/* Direction Statistics */}
+                    {lineStringClosures.length > 0 && (
+                        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center space-x-1">
+                                    <Navigation className="w-3 h-3 text-blue-600" />
+                                    <span className="text-blue-800 font-medium">Direction Info</span>
+                                </div>
+                                <div className="flex space-x-2 text-blue-700">
+                                    <span>↔ {bidirectionalClosures}</span>
+                                    <span>→ {unidirectionalClosures}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Authentication Status */}
                     {!isAuthenticated && (
                         <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
@@ -133,6 +166,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                             {closures.map((closure) => {
                                 const status = getClosureStatus(closure);
                                 const isSelected = selectedClosure?.id === closure.id;
+                                const directionIcon = getDirectionIcon(closure);
+                                const directionLabel = getDirectionLabel(closure);
 
                                 return (
                                     <div
@@ -172,12 +207,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                             {closure.description}
                                         </h3>
 
-                                        {/* Closure Type */}
-                                        <div className="flex items-center space-x-1 mb-2">
-                                            <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                            <span className="text-sm text-gray-600 capitalize">
-                                                {closure.closure_type.replace('_', ' ')}
-                                            </span>
+                                        {/* Closure Type and Direction */}
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center space-x-1">
+                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                <span className="text-sm text-gray-600 capitalize">
+                                                    {closure.closure_type.replace('_', ' ')}
+                                                </span>
+                                            </div>
+                                            {directionIcon && (
+                                                <div className="flex items-center space-x-1">
+                                                    <span className="text-sm" title={directionLabel}>
+                                                        {directionIcon}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {closure.is_bidirectional ? 'Both ways' : 'One way'}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Timing */}
@@ -200,6 +247,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                                     <MapPin className="w-3 h-3" />
                                                     <span className="font-mono text-xs">
                                                         OpenLR: {closure.openlr_code.substring(0, 8)}...
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* Direction information for LineString closures */}
+                                            {closure.geometry.type === 'LineString' && (
+                                                <div className="flex items-center space-x-1">
+                                                    <Navigation className="w-3 h-3" />
+                                                    <span className="text-xs">
+                                                        {closure.is_bidirectional
+                                                            ? 'Bidirectional closure'
+                                                            : 'Unidirectional closure'}
                                                     </span>
                                                 </div>
                                             )}
@@ -228,6 +287,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                             <span>⚠ Using demo data</span>
                         )}
                     </div>
+                    {lineStringClosures.length > 0 && (
+                        <div className="text-xs text-gray-400 text-center mt-1">
+                            ↔ {bidirectionalClosures} bidirectional • → {unidirectionalClosures} unidirectional
+                        </div>
+                    )}
                 </div>
             </div>
         </>
