@@ -1,3 +1,4 @@
+// components/Map/MapComponent.tsx
 "use client"
 import React, { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
@@ -5,6 +6,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure, BoundingBox, getDirectionArrowFromCoords, calculateSimpleDirection, debugDirections } from '@/services/api';
+import { valhallaAPI, RoutePoint, RoutingState } from '@/services/valhallaApi';
+import toast from 'react-hot-toast';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -20,6 +23,7 @@ interface MapComponentProps {
     isSelecting?: boolean;
     onClearPoints?: () => void;
     onFinishSelection?: () => void;
+    onRouteCalculated?: (coordinates: [number, number][], stats: any) => void;
 }
 
 // Helper function to safely extract coordinates
@@ -87,20 +91,11 @@ function extractCoordinates(closure: Closure): { points: [number, number][], isV
     }
 }
 
-// Helper function to create direction arrow markers (FIXED VERSION)
+// Helper function to create direction arrow markers
 function createDirectionArrows(points: [number, number][], isBidirectional: boolean, color: string): L.Layer[] {
     const arrows: L.Layer[] = [];
 
     if (points.length < 2) return arrows;
-
-    // Debug the first segment to verify direction calculation
-    if (points.length >= 2) {
-        const [lat1, lng1] = points[0];
-        const [lat2, lng2] = points[1];
-        console.log(`Direction Debug: (${lat1.toFixed(4)}, ${lng1.toFixed(4)}) → (${lat2.toFixed(4)}, ${lng2.toFixed(4)})`);
-        const arrow = getDirectionArrowFromCoords(lat1, lng1, lat2, lng2);
-        console.log(`Arrow: ${arrow}`);
-    }
 
     // Create arrows along the line segments
     for (let i = 0; i < points.length - 1; i++) {
@@ -109,9 +104,6 @@ function createDirectionArrows(points: [number, number][], isBidirectional: bool
 
         // Use the improved direction calculation
         const arrowSymbol = getDirectionArrowFromCoords(lat1, lng1, lat2, lng2);
-
-        // Calculate bearing for rotation (optional, but useful for fine-tuning)
-        const bearing = calculateSimpleDirection(lat1, lng1, lat2, lng2);
 
         // Calculate midpoint of segment for arrow placement
         const midLat = (lat1 + lat2) / 2;
@@ -159,7 +151,7 @@ function createDirectionArrows(points: [number, number][], isBidirectional: bool
             });
 
             // Offset the reverse arrow slightly to avoid overlap
-            const offsetDistance = 0.0002; // Small offset in degrees
+            const offsetDistance = 0.0002;
             const offsetLat = midLat + (lat2 - lat1) * offsetDistance;
             const offsetLng = midLng + (lng2 - lng1) * offsetDistance;
 
@@ -182,12 +174,20 @@ const MapEventHandler: React.FC<{
     onMapClick?: (latlng: L.LatLng) => void;
     isSelecting?: boolean;
     selectedPoints?: L.LatLng[];
-}> = ({ onMapClick, isSelecting, selectedPoints = [] }) => {
+    onRouteCalculated?: (coordinates: [number, number][], stats: any) => void;
+}> = ({ onMapClick, isSelecting, selectedPoints = [], onRouteCalculated }) => {
     const map = useMap();
     const { state, fetchClosures, selectClosure } = useClosures();
     const { closures, selectedClosure } = state;
     const closureLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
     const selectionLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
+    const routeLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
+
+    const [routingState, setRoutingState] = useState<RoutingState>({
+        isRouting: false,
+        hasRoute: false,
+        routeCoordinates: []
+    });
 
     // Debug directions on component mount
     useEffect(() => {
@@ -195,6 +195,103 @@ const MapEventHandler: React.FC<{
             debugDirections();
         }
     }, []);
+
+    // Handle automatic routing when 2+ points are selected
+    useEffect(() => {
+        const calculateRoute = async () => {
+            if (selectedPoints.length >= 2 && !routingState.isRouting) {
+                setRoutingState(prev => ({ ...prev, isRouting: true, error: undefined }));
+
+                try {
+                    // Convert L.LatLng to route points
+                    const routePoints = selectedPoints.map(point => ({
+                        lat: point.lat,
+                        lng: point.lng
+                    }));
+
+                    console.log('🗺️ Calculating route for points:', routePoints);
+
+                    // Get route from Valhalla
+                    const routeCoordinates = await valhallaAPI.getRouteCoordinates(
+                        routePoints.map(p => ({ lat: p.lat, lon: p.lng, type: 'break' as const })),
+                        'auto' // Default to auto routing
+                    );
+
+                    const routeStats = {
+                        distance_km: calculateRouteDistance(routeCoordinates),
+                        points_count: routeCoordinates.length,
+                        direct_distance: calculateDirectDistance(selectedPoints[0], selectedPoints[selectedPoints.length - 1])
+                    };
+
+                    setRoutingState({
+                        isRouting: false,
+                        hasRoute: true,
+                        routeCoordinates,
+                        error: undefined
+                    });
+
+                    // Notify parent component
+                    if (onRouteCalculated) {
+                        onRouteCalculated(routeCoordinates, routeStats);
+                    }
+
+                    // toast.success(`Route calculated: ${routeStats.distance_km.toFixed(2)} km with ${routeCoordinates.length} points`);
+
+                } catch (error) {
+                    console.error('❌ Routing failed:', error);
+                    const errorMessage = error instanceof Error ? error.message : 'Failed to calculate route';
+
+                    setRoutingState({
+                        isRouting: false,
+                        hasRoute: false,
+                        routeCoordinates: [],
+                        error: errorMessage
+                    });
+
+                    toast.error(`Routing failed: ${errorMessage}`);
+                }
+            } else if (selectedPoints.length < 2) {
+                // Clear route when less than 2 points
+                setRoutingState({
+                    isRouting: false,
+                    hasRoute: false,
+                    routeCoordinates: [],
+                    error: undefined
+                });
+            }
+        };
+
+        const debounceTimer = setTimeout(calculateRoute, 500); // Debounce routing calls
+        return () => clearTimeout(debounceTimer);
+    }, [selectedPoints, onRouteCalculated]);
+
+    // Helper function to calculate route distance
+    const calculateRouteDistance = (coordinates: [number, number][]): number => {
+        let distance = 0;
+        for (let i = 0; i < coordinates.length - 1; i++) {
+            const [lat1, lng1] = coordinates[i];
+            const [lat2, lng2] = coordinates[i + 1];
+            distance += calculateHaversineDistance(lat1, lng1, lat2, lng2);
+        }
+        return distance;
+    };
+
+    // Helper function to calculate direct distance between two points
+    const calculateDirectDistance = (point1: L.LatLng, point2: L.LatLng): number => {
+        return calculateHaversineDistance(point1.lat, point1.lng, point2.lat, point2.lng);
+    };
+
+    // Haversine distance formula
+    const calculateHaversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
 
     // Handle map click events
     useMapEvents({
@@ -216,6 +313,46 @@ const MapEventHandler: React.FC<{
         },
     });
 
+    // Update route visualization
+    useEffect(() => {
+        const routeLayerGroup = routeLayersRef.current;
+        routeLayerGroup.clearLayers();
+
+        if (routingState.hasRoute && routingState.routeCoordinates.length > 1) {
+            // Convert route coordinates to Leaflet format [lat, lng]
+            const latlngs = routingState.routeCoordinates.map(([lat, lng]) => [lat, lng] as [number, number]);
+
+            // Create route polyline
+            const routePolyline = L.polyline(latlngs, {
+                color: '#2563eb', // Blue color for route
+                weight: 5,
+                opacity: 0.8,
+                dashArray: '10, 5',
+            }).bindTooltip(`Routed path: ${routingState.routeCoordinates.length} points`, {
+                permanent: false,
+                direction: 'top'
+            });
+
+            routeLayerGroup.addLayer(routePolyline);
+
+            // Add route direction arrows
+            const routeArrows = createDirectionArrows(latlngs, false, '#2563eb');
+            routeArrows.forEach(arrow => routeLayerGroup.addLayer(arrow));
+
+            // Fit map to route bounds
+            if (latlngs.length > 1) {
+                const routeBounds = L.latLngBounds(latlngs);
+                map.fitBounds(routeBounds, { padding: [20, 20] });
+            }
+        }
+
+        routeLayerGroup.addTo(map);
+
+        return () => {
+            routeLayerGroup.clearLayers();
+        };
+    }, [routingState, map]);
+
     // Update selection visualization
     useEffect(() => {
         const layerGroup = selectionLayersRef.current;
@@ -224,33 +361,52 @@ const MapEventHandler: React.FC<{
         if (selectedPoints.length > 0) {
             // Add markers for each selected point
             selectedPoints.forEach((point, index) => {
-                const marker = L.circleMarker([point.lat, point.lng], {
-                    radius: 8,
-                    fillColor: '#3b82f6',
-                    color: '#ffffff',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.8,
-                }).bindTooltip(`Point ${index + 1}`, { permanent: false });
+                const isStart = index === 0;
+                const isEnd = index === selectedPoints.length - 1;
+
+                let iconHtml = '';
+                let className = 'selection-marker';
+
+                if (isStart) {
+                    iconHtml = '<div class="marker-content start">🚩</div>';
+                    className += ' start-point';
+                } else if (isEnd && selectedPoints.length > 1) {
+                    iconHtml = '<div class="marker-content end">🏁</div>';
+                    className += ' end-point';
+                } else {
+                    iconHtml = `<div class="marker-content waypoint">${index}</div>`;
+                    className += ' waypoint';
+                }
+
+                const customIcon = L.divIcon({
+                    className: className,
+                    html: iconHtml,
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 15],
+                });
+
+                const marker = L.marker([point.lat, point.lng], { icon: customIcon })
+                    .bindTooltip(
+                        isStart ? 'Start Point' :
+                            isEnd ? 'End Point' :
+                                `Waypoint ${index}`,
+                        { permanent: false }
+                    );
 
                 layerGroup.addLayer(marker);
             });
 
-            // Add connecting line if more than one point
-            if (selectedPoints.length > 1) {
+            // Add direct connection line (before routing)
+            if (selectedPoints.length > 1 && !routingState.hasRoute && !routingState.isRouting) {
                 const latlngs = selectedPoints.map(point => [point.lat, point.lng] as [number, number]);
-                const polyline = L.polyline(latlngs, {
-                    color: '#3b82f6',
-                    weight: 4,
-                    opacity: 0.7,
-                    dashArray: '10, 5',
+                const directLine = L.polyline(latlngs, {
+                    color: '#dc2626', // Red for direct line
+                    weight: 3,
+                    opacity: 0.6,
+                    dashArray: '5, 5',
                 });
 
-                layerGroup.addLayer(polyline);
-
-                // Add direction preview arrows for selection
-                const previewArrows = createDirectionArrows(latlngs, false, '#3b82f6');
-                previewArrows.forEach(arrow => layerGroup.addLayer(arrow));
+                layerGroup.addLayer(directLine);
             }
         }
 
@@ -259,7 +415,7 @@ const MapEventHandler: React.FC<{
         return () => {
             layerGroup.clearLayers();
         };
-    }, [selectedPoints, map]);
+    }, [selectedPoints, routingState.hasRoute, routingState.isRouting, map]);
 
     // Update closures on map
     useEffect(() => {
@@ -357,7 +513,37 @@ const MapEventHandler: React.FC<{
         }
     }, [selectedClosure, map]);
 
-    return null;
+    return (
+        <>
+            {/* Routing Status Indicator */}
+            {routingState.isRouting && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                    <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span className="text-sm font-medium">Calculating route...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Route Error Indicator */}
+            {routingState.error && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm">⚠️ {routingState.error}</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Route Success Indicator */}
+            {routingState.hasRoute && selectedPoints.length >= 2 && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm">✅ Route calculated ({routingState.routeCoordinates.length} points)</span>
+                    </div>
+                </div>
+            )}
+        </>
+    );
 };
 
 // Helper functions
@@ -422,7 +608,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
     selectedPoints = [],
     isSelecting = false,
     onClearPoints,
-    onFinishSelection
+    onFinishSelection,
+    onRouteCalculated
 }) => {
     const { fetchClosures } = useClosures();
 
@@ -518,16 +705,50 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
                 }
 
-                /* Bidirectional indicator styles */
                 .bidirectional .arrow-symbol {
                     background: rgba(255, 215, 0, 0.95);
                     border-color: rgba(218, 165, 32, 0.6);
                 }
 
-                /* Hover effect for direction arrows */
                 .direction-arrow:hover .arrow-symbol {
                     transform: scale(1.1);
                     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+                }
+
+                /* Selection marker styles */
+                .selection-marker {
+                    background: transparent !important;
+                    border: none !important;
+                    box-shadow: none !important;
+                }
+
+                .marker-content {
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    font-size: 16px;
+                    font-weight: bold;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                    border: 2px solid white;
+                }
+
+                .marker-content.start {
+                    background-color: #22c55e;
+                    color: white;
+                }
+
+                .marker-content.end {
+                    background-color: #dc2626;
+                    color: white;
+                }
+
+                .marker-content.waypoint {
+                    background-color: #3b82f6;
+                    color: white;
+                    font-size: 12px;
                 }
             `}</style>
 
@@ -546,6 +767,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     onMapClick={onMapClick}
                     isSelecting={isSelecting}
                     selectedPoints={selectedPoints}
+                    onRouteCalculated={onRouteCalculated}
                 />
             </MapContainer>
 
@@ -558,7 +780,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                         </div>
                         {selectedPoints.length >= 2 && (
                             <div className="text-xs text-green-600 font-medium">
-                                ✓ Ready for directional LineString
+                                ✅ Route will be calculated automatically
                             </div>
                         )}
                         <div className="flex space-x-2">
@@ -576,42 +798,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
                             </button>
                         </div>
                     </div>
-
-                    {/* Show direction preview if points are selected */}
-                    {selectedPoints.length >= 2 && (
-                        <div className="mt-2 text-xs text-gray-500 text-center">
-                            Direction: {getDirectionArrowFromCoords(
-                                selectedPoints[0].lat,
-                                selectedPoints[0].lng,
-                                selectedPoints[selectedPoints.length - 1].lat,
-                                selectedPoints[selectedPoints.length - 1].lng
-                            )} {getDirectionArrowFromCoords(
-                                selectedPoints[0].lat,
-                                selectedPoints[0].lng,
-                                selectedPoints[selectedPoints.length - 1].lat,
-                                selectedPoints[selectedPoints.length - 1].lng
-                            ) === '→' ? 'Eastbound' :
-                                getDirectionArrowFromCoords(
-                                    selectedPoints[0].lat,
-                                    selectedPoints[0].lng,
-                                    selectedPoints[selectedPoints.length - 1].lat,
-                                    selectedPoints[selectedPoints.length - 1].lng
-                                ) === '←' ? 'Westbound' :
-                                    getDirectionArrowFromCoords(
-                                        selectedPoints[0].lat,
-                                        selectedPoints[0].lng,
-                                        selectedPoints[selectedPoints.length - 1].lat,
-                                        selectedPoints[selectedPoints.length - 1].lng
-                                    ) === '↑' ? 'Northbound' :
-                                        getDirectionArrowFromCoords(
-                                            selectedPoints[0].lat,
-                                            selectedPoints[0].lng,
-                                            selectedPoints[selectedPoints.length - 1].lat,
-                                            selectedPoints[selectedPoints.length - 1].lng
-                                        ) === '↓' ? 'Southbound' : 'Diagonal'
-                            }
-                        </div>
-                    )}
                 </div>
             )}
         </>
