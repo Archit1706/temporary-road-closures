@@ -232,6 +232,10 @@ const Features: React.FC = () => {
                             <span>Mentor: Simon Poole</span>
                         </div>
                         <div className="flex items-center space-x-2">
+                            <Users className="w-5 h-5" />
+                            <span>Mentor: Ian Wagner</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
                             <Code2 className="w-5 h-5" />
                             <span>Student: Archit Rathod</span>
                         </div>
