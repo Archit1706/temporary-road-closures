@@ -1,6 +1,7 @@
+// components/Forms/ClosureForm.tsx
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation, Route } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { CreateClosureData, authApi } from '@/services/api';
 import L from 'leaflet';
@@ -21,7 +22,15 @@ interface FormData {
     end_time: string;
     geometry_type: 'Point' | 'LineString';
     confidence_level: number;
-    is_bidirectional: boolean; // New field for bidirectional closures
+    is_bidirectional: boolean;
+}
+
+interface RouteInfo {
+    coordinates: [number, number][];
+    distance_km: number;
+    points_count: number;
+    direct_distance: number;
+    route_efficiency: number; // ratio of direct distance to route distance
 }
 
 const CLOSURE_TYPES = [
@@ -54,6 +63,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     const { loading } = state;
     const [currentStep, setCurrentStep] = useState(1);
     const [isMinimized, setIsMinimized] = useState(false);
+    const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
     const totalSteps = 3;
 
     const {
@@ -70,7 +80,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             start_time: new Date().toISOString().slice(0, 16),
             end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16),
             confidence_level: 7,
-            is_bidirectional: false, // Default to unidirectional
+            is_bidirectional: false,
         },
     });
 
@@ -85,8 +95,42 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             reset();
             setCurrentStep(1);
             setIsMinimized(false);
+            setRouteInfo(null);
         }
     }, [isOpen, reset]);
+
+    // Handle route calculation callback from MapComponent
+    const handleRouteCalculated = (coordinates: [number, number][], stats: any) => {
+        console.log('📍 Route calculated in form:', {
+            pointsCount: coordinates.length,
+            distance: stats.distance_km,
+            directDistance: stats.direct_distance
+        });
+
+        const routeEfficiency = stats.direct_distance > 0 ? stats.direct_distance / stats.distance_km : 1;
+
+        setRouteInfo({
+            coordinates,
+            distance_km: stats.distance_km,
+            points_count: coordinates.length,
+            direct_distance: stats.direct_distance,
+            route_efficiency: routeEfficiency
+        });
+    };
+
+    // Add event listener for route calculation
+    useEffect(() => {
+        const handleGlobalRouteCalculated = (event: CustomEvent) => {
+            handleRouteCalculated(event.detail.coordinates, event.detail.stats);
+        };
+
+        // Listen for route calculation events
+        window.addEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
+
+        return () => {
+            window.removeEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
+        };
+    }, []);
 
     const nextStep = async () => {
         const fieldsToValidate = currentStep === 1
@@ -114,17 +158,27 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             return;
         }
 
-        if (!selectedPoints || selectedPoints.length === 0) {
+        // Use routed coordinates if available, otherwise fall back to selected points
+        let finalCoordinates: number[][];
+
+        if (routeInfo && routeInfo.coordinates.length >= 2) {
+            // Use Valhalla routed coordinates (already in [lat, lng] format)
+            // Convert to GeoJSON format [lng, lat]
+            finalCoordinates = routeInfo.coordinates.map(([lat, lng]) => [lng, lat]);
+            console.log('✅ Using Valhalla routed coordinates:', finalCoordinates.length, 'points');
+        } else if (selectedPoints && selectedPoints.length > 0) {
+            // Fall back to direct point-to-point coordinates
+            finalCoordinates = selectedPoints.map(point => [point.lng, point.lat]);
+            console.log('⚠️ Using direct coordinates (no route):', finalCoordinates.length, 'points');
+        } else {
             alert('Please select at least one point on the map');
             return;
         }
 
-        if (data.geometry_type === 'LineString' && selectedPoints.length < 2) {
-            alert('LineString requires at least 2 points. Please select more points on the map.');
+        if (data.geometry_type === 'LineString' && finalCoordinates.length < 2) {
+            alert('LineString requires at least 2 points. Please select more points on the map or wait for route calculation.');
             return;
         }
-
-        const coordinates = selectedPoints.map(point => [point.lng, point.lat]);
 
         // Convert datetime-local values to UTC ISO strings with timezone
         const startTime = new Date(data.start_time).toISOString();
@@ -141,16 +195,18 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             geometry: {
                 type: data.geometry_type,
                 coordinates: data.geometry_type === 'Point'
-                    ? [coordinates[0]]
-                    : coordinates as number[][],
+                    ? [finalCoordinates[0]]
+                    : finalCoordinates,
             },
         };
 
         try {
             console.log('🚀 Submitting closure with auth token:', !!authApi.getToken());
+            console.log('🗺️ Using coordinates from:', routeInfo ? 'Valhalla routing' : 'Direct selection');
             await createClosure(closureData);
             reset();
             setCurrentStep(1);
+            setRouteInfo(null);
             onClose();
         } catch (error) {
             console.error('Error creating closure:', error);
@@ -277,14 +333,14 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                                 <div className="flex items-start space-x-2">
-                                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    <Route className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                     <div className="text-sm text-blue-700">
-                                        <p className="font-medium mb-1">How to select points:</p>
+                                        <p className="font-medium mb-1">Smart Route Calculation:</p>
                                         <ol className="list-decimal list-inside text-xs space-y-0.5">
                                             <li>Click "Start Selecting" below</li>
                                             <li>Click on the map to add points</li>
-                                            <li>Need at least 2 points for LineString</li>
-                                            <li>Points define direction (first → last)</li>
+                                            <li>Route will be calculated automatically using Valhalla</li>
+                                            <li>The system will find the best road path between points</li>
                                             <li>Click "Done" when finished</li>
                                         </ol>
                                     </div>
@@ -307,12 +363,32 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 {isSelectingPoints ? (
                                     'Selecting points... click on the map'
                                 ) : selectedPoints.length > 0 ? (
-                                    `✓ Selected ${selectedPoints.length} points`
+                                    `✓ Selected ${selectedPoints.length} points${routeInfo ? ` → ${routeInfo.points_count} routed points` : ''}`
                                 ) : (
                                     'Start Selecting Points'
                                 )}
                             </button>
 
+                            {/* Route Information */}
+                            {routeInfo && (
+                                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                    <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center">
+                                        <Route className="w-4 h-4 mr-1" />
+                                        Route Calculated
+                                    </h4>
+                                    <div className="grid grid-cols-2 gap-2 text-xs text-green-700">
+                                        <div>Distance: {routeInfo.distance_km.toFixed(2)} km</div>
+                                        <div>Points: {routeInfo.points_count}</div>
+                                        <div>Direct: {routeInfo.direct_distance.toFixed(2)} km</div>
+                                        <div>Efficiency: {(routeInfo.route_efficiency * 100).toFixed(0)}%</div>
+                                    </div>
+                                    <div className="text-xs text-green-600 mt-1">
+                                        ✅ Using Valhalla-calculated road path
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Selected Points Info */}
                             {selectedPoints.length > 0 && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
                                     <h4 className="text-xs font-medium text-gray-700 mb-1">Selected Points:</h4>
@@ -358,9 +434,14 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             <div className="text-xs text-gray-600 mt-1">
                                                 {watchedIsBidirectional
                                                     ? '↔ Affects traffic in both directions'
-                                                    : '→ Affects traffic in one direction only (based on point order)'
+                                                    : '→ Affects traffic in one direction only (based on route direction)'
                                                 }
                                             </div>
+                                            {routeInfo && (
+                                                <div className="text-xs text-blue-600 mt-1">
+                                                    Route follows actual road geometry
+                                                </div>
+                                            )}
                                         </div>
                                     </label>
                                 </div>
@@ -450,8 +531,17 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                     <span className="font-medium text-gray-700">Points: </span>
                                     <span className="text-gray-900">
                                         {selectedPoints.length} selected
+                                        {routeInfo && ` → ${routeInfo.points_count} routed`}
                                     </span>
                                 </div>
+                                {routeInfo && (
+                                    <div>
+                                        <span className="font-medium text-gray-700">Route: </span>
+                                        <span className="text-gray-900">
+                                            {routeInfo.distance_km.toFixed(2)} km
+                                        </span>
+                                    </div>
+                                )}
                                 {selectedPoints.length >= 2 && (
                                     <div>
                                         <span className="font-medium text-gray-700">Direction: </span>
@@ -471,19 +561,38 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             </div>
                         </div>
 
+                        {/* Valhalla Route Information */}
+                        {routeInfo && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div className="flex items-start space-x-2">
+                                    <Route className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <div className="text-xs text-green-700">
+                                        <p className="font-medium mb-1">Valhalla Route Calculated</p>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div>Distance: {routeInfo.distance_km.toFixed(2)} km</div>
+                                            <div>Points: {routeInfo.points_count}</div>
+                                            <div>Direct: {routeInfo.direct_distance.toFixed(2)} km</div>
+                                            <div>Efficiency: {(routeInfo.route_efficiency * 100).toFixed(0)}%</div>
+                                        </div>
+                                        <p className="mt-1">This closure will follow actual road geometry and be encoded with OpenLR.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Backend Integration Notice */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                             <div className="flex items-start space-x-2">
                                 <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
                                 <div className="text-xs text-blue-700">
                                     <p className="font-medium mb-1">Backend API Integration</p>
-                                    <p>This closure will be submitted with OpenLR encoding, directional information, and timezone-aware timestamps.</p>
+                                    <p>This closure will be submitted with OpenLR encoding, directional information, timezone-aware timestamps, and {routeInfo ? 'Valhalla-calculated road geometry' : 'direct point coordinates'}.</p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Validation Warnings */}
-                        {selectedPoints.length < 2 && (
+                        {selectedPoints.length < 2 && !routeInfo && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                 <div className="flex items-center space-x-2">
                                     <TriangleAlert className="w-4 h-4 text-red-600" />
@@ -508,18 +617,23 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                         )}
 
                         {/* Debug Info for Development */}
-                        {selectedPoints.length > 0 && (
+                        {(selectedPoints.length > 0 || routeInfo) && (
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                                 <h5 className="text-xs font-medium text-gray-700 mb-2">Debug Info (Development)</h5>
                                 <div className="text-xs text-gray-600 space-y-1">
-                                    <div>Coordinates: {selectedPoints.length} points</div>
+                                    <div>Selected Points: {selectedPoints.length}</div>
+                                    <div>Route Points: {routeInfo?.points_count || 0}</div>
                                     <div>Geometry Type: LineString</div>
                                     <div>Bidirectional: {watchedIsBidirectional ? 'Yes' : 'No'}</div>
-                                    <div className="max-h-16 overflow-y-auto scrollbar-thin border border-gray-300 rounded p-2 bg-white">
-                                        <pre className="text-xs font-mono">
-                                            {JSON.stringify(selectedPoints.map(p => [p.lng, p.lat]), null, 2)}
-                                        </pre>
-                                    </div>
+                                    <div>Using: {routeInfo ? 'Valhalla Route' : 'Direct Points'}</div>
+                                    {routeInfo && (
+                                        <div className="max-h-16 overflow-y-auto scrollbar-thin border border-gray-300 rounded p-2 bg-white">
+                                            <pre className="text-xs font-mono">
+                                                {JSON.stringify(routeInfo.coordinates.slice(0, 5), null, 2)}
+                                                {routeInfo.coordinates.length > 5 && '\n... and more points'}
+                                            </pre>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}
@@ -675,7 +789,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         ) : (
                                             <button
                                                 type="submit"
-                                                disabled={loading || selectedPoints.length < 2}
+                                                disabled={loading || (selectedPoints.length < 2 && !routeInfo)}
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
                                             >
                                                 {loading ? (
@@ -686,7 +800,10 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                                 ) : (
                                                     <>
                                                         <TriangleAlert className="w-4 h-4" />
-                                                        <span>{state.isAuthenticated ? 'Submit to Backend' : 'Submit to Demo'}</span>
+                                                        <span>
+                                                            {state.isAuthenticated ? 'Submit to Backend' : 'Submit to Demo'}
+                                                            {routeInfo && ' (Routed)'}
+                                                        </span>
                                                     </>
                                                 )}
                                             </button>
@@ -698,6 +815,22 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     </>
                 )}
             </div>
+
+            {/* Pass route calculation callback to MapComponent via custom event */}
+            {isOpen && (
+                <div
+                    ref={(element) => {
+                        if (element) {
+                            // Dispatch custom event to communicate with MapComponent
+                            const event = new CustomEvent('formRouteCallback', {
+                                detail: { callback: handleRouteCalculated }
+                            });
+                            window.dispatchEvent(event);
+                        }
+                    }}
+                    style={{ display: 'none' }}
+                />
+            )}
         </>
     );
 };
