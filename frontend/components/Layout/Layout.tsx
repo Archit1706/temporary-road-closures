@@ -7,9 +7,15 @@ interface LayoutProps {
     children: React.ReactNode;
     onToggleForm: () => void;
     isFormOpen: boolean;
+    onEditClosure?: (closureId: number) => void;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, onToggleForm, isFormOpen }) => {
+const Layout: React.FC<LayoutProps> = ({
+    children,
+    onToggleForm,
+    isFormOpen,
+    onEditClosure
+}) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const toggleSidebar = () => {
@@ -30,6 +36,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onToggleForm, isFormOpen }) =
                 <Sidebar
                     isOpen={isSidebarOpen}
                     onClose={() => setIsSidebarOpen(false)}
+                    onEditClosure={onEditClosure}
                 />
 
                 {/* Main Content - Adjust right margin when form is open */}
@@ -55,7 +62,7 @@ const Layout: React.FC<LayoutProps> = ({ children, onToggleForm, isFormOpen }) =
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg max-w-xs">
                                 <div className="text-sm text-blue-700">
                                     <p className="font-medium mb-1">💡 Tip</p>
-                                    <p>Use the "Report Closure" button in the header to add new road closures.</p>
+                                    <p>Use the "Report Closure" button in the header to add new road closures, or hover over existing closures in the sidebar to edit them.</p>
                                 </div>
                             </div>
                         </div>
