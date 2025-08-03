@@ -1,3 +1,4 @@
+// services/api.ts - Updated with proper edit support
 import axios from 'axios';
 import { mockClosuresApi } from './mockApi';
 
@@ -68,7 +69,7 @@ export interface Closure {
     openlr_code?: string;
     is_valid: boolean;
     duration_hours: number;
-    is_bidirectional?: boolean; // New field for bidirectional closures
+    is_bidirectional?: boolean;
 }
 
 export interface CreateClosureData {
@@ -82,7 +83,22 @@ export interface CreateClosureData {
     closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
     source: string;
     confidence_level: number;
-    is_bidirectional?: boolean; // New field for bidirectional closures
+    is_bidirectional?: boolean;
+}
+
+export interface UpdateClosureData {
+    geometry?: {
+        type: 'LineString' | 'Point';
+        coordinates: number[][];
+    };
+    start_time?: string;
+    end_time?: string;
+    description?: string;
+    closure_type?: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
+    status?: 'active' | 'inactive' | 'expired';
+    source?: string;
+    confidence_level?: number;
+    is_bidirectional?: boolean;
 }
 
 export interface BoundingBox {
@@ -430,10 +446,15 @@ const realApi = {
 
     getClosure: async (id: number): Promise<Closure> => {
         try {
+            console.log(`🔍 Fetching closure with ID: ${id}`);
             const response = await api.get(`/api/v1/closures/${id}`);
+            console.log('✅ Closure fetched successfully:', response.data.id);
             return response.data;
         } catch (error) {
             console.error('❌ Error fetching closure:', error);
+            if (error.response?.status === 404) {
+                throw new Error(`Closure with ID ${id} not found`);
+            }
             throw error;
         }
     },
@@ -460,15 +481,28 @@ const realApi = {
         }
     },
 
-    updateClosure: async (id: number, data: Partial<CreateClosureData>): Promise<Closure> => {
+    updateClosure: async (id: number, data: UpdateClosureData): Promise<Closure> => {
         try {
+            console.log(`📝 Updating closure ${id} with data:`, JSON.stringify(data, null, 2));
+
             if (!authApi.isTokenValid()) {
                 throw new Error('Authentication token is missing or expired. Please log in again.');
             }
 
             const response = await api.put(`/api/v1/closures/${id}`, data);
+            console.log('✅ Closure updated successfully:', response.data);
             return response.data;
         } catch (error) {
+            if (error.response?.status === 401) {
+                console.error('🚫 Authentication failed - token may be expired');
+                throw new Error('Authentication failed. Please log in again.');
+            }
+            if (error.response?.status === 403) {
+                throw new Error('You do not have permission to edit this closure.');
+            }
+            if (error.response?.status === 404) {
+                throw new Error(`Closure with ID ${id} not found.`);
+            }
             console.error('❌ Error updating closure:', error);
             throw error;
         }
@@ -481,6 +515,7 @@ const realApi = {
             }
 
             await api.delete(`/api/v1/closures/${id}`);
+            console.log('✅ Closure deleted successfully:', id);
         } catch (error) {
             console.error('❌ Error deleting closure:', error);
             throw error;
@@ -623,14 +658,17 @@ export const closuresApi = {
         return realApi.createClosure(data);
     },
 
-    updateClosure: async (id: number, data: Partial<CreateClosureData>): Promise<Closure> => {
+    updateClosure: async (id: number, data: UpdateClosureData): Promise<Closure> => {
         const shouldUseMock = USE_MOCK_API || !(await checkBackendAvailability()) || !authApi.isTokenValid();
 
         if (shouldUseMock) {
+            console.log('📝 Updating closure with mock API');
             const mockData = convertBackendToMockFormat(data as CreateClosureData);
             const mockResponse = await mockClosuresApi.updateClosure(id.toString(), mockData);
             return convertMockToBackendFormat(mockResponse);
         }
+
+        console.log('📝 Updating closure with real API');
         return realApi.updateClosure(id, data);
     },
 
@@ -728,21 +766,21 @@ function convertMockToBackendFormat(mockClosure: any): Closure {
 function convertBackendToMockFormat(backendData: any): any {
     let coordinates;
 
-    if (backendData.geometry.type === 'Point') {
+    if (backendData.geometry?.type === 'Point') {
         if (Array.isArray(backendData.geometry.coordinates[0])) {
             coordinates = backendData.geometry.coordinates[0];
         } else {
             coordinates = backendData.geometry.coordinates;
         }
-    } else {
+    } else if (backendData.geometry?.type === 'LineString') {
         coordinates = backendData.geometry.coordinates;
     }
 
     return {
-        geometry: {
+        geometry: backendData.geometry ? {
             type: backendData.geometry.type,
             coordinates: coordinates
-        },
+        } : undefined,
         start_time: backendData.start_time,
         end_time: backendData.end_time,
         description: backendData.description,
@@ -777,5 +815,5 @@ function convertMockStatsToBackendFormat(mockStats: any): ClosureStats {
     };
 }
 
-export { authApi };
+export { realApi };
 export default api;
