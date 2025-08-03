@@ -1,4 +1,4 @@
-// app/closures/page.tsx - Updated with edit support
+// app/closures/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -97,7 +97,7 @@ const PointSelectionInstructions: React.FC<{
       <div className="mt-2 text-sm text-gray-600">
         {pointCount === 0 && "Click on the map to start selecting points"}
         {pointCount === 1 && "Add at least one more point to calculate route"}
-        {pointCount >= 2 && !hasRoute && "Calculating route..."}
+        {pointCount >= 2 && !hasRoute && "Calculating route with Valhalla..."}
         {hasRoute && routeInfo && (
           <div className="text-green-700">
             ✅ Route calculated: {routeInfo.points_count} points, {routeInfo.distance_km.toFixed(2)} km
@@ -154,7 +154,7 @@ const RouteStatus: React.FC<{
         <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg mb-2">
           <div className="flex items-center space-x-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span className="text-sm font-medium">Calculating route...</span>
+            <span className="text-sm font-medium">Calculating route with Valhalla...</span>
           </div>
         </div>
       )}
@@ -172,7 +172,7 @@ const RouteStatus: React.FC<{
           <div className="flex items-center space-x-2">
             <Route className="w-4 h-4" />
             <span className="text-sm">
-              Route: {routeInfo.distance_km.toFixed(2)}km ({routeInfo.points_count} points)
+              Valhalla Route: {routeInfo.distance_km.toFixed(2)}km ({routeInfo.points_count} points)
             </span>
           </div>
         </div>
@@ -218,7 +218,7 @@ function ClosuresPageContent() {
   const { state, stopEditingClosure } = useClosures();
   const { editingClosure, editLoading } = state;
 
-  // Route state
+  // Route state 
   const [routeState, setRouteState] = useState<{
     isRouting: boolean;
     hasRoute: boolean;
@@ -353,13 +353,14 @@ function ClosuresPageContent() {
     setIsSelectingPoints(false);
   };
 
-  // Handle route calculation from MapComponent
+  // Handle route calculation from MapComponent - THIS IS THE KEY CHANGE
   const handleRouteCalculated = (coordinates: [number, number][], stats: any) => {
     console.log('📍 Route calculated in page:', {
       pointsCount: coordinates.length,
       distance: stats.distance_km
     });
 
+    // Update local route state
     setRouteState({
       isRouting: false,
       hasRoute: true,
@@ -501,7 +502,19 @@ function ClosuresPageContent() {
           <div className="flex items-center space-x-2">
             <Route className="w-4 h-4" />
             <span className="text-sm font-medium">
-              Waiting for route calculation...
+              Waiting for Valhalla route calculation...
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Route Success Notice */}
+      {routeState.hasRoute && routeState.routeInfo && isFormOpen && !isEditFormOpen && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <Route className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              ✅ Valhalla route ready: {routeState.routeInfo.distance_km.toFixed(2)}km ({routeState.routeInfo.points_count} points)
             </span>
           </div>
         </div>
