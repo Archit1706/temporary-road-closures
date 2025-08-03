@@ -48,7 +48,7 @@ const CLOSURE_TYPES = [
 
 const STATUS_OPTIONS = [
     { value: 'active', label: 'Active', color: 'text-red-600' },
-    { value: 'inactive', label: 'Inactive', color: 'text-blue-600' },
+    { value: 'cancelled', label: 'Cancelled', color: 'text-blue-600' },
     { value: 'expired', label: 'Expired', color: 'text-gray-600' },
 ];
 
@@ -75,6 +75,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     const [currentStep, setCurrentStep] = useState(1);
     const [isMinimized, setIsMinimized] = useState(false);
     const [editPoints, setEditPoints] = useState<L.LatLng[]>([]);
+    const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
     const totalSteps = 3;
 
     const isEditMode = mode === 'edit' && editingClosure;
@@ -150,41 +151,51 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             setCurrentStep(1);
             setIsMinimized(false);
             setEditPoints([]);
+            setRouteInfo(null);
         }
     }, [isOpen, reset]);
 
     // Handle route calculation callback from MapComponent
-    // const handleRouteCalculated = (coordinates: [number, number][], stats: any) => {
-    //     console.log('📍 Route calculated in form:', {
-    //         pointsCount: coordinates.length,
-    //         distance: stats.distance_km,
-    //         directDistance: stats.direct_distance
-    //     });
+    const handleRouteCalculated = (coordinates: [number, number][], stats: any) => {
+        console.log('📍 Route calculated in form:', {
+            pointsCount: coordinates.length,
+            distance: stats.distance_km,
+            directDistance: stats.direct_distance
+        });
 
-    //     const routeEfficiency = stats.direct_distance > 0 ? stats.direct_distance / stats.distance_km : 1;
+        const routeEfficiency = stats.direct_distance > 0 ? stats.direct_distance / stats.distance_km : 1;
 
-    //     setRouteInfo({
-    //         coordinates,
-    //         distance_km: stats.distance_km,
-    //         points_count: coordinates.length,
-    //         direct_distance: stats.direct_distance,
-    //         route_efficiency: routeEfficiency
-    //     });
-    // };
+        setRouteInfo({
+            coordinates,
+            distance_km: stats.distance_km,
+            points_count: coordinates.length,
+            direct_distance: stats.direct_distance,
+            route_efficiency: routeEfficiency
+        });
+    };
 
-    // // Add event listener for route calculation
-    // useEffect(() => {
-    //     const handleGlobalRouteCalculated = (event: CustomEvent) => {
-    //         handleRouteCalculated(event.detail.coordinates, event.detail.stats);
-    //     };
+    // Add event listener for route calculation
+    useEffect(() => {
+        const handleGlobalRouteCalculated = (event: CustomEvent) => {
+            if (isOpen && !isEditMode) { // Only handle route calculation for create mode
+                handleRouteCalculated(event.detail.coordinates, event.detail.stats);
+            }
+        };
 
-    //     // Listen for route calculation events
-    //     window.addEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
+        // Listen for route calculation events
+        window.addEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
 
-    //     return () => {
-    //         window.removeEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
-    //     };
-    // }, []);
+        return () => {
+            window.removeEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
+        };
+    }, [isOpen, isEditMode]);
+
+    // Clear route info when selected points change
+    useEffect(() => {
+        if (selectedPoints.length < 2) {
+            setRouteInfo(null);
+        }
+    }, [selectedPoints]);
 
     const nextStep = async () => {
         const fieldsToValidate = currentStep === 1
@@ -217,37 +228,31 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         }
 
         // Use routed coordinates if available, otherwise fall back to selected points
-        // let finalCoordinates: number[][];
+        let finalCoordinates: number[][] | undefined;
 
-        // if (routeInfo && routeInfo.coordinates.length >= 2) {
-        //     // Use Valhalla routed coordinates (already in [lat, lng] format)
-        //     // Convert to GeoJSON format [lng, lat]
-        //     finalCoordinates = routeInfo.coordinates.map(([lat, lng]) => [lng, lat]);
-        //     console.log('✅ Using Valhalla routed coordinates:', finalCoordinates.length, 'points');
-        // } else if (selectedPoints && selectedPoints.length > 0) {
-        //     // Fall back to direct point-to-point coordinates
-        //     finalCoordinates = selectedPoints.map(point => [point.lng, point.lat]);
-        //     console.log('⚠️ Using direct coordinates (no route):', finalCoordinates.length, 'points');
-        // } else {
-        //     alert('Please select at least one point on the map');
-        //     return;
-        // }
+        if (routeInfo && routeInfo.coordinates.length >= 2 && !isEditMode) {
+            // Use Valhalla routed coordinates (already in [lat, lng] format)
+            // Convert to GeoJSON format [lng, lat]
+            finalCoordinates = routeInfo.coordinates.map(([lat, lng]) => [lng, lat]);
+            console.log('✅ Using Valhalla routed coordinates:', finalCoordinates.length, 'points');
+        } else {
+            // Fall back to direct point-to-point coordinates
+            const currentPoints = getCurrentPoints();
 
-        // if (data.geometry_type === 'LineString' && finalCoordinates.length < 2) {
-        //     alert('LineString requires at least 2 points. Please select more points on the map or wait for route calculation.');
-        //     return;
-        // }
+            if (!isEditMode && (!currentPoints || currentPoints.length === 0)) {
+                alert('Please select at least one point on the map');
+                return;
+            }
 
-        const currentPoints = getCurrentPoints();
+            if (!isEditMode && data.geometry_type === 'LineString' && currentPoints.length < 2) {
+                alert('LineString requires at least 2 points. Please select more points on the map.');
+                return;
+            }
 
-        if (!isEditMode && (!currentPoints || currentPoints.length === 0)) {
-            alert('Please select at least one point on the map');
-            return;
-        }
-
-        if (!isEditMode && data.geometry_type === 'LineString' && currentPoints.length < 2) {
-            alert('LineString requires at least 2 points. Please select more points on the map.');
-            return;
+            if (currentPoints.length > 0) {
+                finalCoordinates = currentPoints.map(point => [point.lng, point.lat]);
+                console.log('⚠️ Using direct coordinates (no route):', finalCoordinates.length, 'points');
+            }
         }
 
         // Convert datetime-local values to UTC ISO strings
@@ -270,13 +275,12 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                 };
 
                 // Only update geometry if points were modified
-                if (currentPoints.length > 0) {
-                    const coordinates = currentPoints.map(point => [point.lng, point.lat]);
+                if (finalCoordinates && finalCoordinates.length > 0) {
                     updateData.geometry = {
                         type: data.geometry_type,
                         coordinates: data.geometry_type === 'Point'
-                            ? [coordinates[0]]
-                            : coordinates as number[][],
+                            ? [finalCoordinates[0]]
+                            : finalCoordinates as number[][],
                     };
                 }
 
@@ -288,7 +292,10 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                 await updateClosure(editingClosure.id, updateData);
             } else {
                 // Create new closure
-                const coordinates = currentPoints.map(point => [point.lng, point.lat]);
+                if (!finalCoordinates || finalCoordinates.length === 0) {
+                    alert('Please select at least one point on the map');
+                    return;
+                }
 
                 const closureData: CreateClosureData = {
                     description: data.description,
@@ -301,8 +308,8 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     geometry: {
                         type: data.geometry_type,
                         coordinates: data.geometry_type === 'Point'
-                            ? [coordinates[0]]
-                            : coordinates as number[][],
+                            ? [finalCoordinates[0]]
+                            : finalCoordinates as number[][],
                     },
                 };
 
@@ -312,6 +319,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             reset();
             setCurrentStep(1);
             setEditPoints([]);
+            setRouteInfo(null);
             onClose();
         } catch (error) {
             console.error(`Error ${isEditMode ? 'updating' : 'creating'} closure:`, error);
@@ -492,7 +500,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             <li>Click "Start Selecting" below</li>
                                             <li>Click on the map to add points</li>
                                             <li>Need at least 2 points for LineString</li>
-                                            <li>Points define direction (first → last)</li>
+                                            <li>Valhalla will automatically calculate the road route</li>
                                             <li>Click "Done" when finished</li>
                                         </ol>
                                     </div>
@@ -523,12 +531,12 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 )}
                             </button>
 
-                            {/* Route Information
-                                                        {routeInfo && (
+                            {/* Route Information */}
+                            {routeInfo && !isEditMode && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                     <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center">
                                         <Route className="w-4 h-4 mr-1" />
-                                        Route Calculated
+                                        Valhalla Route Calculated
                                     </h4>
                                     <div className="grid grid-cols-2 gap-2 text-xs text-green-700">
                                         <div>Distance: {routeInfo.distance_km.toFixed(2)} km</div>
@@ -540,7 +548,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         ✅ Using Valhalla-calculated road path
                                     </div>
                                 </div>
-                            )} */}
+                            )}
 
                             {currentPoints.length > 0 && (
                                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
@@ -699,6 +707,15 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         }
                                     </span>
                                 </div>
+                                {/* Route Information in Summary */}
+                                {routeInfo && !isEditMode && (
+                                    <div>
+                                        <span className="font-medium text-gray-700">Route: </span>
+                                        <span className="text-green-600">
+                                            {routeInfo.distance_km.toFixed(2)}km Valhalla path ({routeInfo.points_count} points)
+                                        </span>
+                                    </div>
+                                )}
                                 {((currentPointsStep3.length >= 2) || (isEditMode && editingClosure?.geometry.type === 'LineString')) && (
                                     <div>
                                         <span className="font-medium text-gray-700">Direction: </span>
@@ -717,6 +734,22 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 </div>
                             </div>
                         </div>
+
+                        {/* Route Integration Notice */}
+                        {routeInfo && !isEditMode && (
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                                <div className="flex items-start space-x-2">
+                                    <Route className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                                    <div className="text-xs text-green-700">
+                                        <p className="font-medium mb-1">Valhalla Route Integration</p>
+                                        <p>
+                                            This closure will use the automatically calculated road path from Valhalla
+                                            ({routeInfo.points_count} coordinate points) instead of direct point-to-point lines.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Edit Mode Notice */}
                         {isEditMode && (
@@ -749,12 +782,12 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                         </div>
 
                         {/* Validation Warnings */}
-                        {!isEditMode && currentPointsStep3.length < 2 && watchedGeometryType === 'LineString' && (
+                        {!isEditMode && !routeInfo && currentPointsStep3.length < 2 && watchedGeometryType === 'LineString' && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                                 <div className="flex items-center space-x-2">
                                     <TriangleAlert className="w-4 h-4 text-red-600" />
                                     <span className="text-sm text-red-700 font-medium">
-                                        LineString requires at least 2 points
+                                        LineString requires at least 2 points for route calculation
                                     </span>
                                 </div>
                             </div>
@@ -775,8 +808,6 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 </div>
                             </div>
                         )}
-
-
                     </div>
                 );
 
@@ -933,7 +964,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         ) : (
                                             <button
                                                 type="submit"
-                                                disabled={loading || (!isEditMode && getCurrentPoints().length < 2 && watchedGeometryType === 'LineString')}
+                                                disabled={loading || (!isEditMode && !routeInfo && getCurrentPoints().length < 2 && watchedGeometryType === 'LineString')}
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
                                             >
                                                 {loading ? (
@@ -961,24 +992,6 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     </>
                 )}
             </div>
-
-
-            {/*
-            // Pass route calculation callback to MapComponent via custom event
-            {isOpen && (
-                <div
-                    ref={(element) => {
-                        if (element) {
-                            // Dispatch custom event to communicate with MapComponent
-                            const event = new CustomEvent('formRouteCallback', {
-                                detail: { callback: handleRouteCalculated }
-                            });
-                            window.dispatchEvent(event);
-                        }
-                    }}
-                    style={{ display: 'none' }}
-                />
-            )} */}
         </>
     );
 };
