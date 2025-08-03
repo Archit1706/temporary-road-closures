@@ -1,6 +1,6 @@
 "use client"
 import React from 'react';
-import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2 } from 'lucide-react';
 import { format, isAfter, isBefore } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
@@ -8,10 +8,11 @@ import { Closure } from '@/services/api';
 interface SidebarProps {
     isOpen: boolean;
     onClose: () => void;
+    onEditClosure?: (closureId: number) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
-    const { state, selectClosure } = useClosures();
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => {
+    const { state, selectClosure, startEditingClosure, canEditClosure, deleteClosure } = useClosures();
     const { closures, selectedClosure, loading, isAuthenticated } = state;
 
     const getClosureStatus = (closure: Closure): 'active' | 'upcoming' | 'expired' => {
@@ -66,6 +67,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         selectClosure(closure);
         if (window.innerWidth < 768) {
             onClose();
+        }
+    };
+
+    const handleEditClick = async (e: React.MouseEvent, closureId: number) => {
+        e.stopPropagation(); // Prevent closure selection
+
+        try {
+            await startEditingClosure(closureId);
+            if (onEditClosure) {
+                onEditClosure(closureId);
+            }
+        } catch (error) {
+            console.error('Failed to start editing closure:', error);
+        }
+    };
+
+    const handleDeleteClick = async (e: React.MouseEvent, closureId: number, description: string) => {
+        e.stopPropagation(); // Prevent closure selection
+
+        const confirmed = window.confirm(
+            `Are you sure you want to delete this closure?\n\n"${description}"\n\nThis action cannot be undone.`
+        );
+
+        if (confirmed) {
+            try {
+                await deleteClosure(closureId);
+            } catch (error) {
+                console.error('Failed to delete closure:', error);
+            }
         }
     };
 
@@ -144,6 +174,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                             </div>
                         </div>
                     )}
+
+                    {/* Edit Instructions */}
+                    {isAuthenticated && (
+                        <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center space-x-2">
+                                <Edit3 className="w-4 h-4 text-green-600" />
+                                <span className="text-sm text-green-700">
+                                    Edit buttons available for your closures
+                                </span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Closures List */}
@@ -168,109 +210,149 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                                 const isSelected = selectedClosure?.id === closure.id;
                                 const directionIcon = getDirectionIcon(closure);
                                 const directionLabel = getDirectionLabel(closure);
+                                const canEdit = canEditClosure(closure);
 
                                 return (
                                     <div
                                         key={closure.id}
-                                        onClick={() => handleClosureClick(closure)}
                                         className={`
-                                            p-3 mb-2 rounded-lg border cursor-pointer transition-colors
+                                            p-3 mb-2 rounded-lg border cursor-pointer transition-colors relative group
                                             ${isSelected
                                                 ? 'border-blue-500 bg-blue-50'
                                                 : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                             }
                                         `}
                                     >
-                                        {/* Header with Status and Confidence */}
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className={`
-                                                inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border
-                                                ${getStatusColor(status)}
-                                            `}>
-                                                {status.charAt(0).toUpperCase() + status.slice(1)}
-                                            </span>
-                                            <div className="flex items-center space-x-2">
-                                                <div className="flex items-center space-x-1">
-                                                    <Zap className="w-3 h-3 text-gray-400" />
-                                                    <span className={`text-xs font-medium ${getConfidenceColor(closure.confidence_level)}`}>
-                                                        {closure.confidence_level}/10
-                                                    </span>
+                                        {/* Action Buttons - Visible on hover for authenticated users */}
+                                        {isAuthenticated && canEdit && (
+                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                                <div className="flex space-x-1">
+                                                    <button
+                                                        onClick={(e) => handleEditClick(e, closure.id)}
+                                                        className="p-1 bg-white border border-gray-300 rounded hover:bg-gray-50 shadow-sm"
+                                                        title="Edit closure"
+                                                    >
+                                                        <Edit3 className="w-3 h-3 text-gray-600 hover:text-blue-600" />
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDeleteClick(e, closure.id, closure.description)}
+                                                        className="p-1 bg-white border border-gray-300 rounded hover:bg-gray-50 shadow-sm"
+                                                        title="Delete closure"
+                                                    >
+                                                        <Trash2 className="w-3 h-3 text-gray-600 hover:text-red-600" />
+                                                    </button>
                                                 </div>
-                                                <span className="text-xs text-gray-400">
-                                                    {formatDuration(closure.duration_hours)}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {/* Description */}
-                                        <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">
-                                            {closure.description}
-                                        </h3>
-
-                                        {/* Closure Type and Direction */}
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="flex items-center space-x-1">
-                                                <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                <span className="text-sm text-gray-600 capitalize">
-                                                    {closure.closure_type.replace('_', ' ')}
-                                                </span>
-                                            </div>
-                                            {directionIcon && (
-                                                <div className="flex items-center space-x-1">
-                                                    <span className="text-sm" title={directionLabel}>
-                                                        {directionIcon}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
-                                                        {closure.is_bidirectional ? 'Both ways' : 'One way'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Timing */}
-                                        <div className="space-y-1 text-xs text-gray-500">
-                                            <div className="flex items-center space-x-1">
-                                                <Calendar className="w-3 h-3" />
-                                                <span>
-                                                    {format(new Date(closure.start_time), 'MMM dd, HH:mm')} -
-                                                    {format(new Date(closure.end_time), 'MMM dd, HH:mm')}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex items-center space-x-1">
-                                                <Building2 className="w-3 h-3" />
-                                                <span>Source: {closure.source}</span>
-                                            </div>
-
-                                            {closure.openlr_code && (
-                                                <div className="flex items-center space-x-1">
-                                                    <MapPin className="w-3 h-3" />
-                                                    <span className="font-mono text-xs">
-                                                        OpenLR: {closure.openlr_code.substring(0, 8)}...
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* Direction information for LineString closures */}
-                                            {closure.geometry.type === 'LineString' && (
-                                                <div className="flex items-center space-x-1">
-                                                    <Navigation className="w-3 h-3" />
-                                                    <span className="text-xs">
-                                                        {closure.is_bidirectional
-                                                            ? 'Bidirectional closure'
-                                                            : 'Unidirectional closure'}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Validation Status */}
-                                        {!closure.is_valid && (
-                                            <div className="mt-2 flex items-center space-x-1">
-                                                <AlertCircle className="w-3 h-3 text-yellow-500" />
-                                                <span className="text-xs text-yellow-600">Needs validation</span>
                                             </div>
                                         )}
+
+                                        {/* Main Content - Click handler for selection */}
+                                        <div onClick={() => handleClosureClick(closure)}>
+                                            {/* Header with Status and Confidence */}
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className={`
+                                                    inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border
+                                                    ${getStatusColor(status)}
+                                                `}>
+                                                    {status.charAt(0).toUpperCase() + status.slice(1)}
+                                                </span>
+                                                <div className="flex items-center space-x-2">
+                                                    <div className="flex items-center space-x-1">
+                                                        <Zap className="w-3 h-3 text-gray-400" />
+                                                        <span className={`text-xs font-medium ${getConfidenceColor(closure.confidence_level)}`}>
+                                                            {closure.confidence_level}/10
+                                                        </span>
+                                                    </div>
+                                                    <span className="text-xs text-gray-400">
+                                                        {formatDuration(closure.duration_hours)}
+                                                    </span>
+                                                    {/* Edit indicator for owned closures */}
+                                                    {canEdit && (
+                                                        <div title="You can edit this closure">
+                                                            <Edit3 className="w-3 h-3 text-green-500" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Description */}
+                                            <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 pr-8">
+                                                {closure.description}
+                                            </h3>
+
+                                            {/* Closure Type and Direction */}
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center space-x-1">
+                                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                    <span className="text-sm text-gray-600 capitalize">
+                                                        {closure.closure_type.replace('_', ' ')}
+                                                    </span>
+                                                </div>
+                                                {directionIcon && (
+                                                    <div className="flex items-center space-x-1">
+                                                        <span className="text-sm" title={directionLabel}>
+                                                            {directionIcon}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500">
+                                                            {closure.is_bidirectional ? 'Both ways' : 'One way'}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Timing */}
+                                            <div className="space-y-1 text-xs text-gray-500">
+                                                <div className="flex items-center space-x-1">
+                                                    <Calendar className="w-3 h-3" />
+                                                    <span>
+                                                        {format(new Date(closure.start_time), 'MMM dd, HH:mm')} -
+                                                        {format(new Date(closure.end_time), 'MMM dd, HH:mm')}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center space-x-1">
+                                                    <Building2 className="w-3 h-3" />
+                                                    <span>Source: {closure.source}</span>
+                                                </div>
+
+                                                {closure.openlr_code && (
+                                                    <div className="flex items-center space-x-1">
+                                                        <MapPin className="w-3 h-3" />
+                                                        <span className="font-mono text-xs">
+                                                            OpenLR: {closure.openlr_code.substring(0, 8)}...
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Direction information for LineString closures */}
+                                                {closure.geometry.type === 'LineString' && (
+                                                    <div className="flex items-center space-x-1">
+                                                        <Navigation className="w-3 h-3" />
+                                                        <span className="text-xs">
+                                                            {closure.is_bidirectional
+                                                                ? 'Bidirectional closure'
+                                                                : 'Unidirectional closure'}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Submitter info */}
+                                                <div className="flex items-center space-x-1">
+                                                    <User className="w-3 h-3" />
+                                                    <span className="text-xs">ID: {closure.submitter_id}</span>
+                                                    {canEdit && (
+                                                        <span className="text-green-600 font-medium">(Your closure)</span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Validation Status */}
+                                            {!closure.is_valid && (
+                                                <div className="mt-2 flex items-center space-x-1">
+                                                    <AlertCircle className="w-3 h-3 text-yellow-500" />
+                                                    <span className="text-xs text-yellow-600">Needs validation</span>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })}
@@ -290,6 +372,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                     {lineStringClosures.length > 0 && (
                         <div className="text-xs text-gray-400 text-center mt-1">
                             ↔ {bidirectionalClosures} bidirectional • → {unidirectionalClosures} unidirectional
+                        </div>
+                    )}
+                    {isAuthenticated && (
+                        <div className="text-xs text-green-600 text-center mt-1">
+                            Hover over your closures to edit or delete
                         </div>
                     )}
                 </div>
