@@ -1,7 +1,8 @@
-// services/mockApi.ts - Updated with bidirectional support
+// services/mockApi.ts - Updated with edit support and proper backend format compatibility
 import {
     Closure,
     CreateClosureData,
+    UpdateClosureData,
     BoundingBox,
     ClosureStats
 } from './api';
@@ -41,7 +42,7 @@ const initializeMockData = () => {
     const oneDayFromNow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
     closuresStorage = [
-        // Bidirectional closure example
+        // Bidirectional closure example - User 1 (chicago_mapper) - can be edited
         {
             id: "closure-001",
             geometry: {
@@ -58,13 +59,16 @@ const initializeMockData = () => {
             reason: "construction",
             status: "active",
             submitter: "CDOT Construction Division",
+            submitter_id: 1, // chicago_mapper user
             severity: "critical",
             created_at: oneHourAgo.toISOString(),
             updated_at: now.toISOString(),
             openlr: "CwRbWyNG9RpsCQCaAL4=",
-            is_bidirectional: true
+            is_bidirectional: true,
+            confidence_level: 8,
+            source: "City of Chicago DOT"
         },
-        // Unidirectional closure example
+        // Unidirectional closure example - User 1 (chicago_mapper) - can be edited
         {
             id: "closure-002",
             geometry: {
@@ -82,13 +86,16 @@ const initializeMockData = () => {
             reason: "maintenance",
             status: "active",
             submitter: "ComEd Maintenance",
+            submitter_id: 1, // chicago_mapper user
             severity: "medium",
             created_at: now.toISOString(),
             updated_at: now.toISOString(),
             openlr: "CwRbWyNG9RpsCQCaAL5=",
-            is_bidirectional: false
+            is_bidirectional: false,
+            confidence_level: 7,
+            source: "ComEd Emergency Response"
         },
-        // Point closure (no direction)
+        // Point closure (no direction) - User 2 (different user) - cannot be edited by user 1
         {
             id: "closure-003",
             geometry: {
@@ -101,13 +108,16 @@ const initializeMockData = () => {
             reason: "emergency",
             status: "active",
             submitter: "Chicago Water Management",
+            submitter_id: 2, // Different user
             severity: "high",
             created_at: now.toISOString(),
             updated_at: now.toISOString(),
             openlr: "CwRbWyNG9RpsCQCaAL6=",
-            is_bidirectional: undefined // Not applicable for points
+            is_bidirectional: undefined, // Not applicable for points
+            confidence_level: 9,
+            source: "Chicago Water Department"
         },
-        // Another bidirectional example
+        // Another bidirectional example - User 1 (chicago_mapper) - can be edited
         {
             id: "closure-004",
             geometry: {
@@ -124,13 +134,16 @@ const initializeMockData = () => {
             reason: "event",
             status: "inactive",
             submitter: "Chicago Special Events",
+            submitter_id: 1, // chicago_mapper user
             severity: "critical",
             created_at: now.toISOString(),
             updated_at: now.toISOString(),
             openlr: "CwRbWyNG9RpsCQCbBM6=",
-            is_bidirectional: true
+            is_bidirectional: true,
+            confidence_level: 10,
+            source: "Chicago Mayor's Office"
         },
-        // Unidirectional example with complex path
+        // Unidirectional example with complex path - User 3 (different user) - cannot be edited by user 1
         {
             id: "closure-005",
             geometry: {
@@ -149,11 +162,14 @@ const initializeMockData = () => {
             reason: "construction",
             status: "inactive",
             submitter: "Walsh Construction",
+            submitter_id: 3, // Different user
             severity: "medium",
             created_at: now.toISOString(),
             updated_at: now.toISOString(),
             openlr: "CwRbWyNG9RpsCQCcCN7=",
-            is_bidirectional: false
+            is_bidirectional: false,
+            confidence_level: 6,
+            source: "Walsh Construction Company"
         }
     ];
 };
@@ -228,11 +244,14 @@ export const mockClosuresApi = {
             reason: data.reason,
             status: determineStatus(data.start_time, data.end_time),
             submitter: data.submitter,
+            submitter_id: 1, // Assume user 1 (chicago_mapper) for demo
             severity: data.severity || 'medium',
             created_at: now,
             updated_at: now,
             openlr: `CwRbWyNG9RpsCQC${Math.random().toString(36).substr(2, 4)}=`,
-            is_bidirectional: data.is_bidirectional
+            is_bidirectional: data.is_bidirectional,
+            confidence_level: data.confidence_level || 7,
+            source: data.source || data.submitter
         };
 
         closuresStorage.unshift(newClosure); // Add to beginning
@@ -249,16 +268,37 @@ export const mockClosuresApi = {
         }
 
         const existingClosure = closuresStorage[closureIndex];
+
+        // Simulate permission check - only allow editing if submitter_id matches current user (1)
+        // or if user is moderator (not implemented in mock, but this is where you'd check)
+        if (existingClosure.submitter_id !== 1) {
+            throw new Error('You do not have permission to edit this closure');
+        }
+
+        // Prepare updated closure - only update provided fields
         const updatedClosure = {
             ...existingClosure,
-            ...data,
-            id: existingClosure.id, // Ensure ID doesn't change
-            created_at: existingClosure.created_at, // Preserve creation time
-            updated_at: getCurrentTimestamp(),
-            status: data.start_time && data.end_time
-                ? determineStatus(data.start_time, data.end_time)
-                : determineStatus(existingClosure.start_time, existingClosure.end_time)
+            updated_at: getCurrentTimestamp()
         };
+
+        // Update specific fields if provided
+        if (data.description !== undefined) updatedClosure.description = data.description;
+        if (data.reason !== undefined) updatedClosure.reason = data.reason;
+        if (data.closure_type !== undefined) updatedClosure.reason = data.closure_type;
+        if (data.source !== undefined) {
+            updatedClosure.source = data.source;
+            updatedClosure.submitter = data.source;
+        }
+        if (data.start_time !== undefined) updatedClosure.start_time = data.start_time;
+        if (data.end_time !== undefined) updatedClosure.end_time = data.end_time;
+        if (data.confidence_level !== undefined) updatedClosure.confidence_level = data.confidence_level;
+        if (data.status !== undefined) updatedClosure.status = data.status;
+        if (data.is_bidirectional !== undefined) updatedClosure.is_bidirectional = data.is_bidirectional;
+
+        // Update status based on new times if provided
+        if (data.start_time || data.end_time) {
+            updatedClosure.status = determineStatus(updatedClosure.start_time, updatedClosure.end_time);
+        }
 
         closuresStorage[closureIndex] = updatedClosure;
         return updatedClosure;
@@ -271,6 +311,13 @@ export const mockClosuresApi = {
         const closureIndex = closuresStorage.findIndex(c => c.id === id);
         if (closureIndex === -1) {
             throw new Error(`Closure with ID ${id} not found`);
+        }
+
+        const existingClosure = closuresStorage[closureIndex];
+
+        // Simulate permission check - only allow deletion if submitter_id matches current user (1)
+        if (existingClosure.submitter_id !== 1) {
+            throw new Error('You do not have permission to delete this closure');
         }
 
         closuresStorage.splice(closureIndex, 1);
@@ -334,8 +381,8 @@ export const mockClosuresApi = {
             active,
             upcoming,
             expired,
-            byReason,
-            bySeverity,
+            byClosureType: byReason,
+            byStatus: bySeverity,
             byTimeOfDay: {
                 morning: Math.floor(currentClosures.length * 0.25),
                 afternoon: Math.floor(currentClosures.length * 0.35),
@@ -358,5 +405,15 @@ export const mockClosuresApi = {
         await new Promise(resolve => setTimeout(resolve, 200));
         initializeMockData();
         nextId = 1000;
+    },
+
+    // Get current user info (for permission checking)
+    getCurrentUser: (): { id: number; username: string; is_moderator: boolean } => {
+        // Simulate current user for demo
+        return {
+            id: 1,
+            username: 'chicago_mapper',
+            is_moderator: false
+        };
     }
 };
