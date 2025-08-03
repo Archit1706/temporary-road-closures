@@ -43,7 +43,7 @@ const CONFIDENCE_LEVELS = [
 
 const STATUS_OPTIONS = [
     { value: 'active', label: 'Active', description: 'Currently in effect' },
-    { value: 'inactive', label: 'Inactive', description: 'Not currently active' },
+    { value: 'cancelled', label: 'Cancelled', description: 'Not currently active' },
     { value: 'expired', label: 'Expired', description: 'No longer valid' },
 ];
 
@@ -331,7 +331,7 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                                         </span>
                                     </div>
                                     <div className="text-xs text-gray-600">
-                                        {closure.geometry.type === 'Point' 
+                                        {closure.geometry.type === 'Point'
                                             ? 'Single point location'
                                             : `${closure.geometry.coordinates.length} coordinate points`
                                         }
@@ -453,10 +453,9 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                                 </div>
                                 <div>
                                     <span className="font-medium text-gray-700">Status: </span>
-                                    <span className={`font-medium ${
-                                        watchedStatus === 'active' ? 'text-green-600' :
+                                    <span className={`font-medium ${watchedStatus === 'active' ? 'text-green-600' :
                                         watchedStatus === 'expired' ? 'text-red-600' : 'text-gray-600'
-                                    }`}>
+                                        }`}>
                                         {STATUS_OPTIONS.find(s => s.value === watchedStatus)?.label}
                                     </span>
                                 </div>
