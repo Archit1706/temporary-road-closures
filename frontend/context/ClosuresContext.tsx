@@ -1,6 +1,6 @@
 "use client"
 import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect } from 'react';
-import { Closure, CreateClosureData, BoundingBox, closuresApi, authApi } from '@/services/api';
+import { Closure, CreateClosureData, UpdateClosureData, BoundingBox, closuresApi, authApi } from '@/services/api';
 import toast from 'react-hot-toast';
 
 // State interface
@@ -11,6 +11,8 @@ interface ClosuresState {
     selectedClosure: Closure | null;
     isAuthenticated: boolean;
     user: any | null;
+    editingClosure: Closure | null;
+    editLoading: boolean;
 }
 
 // Action types
@@ -23,20 +25,25 @@ type ClosuresAction =
     | { type: 'SET_SELECTED_CLOSURE'; payload: Closure | null }
     | { type: 'SET_ERROR'; payload: string | null }
     | { type: 'SET_AUTHENTICATED'; payload: boolean }
-    | { type: 'SET_USER'; payload: any | null };
+    | { type: 'SET_USER'; payload: any | null }
+    | { type: 'SET_EDITING_CLOSURE'; payload: Closure | null }
+    | { type: 'SET_EDIT_LOADING'; payload: boolean };
 
 // Context interface
 interface ClosuresContextType {
     state: ClosuresState;
     fetchClosures: (bbox?: BoundingBox) => Promise<void>;
     createClosure: (data: CreateClosureData) => Promise<void>;
-    updateClosure: (id: number, data: Partial<CreateClosureData>) => Promise<void>;
+    updateClosure: (id: number, data: UpdateClosureData) => Promise<void>;
     deleteClosure: (id: number) => Promise<void>;
     selectClosure: (closure: Closure | null) => void;
     login: (username: string, password: string) => Promise<void>;
     register: (userData: { username: string; email: string; full_name: string; password: string }) => Promise<void>;
     logout: () => void;
     checkAuthStatus: () => boolean;
+    startEditingClosure: (closureId: number) => Promise<void>;
+    stopEditingClosure: () => void;
+    canEditClosure: (closure: Closure) => boolean;
 }
 
 // Initial state
@@ -47,6 +54,8 @@ const initialState: ClosuresState = {
     selectedClosure: null,
     isAuthenticated: false,
     user: null,
+    editingClosure: null,
+    editLoading: false,
 };
 
 // Reducer
@@ -75,6 +84,9 @@ const closuresReducer = (state: ClosuresState, action: ClosuresAction): Closures
                 selectedClosure: state.selectedClosure?.id === action.payload.id
                     ? action.payload
                     : state.selectedClosure,
+                editingClosure: state.editingClosure?.id === action.payload.id
+                    ? action.payload
+                    : state.editingClosure,
                 loading: false,
                 error: null
             };
@@ -86,6 +98,9 @@ const closuresReducer = (state: ClosuresState, action: ClosuresAction): Closures
                 selectedClosure: state.selectedClosure?.id === action.payload
                     ? null
                     : state.selectedClosure,
+                editingClosure: state.editingClosure?.id === action.payload
+                    ? null
+                    : state.editingClosure,
                 loading: false,
                 error: null
             };
@@ -101,6 +116,12 @@ const closuresReducer = (state: ClosuresState, action: ClosuresAction): Closures
 
         case 'SET_USER':
             return { ...state, user: action.payload };
+
+        case 'SET_EDITING_CLOSURE':
+            return { ...state, editingClosure: action.payload };
+
+        case 'SET_EDIT_LOADING':
+            return { ...state, editLoading: action.payload };
 
         default:
             return state;
@@ -208,6 +229,7 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         dispatch({ type: 'SET_USER', payload: null });
         dispatch({ type: 'SET_CLOSURES', payload: [] });
         dispatch({ type: 'SET_SELECTED_CLOSURE', payload: null });
+        dispatch({ type: 'SET_EDITING_CLOSURE', payload: null });
         toast.success('Logged out successfully');
         console.log('👋 User logged out');
     }, []);
@@ -260,7 +282,6 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
 
             if (error instanceof Error && (error.message.includes('401') || error.message.includes('Authentication'))) {
                 toast.error('Authentication required. Please log in to create closures.');
-                // Trigger logout to clear invalid session
                 logout();
             } else if (error instanceof Error && error.message.includes('validation')) {
                 toast.error('Please check your input data');
@@ -272,8 +293,8 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         }
     }, [logout]);
 
-    const updateClosure = useCallback(async (id: number, data: Partial<CreateClosureData>) => {
-        dispatch({ type: 'SET_LOADING', payload: true });
+    const updateClosure = useCallback(async (id: number, data: UpdateClosureData) => {
+        dispatch({ type: 'SET_EDIT_LOADING', payload: true });
         dispatch({ type: 'SET_ERROR', payload: null });
 
         try {
@@ -281,17 +302,29 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
                 throw new Error('Authentication required. Please log in to update closures.');
             }
 
+            console.log('📝 Attempting to update closure:', {
+                id,
+                updates: Object.keys(data),
+                auth: !!authApi.getToken()
+            });
+
             const updatedClosure = await closuresApi.updateClosure(id, data);
             dispatch({ type: 'UPDATE_CLOSURE', payload: updatedClosure });
+            dispatch({ type: 'SET_EDIT_LOADING', payload: false });
             toast.success('Closure updated successfully!');
             console.log('✅ Closure updated successfully:', id);
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Failed to update closure';
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
+            dispatch({ type: 'SET_EDIT_LOADING', payload: false });
 
             if (error instanceof Error && (error.message.includes('401') || error.message.includes('Authentication'))) {
                 toast.error('Authentication required. Please log in to update closures.');
                 logout();
+            } else if (error instanceof Error && error.message.includes('403')) {
+                toast.error('You do not have permission to edit this closure.');
+            } else if (error instanceof Error && error.message.includes('404')) {
+                toast.error('Closure not found. It may have been deleted.');
             } else {
                 toast.error(errorMessage);
             }
@@ -332,6 +365,39 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         dispatch({ type: 'SET_SELECTED_CLOSURE', payload: closure });
     }, []);
 
+    const startEditingClosure = useCallback(async (closureId: number) => {
+        dispatch({ type: 'SET_EDIT_LOADING', payload: true });
+        dispatch({ type: 'SET_ERROR', payload: null });
+
+        try {
+            console.log('🔄 Starting to edit closure:', closureId);
+            const closure = await closuresApi.getClosure(closureId);
+            dispatch({ type: 'SET_EDITING_CLOSURE', payload: closure });
+            dispatch({ type: 'SET_EDIT_LOADING', payload: false });
+            console.log('✅ Closure loaded for editing:', closure.id);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to load closure for editing';
+            dispatch({ type: 'SET_ERROR', payload: errorMessage });
+            dispatch({ type: 'SET_EDIT_LOADING', payload: false });
+            toast.error(errorMessage);
+            console.error('❌ Error loading closure for editing:', errorMessage);
+        }
+    }, []);
+
+    const stopEditingClosure = useCallback(() => {
+        dispatch({ type: 'SET_EDITING_CLOSURE', payload: null });
+        console.log('🔄 Stopped editing closure');
+    }, []);
+
+    const canEditClosure = useCallback((closure: Closure): boolean => {
+        if (!state.isAuthenticated || !state.user) {
+            return false;
+        }
+
+        // Users can edit their own closures or moderators can edit any closure
+        return closure.submitter_id === state.user.id || state.user.is_moderator;
+    }, [state.isAuthenticated, state.user]);
+
     const value: ClosuresContextType = {
         state,
         fetchClosures,
@@ -343,6 +409,9 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         register,
         logout,
         checkAuthStatus,
+        startEditingClosure,
+        stopEditingClosure,
+        canEditClosure,
     };
 
     return (
