@@ -122,7 +122,7 @@ export interface ValhallaResponse {
 }
 
 // Polyline decoder function (precision 6 for Valhalla)
-export function decodePolyline(str: string, precision: number = 6): [number, number][] {
+function decodePolyline(str: string, precision: number = 6): [number, number][] {
     let index = 0;
     let lat = 0;
     let lng = 0;
@@ -153,7 +153,7 @@ export function decodePolyline(str: string, precision: number = 6): [number, num
 
         coordinates.push([lat / factor, lng / factor]);
     }
-    
+
     return coordinates;
 }
 
@@ -193,7 +193,7 @@ export class ValhallaAPI {
                 if (error.response?.status === 404) {
                     throw new Error('No route found between the selected points.');
                 }
-                if (error.response?.status >= 500) {
+                if (error.response?.status && error.response?.status >= 500) {
                     throw new Error('Routing service is temporarily unavailable.');
                 }
             }
@@ -224,10 +224,10 @@ export class ValhallaAPI {
         };
 
         const response = await this.getRoute(request);
-        
+
         // Decode all polylines and combine coordinates
         const allCoordinates: [number, number][] = [];
-        
+
         for (const leg of response.trip.legs) {
             const coordinates = decodePolyline(leg.shape, 6);
             allCoordinates.push(...coordinates);
@@ -236,9 +236,9 @@ export class ValhallaAPI {
         // Remove duplicate consecutive points
         const dedupedCoordinates: [number, number][] = [];
         for (let i = 0; i < allCoordinates.length; i++) {
-            if (i === 0 || 
-                allCoordinates[i][0] !== allCoordinates[i-1][0] || 
-                allCoordinates[i][1] !== allCoordinates[i-1][1]) {
+            if (i === 0 ||
+                allCoordinates[i][0] !== allCoordinates[i - 1][0] ||
+                allCoordinates[i][1] !== allCoordinates[i - 1][1]) {
                 dedupedCoordinates.push(allCoordinates[i]);
             }
         }
@@ -255,9 +255,9 @@ export class ValhallaAPI {
 
     // Helper method to create a simple route between two points
     async getSimpleRoute(
-        startLat: number, 
-        startLng: number, 
-        endLat: number, 
+        startLat: number,
+        startLng: number,
+        endLat: number,
         endLng: number,
         costing: 'auto' | 'bicycle' | 'pedestrian' = 'auto'
     ): Promise<[number, number][]> {
@@ -278,7 +278,8 @@ export class ValhallaAPI {
             });
             return true;
         } catch (error) {
-            console.warn('⚠️ Valhalla API not available:', error.message);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            console.warn('⚠️ Valhalla API not available:', errorMessage);
             return false;
         }
     }
