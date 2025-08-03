@@ -1,4 +1,4 @@
-// app/closures/page.tsx
+// app/closures/page.tsx - Updated with edit support
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -7,8 +7,9 @@ import { Toaster } from 'react-hot-toast';
 import { ClosuresProvider, useClosures } from '@/context/ClosuresContext';
 import Layout from '@/components/Layout/Layout';
 import ClosureForm from '@/components/Forms/ClosureForm';
+import EditClosureForm from '@/components/Forms/EditClosureForm';
 import ClientOnly from '@/components/ClientOnly';
-import { LogIn, Info, MapPin, Route } from 'lucide-react';
+import { LogIn, Info, MapPin, Route, Edit3, TriangleAlert } from 'lucide-react';
 import L from 'leaflet';
 
 // Dynamically import MapComponent to avoid SSR issues
@@ -50,10 +51,10 @@ const AuthNotice: React.FC = () => {
           <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
             <h4 className="text-sm font-medium text-blue-900 mb-1">
-              Login Required to Report Closures
+              Login Required for Full Features
             </h4>
             <p className="text-sm text-blue-700 mb-3">
-              You can view all road closures, but you need to log in to report new ones.
+              You can view closures, but need to log in to report new ones or edit existing closures.
             </p>
             <button className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
               <LogIn className="w-4 h-4 mr-1" />
@@ -180,10 +181,42 @@ const RouteStatus: React.FC<{
   );
 };
 
+// Edit Status Component
+const EditStatus: React.FC<{
+  isEditing: boolean;
+  editingClosure: any;
+  onCancel: () => void;
+}> = ({ isEditing, editingClosure, onCancel }) => {
+  if (!isEditing || !editingClosure) return null;
+
+  return (
+    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 max-w-md">
+      <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+        <div className="flex items-center space-x-2">
+          <Edit3 className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            Editing Closure #{editingClosure.id}
+          </span>
+          <button
+            onClick={onCancel}
+            className="ml-2 text-orange-200 hover:text-white text-sm underline"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 function ClosuresPageContent() {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);
   const [isSelectingPoints, setIsSelectingPoints] = useState(false);
+
+  const { state, stopEditingClosure } = useClosures();
+  const { editingClosure, editLoading } = state;
 
   // Route state
   const [routeState, setRouteState] = useState<{
@@ -195,6 +228,15 @@ function ClosuresPageContent() {
     isRouting: false,
     hasRoute: false
   });
+
+  // Watch for editing state changes
+  useEffect(() => {
+    if (editingClosure && !isEditFormOpen) {
+      setIsEditFormOpen(true);
+      // Close create form if open
+      setIsFormOpen(false);
+    }
+  }, [editingClosure, isEditFormOpen]);
 
   // Handle custom events from the form
   useEffect(() => {
@@ -230,6 +272,48 @@ function ClosuresPageContent() {
       });
     }
     setIsFormOpen(!isFormOpen);
+
+    // Close edit form if create form is being opened
+    if (!isFormOpen && isEditFormOpen) {
+      setIsEditFormOpen(false);
+      stopEditingClosure();
+    }
+  };
+
+  const handleToggleEditForm = () => {
+    setIsEditFormOpen(!isEditFormOpen);
+
+    if (isEditFormOpen) {
+      stopEditingClosure();
+    }
+
+    // Close create form if edit form is being opened
+    if (!isEditFormOpen && isFormOpen) {
+      setIsFormOpen(false);
+      setSelectedPoints([]);
+      setIsSelectingPoints(false);
+      setRouteState({
+        isRouting: false,
+        hasRoute: false
+      });
+    }
+  };
+
+  const handleEditClosure = (closureId: number) => {
+    // The editing state is already handled by the context
+    // Just open the edit form
+    setIsEditFormOpen(true);
+
+    // Close create form if open
+    if (isFormOpen) {
+      setIsFormOpen(false);
+      setSelectedPoints([]);
+      setIsSelectingPoints(false);
+      setRouteState({
+        isRouting: false,
+        hasRoute: false
+      });
+    }
   };
 
   const handlePointsSelect = () => {
@@ -241,7 +325,7 @@ function ClosuresPageContent() {
   };
 
   const handleMapClick = (latlng: L.LatLng) => {
-    if (isSelectingPoints) {
+    if (isSelectingPoints && isFormOpen && !isEditFormOpen) {
       // Add point to the selection
       setSelectedPoints(prev => {
         const newPoints = [...prev, latlng];
@@ -316,17 +400,18 @@ function ClosuresPageContent() {
       <Layout
         onToggleForm={handleToggleForm}
         isFormOpen={isFormOpen}
+        onEditClosure={handleEditClosure}
       >
         <MapComponent
           onMapClick={handleMapClick}
           selectedPoints={selectedPoints}
-          isSelecting={isSelectingPoints}
+          isSelecting={isSelectingPoints && isFormOpen && !isEditFormOpen}
           onClearPoints={handleClearPoints}
           onFinishSelection={handleFinishSelection}
           onRouteCalculated={handleRouteCalculated}
         />
 
-        {/* Form Sidebar */}
+        {/* Create Form Sidebar */}
         <ClosureForm
           isOpen={isFormOpen}
           onClose={handleToggleForm}
@@ -334,10 +419,26 @@ function ClosuresPageContent() {
           onPointsSelect={handlePointsSelect}
           isSelectingPoints={isSelectingPoints}
         />
+
+        {/* Edit Form Sidebar */}
+        {editingClosure && (
+          <EditClosureForm
+            isOpen={isEditFormOpen}
+            onClose={handleToggleEditForm}
+            closure={editingClosure}
+          />
+        )}
       </Layout>
 
       {/* Auth Notice for non-authenticated users */}
       <AuthNotice />
+
+      {/* Edit Status Indicator */}
+      <EditStatus
+        isEditing={isEditFormOpen && !!editingClosure}
+        editingClosure={editingClosure}
+        onCancel={handleToggleEditForm}
+      />
 
       {/* Route Status Indicators */}
       <RouteStatus
@@ -349,7 +450,7 @@ function ClosuresPageContent() {
 
       {/* Point Selection Instructions */}
       <PointSelectionInstructions
-        isSelecting={isSelectingPoints}
+        isSelecting={isSelectingPoints && isFormOpen && !isEditFormOpen}
         pointCount={selectedPoints.length}
         hasRoute={routeState.hasRoute}
         routeInfo={routeState.routeInfo}
@@ -362,8 +463,8 @@ function ClosuresPageContent() {
         <DemoControlPanel />
       </ClientOnly>
 
-      {/* Point Selection Status - Fixed position when form is open */}
-      {isSelectingPoints && isFormOpen && (
+      {/* Point Selection Status - Fixed position when create form is open */}
+      {isSelectingPoints && isFormOpen && !isEditFormOpen && (
         <div className="fixed top-20 right-[25rem] z-40 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
             <MapPin className="w-4 h-4" />
@@ -381,8 +482,21 @@ function ClosuresPageContent() {
         </div>
       )}
 
+      {/* Edit Form Status - Fixed position when edit form is open */}
+      {isEditFormOpen && editingClosure && (
+        <div className="fixed top-20 right-[25rem] z-40 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <Edit3 className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              Editing: {editingClosure.description.substring(0, 30)}
+              {editingClosure.description.length > 30 ? '...' : ''}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Valhalla Integration Notice */}
-      {selectedPoints.length >= 2 && !routeState.hasRoute && !routeState.isRouting && (
+      {selectedPoints.length >= 2 && !routeState.hasRoute && !routeState.isRouting && isFormOpen && !isEditFormOpen && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
             <Route className="w-4 h-4" />
@@ -393,17 +507,29 @@ function ClosuresPageContent() {
         </div>
       )}
 
-      {/* Valhalla Success Notice */}
-      {/* {routeState.hasRoute && routeState.routeInfo && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+      {/* Form Conflict Warning */}
+      {isFormOpen && isEditFormOpen && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
-            <Route className="w-4 h-4" />
+            <TriangleAlert className="w-4 h-4" />
             <span className="text-sm font-medium">
-              ✅ Smart route calculated: {routeState.routeInfo.distance_km.toFixed(2)}km path
+              Cannot have both create and edit forms open simultaneously
             </span>
           </div>
         </div>
-      )} */}
+      )}
+
+      {/* Loading State for Edit */}
+      {editLoading && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            <span className="text-sm font-medium">
+              {editingClosure ? 'Updating closure...' : 'Loading closure for editing...'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Notifications */}
       <Toaster
