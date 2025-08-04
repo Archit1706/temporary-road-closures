@@ -53,6 +53,7 @@ async def create_closure(
     - **end_time**: When the closure ends (optional for indefinite closures)
     - **source**: Source of the closure information (optional)
     - **confidence_level**: Confidence in the information (1-10, optional)
+    - **is_bidirectional**: Whether the closure affects both directions (default: false)
 
     Returns the created closure with generated ID and OpenLR code.
     """
@@ -90,6 +91,10 @@ async def query_closures(
     submitter_id: Optional[int] = Query(
         None, description="Filter by submitter user ID"
     ),
+    is_bidirectional: Optional[bool] = Query(
+        None,
+        description="Filter by direction: true for bidirectional, false for unidirectional",
+    ),
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=1000, description="Page size"),
     db: Session = Depends(get_db),
@@ -106,6 +111,11 @@ async def query_closures(
     - `valid_only=true` (default): Only return currently valid closures
     - `start_time`: Filter closures that start after the specified time
     - `end_time`: Filter closures that end before the specified time
+
+    **Direction Filtering:**
+    - `is_bidirectional=true`: Return only closures that affect both directions
+    - `is_bidirectional=false`: Return only closures that affect one direction
+    - `is_bidirectional` not specified: Return closures regardless of direction
 
     **Other Filters:**
     - `closure_type`: Filter by type (construction, accident, event, etc.)
@@ -151,6 +161,7 @@ async def query_closures(
         start_time=start_datetime,
         end_time=end_datetime,
         submitter_id=submitter_id,
+        is_bidirectional=is_bidirectional,
         page=page,
         size=size,
     )
@@ -191,6 +202,7 @@ async def get_closure(
     - Metadata and timestamps
     - OpenLR location reference code
     - Current status and validity state
+    - Direction information (bidirectional or unidirectional)
     """
     service = ClosureService(db)
 
@@ -229,6 +241,7 @@ async def update_closure(
     - Start/end times
     - Status (for moderators)
     - Closure type
+    - Direction (bidirectional flag)
 
     **Automatic Updates:**
     - `updated_at` timestamp is automatically set
@@ -323,6 +336,10 @@ async def get_user_closures(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=1000, description="Page size"),
     valid_only: bool = Query(False, description="Return only valid closures"),
+    is_bidirectional: Optional[bool] = Query(
+        None,
+        description="Filter by direction: true for bidirectional, false for unidirectional",
+    ),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -335,10 +352,15 @@ async def get_user_closures(
 
     **Filtering:**
     - Use `valid_only=true` to see only currently valid closures
+    - Use `is_bidirectional=true/false` to filter by direction
     - Results are ordered by creation date (newest first)
     """
     query_params = ClosureQueryParams(
-        submitter_id=user_id, valid_only=valid_only, page=page, size=size
+        submitter_id=user_id,
+        valid_only=valid_only,
+        is_bidirectional=is_bidirectional,
+        page=page,
+        size=size,
     )
 
     service = ClosureService(db)

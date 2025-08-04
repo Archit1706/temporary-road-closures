@@ -74,6 +74,9 @@ class ClosureBase(BaseModel):
     confidence_level: Optional[int] = Field(
         None, ge=1, le=10, description="Confidence level (1-10)"
     )
+    is_bidirectional: bool = Field(
+        False, description="Whether the closure affects both directions"
+    )
 
     @field_validator("end_time")
     @classmethod
@@ -111,6 +114,7 @@ class ClosureCreate(ClosureBase):
                 "end_time": "2025-06-01T18:00:00Z",
                 "source": "City of Chicago",
                 "confidence_level": 9,
+                "is_bidirectional": False,
             }
         }
     }
@@ -132,6 +136,9 @@ class ClosureUpdate(BaseModel):
     source: Optional[str] = Field(None, max_length=100, description="Updated source")
     confidence_level: Optional[int] = Field(
         None, ge=1, le=10, description="Updated confidence level"
+    )
+    is_bidirectional: Optional[bool] = Field(
+        None, description="Updated bidirectional flag"
     )
 
     @model_validator(mode="after")
@@ -180,6 +187,7 @@ class ClosureResponse(ClosureBase):
                 "duration_hours": 10.0,
                 "source": "City of Chicago",
                 "confidence_level": 9,
+                "is_bidirectional": False,
             }
         },
     }
@@ -212,6 +220,10 @@ class ClosureQueryParams(BaseModel):
         None, description="Filter closures ending before this time"
     )
     submitter_id: Optional[int] = Field(None, description="Filter by submitter user ID")
+    is_bidirectional: Optional[bool] = Field(
+        None,
+        description="Filter by direction: true for bidirectional, false for unidirectional",
+    )
     page: int = Field(1, ge=1, description="Page number")
     size: int = Field(50, ge=1, le=1000, description="Page size")
 

@@ -2,7 +2,18 @@
 Closure model for managing temporary road closures.
 """
 
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Enum, func
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    DateTime,
+    ForeignKey,
+    Enum,
+    func,
+    Boolean,
+)
+from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session
 from sqlalchemy.dialects.postgresql import ENUM
 from geoalchemy2 import Geometry
@@ -112,6 +123,15 @@ class Closure(BaseModel):
         Integer, nullable=True, doc="Confidence level of the closure information (1-10)"
     )
 
+    # Directional information
+    is_bidirectional = Column(
+        Boolean,
+        nullable=False,
+        default=True,
+        index=True,
+        doc="Whether the closure affects traffic in both directions",
+    )
+
     # Relationships
     submitter = relationship(
         "User", back_populates="closures", doc="User who submitted this closure"
@@ -158,6 +178,16 @@ class Closure(BaseModel):
 
         delta = self.end_time - self.start_time
         return delta.total_seconds() / 3600
+
+    @property
+    def affects_both_directions(self) -> bool:
+        """
+        Check if closure affects both directions of traffic.
+
+        Returns:
+            bool: True if bidirectional closure
+        """
+        return self.is_bidirectional
 
     def update_status_if_needed(self) -> bool:
         """
@@ -211,6 +241,10 @@ class Closure(BaseModel):
                 "status": self.status.value,
                 "start_time": self.start_time.isoformat(),
                 "end_time": self.end_time.isoformat() if self.end_time else None,
+                "submitter_id": self.submitter_id,
+                "source": self.source,
+                "confidence_level": self.confidence_level,
+                "is_bidirectional": self.is_bidirectional,
             },
         }
 
@@ -353,6 +387,40 @@ class Closure(BaseModel):
 
         return query.offset(skip).limit(limit).all()
 
+    @classmethod
+    def get_by_direction(
+        cls,
+        db: Session,
+        is_bidirectional: bool,
+        valid_only: bool = True,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List["Closure"]:
+        """
+        Get closures by direction (bidirectional or unidirectional).
+
+        Args:
+            db: Database session
+            is_bidirectional: Whether to get bidirectional closures
+            valid_only: Whether to return only valid closures
+            skip: Number of records to skip
+            limit: Maximum number of records to return
+
+        Returns:
+            List[Closure]: List of closures matching the direction criteria
+        """
+        query = db.query(cls).filter(cls.is_bidirectional == is_bidirectional)
+
+        if valid_only:
+            now = datetime.datetime.now(datetime.timezone.utc)
+            query = query.filter(
+                cls.status == ClosureStatus.ACTIVE,
+                cls.start_time <= now,
+                (cls.end_time.is_(None)) | (cls.end_time > now),
+            )
+
+        return query.offset(skip).limit(limit).all()
+
     def to_dict(self, include_geometry: bool = False) -> Dict[str, Any]:
         """
         Convert closure to dictionary.
@@ -383,11 +451,14 @@ class Closure(BaseModel):
         # Add computed properties
         data["is_valid"] = self.is_valid
         data["duration_hours"] = self.duration_hours
+        data["affects_both_directions"] = self.affects_both_directions
 
         return data
 
     def __repr__(self) -> str:
         """String representation of the closure."""
+        direction = "bidirectional" if self.is_bidirectional else "unidirectional"
         return (
-            f"<Closure(id={self.id}, type={self.closure_type}, status={self.status})>"
+            f"<Closure(id={self.id}, type={self.closure_type}, status={self.status}, "
+            f"direction={direction})>"
         )

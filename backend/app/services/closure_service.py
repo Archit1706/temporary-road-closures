@@ -74,6 +74,7 @@ class ClosureService:
                 end_time=closure_data.end_time,
                 source=closure_data.source,
                 confidence_level=closure_data.confidence_level,
+                is_bidirectional=closure_data.is_bidirectional,
                 submitter_id=user_id,
                 status=ClosureStatus.ACTIVE.value,
             )
