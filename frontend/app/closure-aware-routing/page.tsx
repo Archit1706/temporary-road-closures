@@ -6,6 +6,7 @@ import { ClosuresProvider } from '@/context/ClosuresContext';
 import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X } from 'lucide-react';
 import RoutingForm from '@/components/Demo/RoutingForm';
 import ClosuresList from '@/components/Demo/ClosuresList';
+import { Closure } from '@/services/api';
 
 // Dynamically import map to avoid SSR issues
 const RoutingMapComponent = dynamic(
@@ -108,8 +109,13 @@ const ClosureAwareRoutingPage: React.FC = () => {
                 format: 'json' as const
             },
             ...(excludeLocations.length > 0 && {
-                exclude_locations: excludeLocations.map(([lat, lng]) => ({ lat, lon: lng }))
-            })
+                // only exclude locations that are not on the direct route and a max of 50 locations
+                exclude_locations: excludeLocations.filter(([lat, lng]) => {
+                    // check if the location is on the direct route
+                    const directRoutePoints = directRoute?.coordinates || [];
+                    return !directRoutePoints.some(point => point[0] === lat && point[1] === lng);
+                }).map(([lat, lng]) => ({ lat, lon: lng })).slice(0, 49)
+            }),
         };
 
         try {
@@ -173,13 +179,14 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
             // 3. Extract exclude locations from closures
             const excludeLocations: [number, number][] = [];
-            closures.forEach(closure => {
+            closures.forEach((closure: Closure) => {
                 if (closure.status === 'active' && closure.geometry) {
                     if (closure.geometry.type === 'Point') {
-                        const [lng, lat] = closure.geometry.coordinates;
+                        const [lng, lat] = closure.geometry.coordinates[0];
                         excludeLocations.push([lat, lng]);
                     } else if (closure.geometry.type === 'LineString') {
-                        closure.geometry.coordinates.forEach(([lng, lat]: [number, number]) => {
+                        closure.geometry.coordinates.forEach((coord: number[]) => {
+                            const [lng, lat] = coord;
                             excludeLocations.push([lat, lng]);
                         });
                     }
