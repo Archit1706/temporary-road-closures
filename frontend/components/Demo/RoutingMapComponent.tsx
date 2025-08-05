@@ -258,7 +258,7 @@ const MapEventHandler: React.FC<{
           <h3 class="font-semibold text-blue-700 mb-1">Closure-Aware Route</h3>
           <p class="text-sm">Distance: ${route.distance.toFixed(2)} km</p>
           <p class="text-sm">Duration: ${Math.round(route.duration)} min</p>
-          <p class="text-sm">Closures avoided: ${route.avoidedClosures}</p>
+          <p class="text-sm">Closure Points avoided: ${route.avoidedClosures}</p>
           <p class="text-xs text-blue-600 mt-1">✓ Optimized to avoid road closures</p>
         </div>
       `);

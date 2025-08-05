@@ -341,7 +341,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                 <div className="flex items-center space-x-2">
                                     <AlertTriangle className="w-4 h-4 text-green-600" />
                                     <span className="text-green-700">
-                                        {route.avoidedClosures} closures avoided
+                                        {route.avoidedClosures} closure points avoided
                                     </span>
                                 </div>
                             </div>
