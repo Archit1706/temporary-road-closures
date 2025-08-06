@@ -428,12 +428,31 @@ export const authApi = {
 
 // Real API functions
 const realApi = {
-    getClosures: async (bbox?: BoundingBox, page: number = 1, size: number = 50): Promise<PaginatedResponse<Closure>> => {
+    // get all the closures with pagination
+    getClosuresWithPagination: async (bbox?: BoundingBox, page: number = 1, size: number = 50): Promise<PaginatedResponse<Closure>> => {
         try {
             const params: any = {
                 valid_only: false,
                 page,
                 size
+            };
+
+            const response = await api.get('/api/v1/closures/', { params });
+            return response.data;
+        } catch (error) {
+            console.error('❌ Error fetching closures:', error);
+            throw error;
+        }
+    },
+
+    // get all the closures
+    getClosures: async (bbox?: BoundingBox): Promise<PaginatedResponse<Closure>> => {
+        try {
+            const params: any = {
+                valid_only: false,
+                bbox: bbox ? `${bbox.west},${bbox.south},${bbox.east},${bbox.north}` : undefined,
+                page: 1,
+                size: 1000 // get all the closures
             };
 
             const response = await api.get('/api/v1/closures/', { params });
