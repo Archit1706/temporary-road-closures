@@ -71,7 +71,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
         try {
             const response = await fetch(
                 `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/closures/?` +
-                `bbox=${bbox.west},${bbox.south},${bbox.east},${bbox.north}&valid_only=true`,
+                `bbox=${bbox.west},${bbox.south},${bbox.east},${bbox.north}`,
                 {
                     headers: {
                         'Accept': 'application/json'
@@ -109,9 +109,9 @@ const ClosureAwareRoutingPage: React.FC = () => {
                 format: 'json' as const
             },
             ...(excludeLocations.length > 0 && {
-                // only exclude locations that are not on the direct route and a max of 50 locations
+                // exclude_polygons: excludeLocations.map(([lat, lng]) => ({ lat, lon: lng }))
+
                 exclude_locations: excludeLocations.filter(([lat, lng]) => {
-                    // check if the location is on the direct route
                     const directRoutePoints = directRoute?.coordinates || [];
                     return !directRoutePoints.some(point => point[0] === lat && point[1] === lng);
                 }).map(([lat, lng]) => ({ lat, lon: lng })).slice(0, 49)
