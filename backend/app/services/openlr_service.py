@@ -386,22 +386,47 @@ class OpenLRService:
         if not isinstance(geometry, dict):
             raise GeospatialException("Geometry must be a dictionary")
 
-        if geometry.get("type") != "LineString":
-            raise GeospatialException("Only LineString geometries are supported")
+        if "type" not in geometry or "coordinates" not in geometry:
+            raise GeospatialException(
+                "Geometry must have 'type' and 'coordinates' fields"
+            )
 
-        coordinates = geometry.get("coordinates", [])
-        if not coordinates or len(coordinates) < 2:
-            raise GeospatialException("LineString must have at least 2 coordinates")
+        geometry_type = geometry["type"]
+        if geometry_type not in ["LineString", "Point"]:
+            raise GeospatialException(f"Unsupported geometry type: {geometry_type}")
 
-        for coord in coordinates:
-            if not isinstance(coord, list) or len(coord) != 2:
-                raise GeospatialException(
-                    "Each coordinate must be [longitude, latitude]"
-                )
+        coordinates = geometry["coordinates"]
 
-            lon, lat = coord
-            if not (-180 <= lon <= 180) or not (-90 <= lat <= 90):
-                raise GeospatialException(f"Invalid coordinates: [{lon}, {lat}]")
+        if geometry_type == "Point":
+            # OpenLR doesn't typically encode points, but we can validate the format
+            if not isinstance(coordinates, list) or len(coordinates) != 2:
+                raise GeospatialException("Point must have exactly 2 coordinates")
+            return  # Skip further validation for points
+
+        if geometry_type == "LineString":
+            if len(coordinates) < 2:
+                raise GeospatialException("LineString must have at least 2 coordinates")
+
+            # Check for minimum distance between points
+            if settings.OPENLR_MIN_DISTANCE > 0:
+                for i in range(len(coordinates) - 1):
+                    distance = self._calculate_haversine_distance(
+                        coordinates[i], coordinates[i + 1]
+                    )
+                    if distance < settings.OPENLR_MIN_DISTANCE:
+                        logger.warning(
+                            f"Points {i} and {i+1} are closer than minimum distance ({distance}m < {settings.OPENLR_MIN_DISTANCE}m)"
+                        )
+
+            for coord in coordinates:
+                if not isinstance(coord, list) or len(coord) != 2:
+                    raise GeospatialException(
+                        "Each coordinate must be [longitude, latitude]"
+                    )
+
+                lon, lat = coord
+                if not (-180 <= lon <= 180) or not (-90 <= lat <= 90):
+                    raise GeospatialException(f"Invalid coordinates: [{lon}, {lat}]")
 
     def _fetch_osm_way_geometry(
         self, way_id: int, start_node: int = None, end_node: int = None

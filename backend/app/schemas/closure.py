@@ -3,7 +3,7 @@ Pydantic schemas for closure data validation and serialization.
 """
 
 from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 from enum import Enum
 
@@ -11,16 +11,18 @@ from app.models.closure import ClosureType, ClosureStatus
 
 
 class GeoJSONGeometry(BaseModel):
-    """GeoJSON geometry schema."""
+    """GeoJSON geometry schema supporting Point and LineString."""
 
     type: str = Field(..., description="Geometry type")
-    coordinates: List[List[float]] = Field(..., description="Coordinate array")
+    coordinates: Union[List[float], List[List[float]]] = Field(
+        ..., description="Coordinate array"
+    )
 
     @field_validator("type")
     @classmethod
     def validate_geometry_type(cls, v):
         """Validate geometry type."""
-        allowed_types = ["LineString", "Point", "Polygon"]
+        allowed_types = ["LineString", "Point"]  # Removed Polygon for now
         if v not in allowed_types:
             raise ValueError(f"Geometry type must be one of {allowed_types}")
         return v
@@ -33,7 +35,25 @@ class GeoJSONGeometry(BaseModel):
         data = info.data if hasattr(info, "data") else {}
         geometry_type = data.get("type")
 
-        if geometry_type == "LineString":
+        if geometry_type == "Point":
+            # Point coordinates: [longitude, latitude]
+            if not isinstance(v, list) or len(v) != 2:
+                raise ValueError("Point coordinates must be [longitude, latitude]")
+
+            lon, lat = v
+            if not isinstance(lon, (int, float)) or not isinstance(lat, (int, float)):
+                raise ValueError("Coordinates must be numeric")
+
+            # Validate longitude and latitude ranges
+            if not (-180 <= lon <= 180):
+                raise ValueError(f"Longitude {lon} is out of range [-180, 180]")
+            if not (-90 <= lat <= 90):
+                raise ValueError(f"Latitude {lat} is out of range [-90, 90]")
+
+            # Round to 5 decimal places
+            return [round(lon, 5), round(lat, 5)]
+
+        elif geometry_type == "LineString":
             if len(v) < 2:
                 raise ValueError("LineString must have at least 2 coordinates")
 
@@ -103,19 +123,45 @@ class ClosureCreate(ClosureBase):
 
     model_config = {
         "json_schema_extra": {
-            "example": {
-                "geometry": {
-                    "type": "LineString",
-                    "coordinates": [[-87.62980, 41.87810], [-87.62900, 41.87850]],
+            "examples": [
+                {
+                    "example_name": "LineString Closure",
+                    "summary": "Road segment closure",
+                    "value": {
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [-87.62980, 41.87810],
+                                [-87.62900, 41.87850],
+                            ],
+                        },
+                        "description": "Water main repair blocking eastbound traffic",
+                        "closure_type": "construction",
+                        "start_time": "2025-06-01T08:00:00Z",
+                        "end_time": "2025-06-01T18:00:00Z",
+                        "source": "City of Chicago",
+                        "confidence_level": 9,
+                        "is_bidirectional": False,
+                    },
                 },
-                "description": "Water main repair blocking eastbound traffic",
-                "closure_type": "construction",
-                "start_time": "2025-06-01T08:00:00Z",
-                "end_time": "2025-06-01T18:00:00Z",
-                "source": "City of Chicago",
-                "confidence_level": 9,
-                "is_bidirectional": False,
-            }
+                {
+                    "example_name": "Point Closure",
+                    "summary": "Intersection or specific location closure",
+                    "value": {
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [-87.6201, 41.8902],
+                        },
+                        "description": "Multi-car accident blocking southbound lanes near I-90 exit 42",
+                        "closure_type": "accident",
+                        "start_time": "2025-08-13T15:30:00Z",
+                        "end_time": "2025-08-13T18:45:00Z",
+                        "source": "Illinois State Police",
+                        "confidence_level": 7,
+                        "is_bidirectional": False,
+                    },
+                },
+            ]
         }
     }
 

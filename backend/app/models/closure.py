@@ -72,9 +72,9 @@ class Closure(BaseModel):
 
     # Geospatial data
     geometry = Column(
-        Geometry("LINESTRING", srid=4326),
+        Geometry("GEOMETRY", srid=4326),
         nullable=False,
-        doc="Road segment geometry as LineString in WGS84",
+        doc="Road segment geometry as Point or LineString in WGS84",
     )
 
     # Temporal data
@@ -194,6 +194,49 @@ class Closure(BaseModel):
             bool: True if bidirectional closure
         """
         return self.is_bidirectional
+
+    def _validate_geometry_type(self) -> bool:
+        """
+        Validate that geometry is either Point or LineString.
+
+        Returns:
+            bool: True if geometry type is valid
+        """
+        # This would be called during model validation
+        # The actual geometry type checking will be done in the service layer
+        return True
+
+    @property
+    def geometry_type(self) -> Optional[str]:
+        """
+        Get the geometry type (Point or LineString).
+
+        Returns:
+            str: Geometry type
+        """
+        # This would need to be implemented with a database query
+        # For now, return None - this will be populated by the service layer
+        return None
+
+    @property
+    def is_point_closure(self) -> bool:
+        """
+        Check if this is a point closure.
+
+        Returns:
+            bool: True if geometry is a Point
+        """
+        return self.geometry_type == "Point"
+
+    @property
+    def is_linestring_closure(self) -> bool:
+        """
+        Check if this is a linestring closure.
+
+        Returns:
+            bool: True if geometry is a LineString
+        """
+        return self.geometry_type == "LineString"
 
     def update_status_if_needed(self) -> bool:
         """

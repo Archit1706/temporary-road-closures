@@ -59,23 +59,40 @@ SELECT 'WGS84 (EPSG:4326) available: ' ||
          ELSE 'NO' 
     END as wgs84_status;
 
--- Create a simple test table to verify PostGIS functionality
+-- Create a test table to verify PostGIS functionality supports both Point and LineString
 CREATE TABLE IF NOT EXISTS postgis_test (
     id SERIAL PRIMARY KEY,
     name VARCHAR(50),
-    geom GEOMETRY(POINT, 4326)
+    geom GEOMETRY(GEOMETRY, 4326)  -- Changed to support both Point and LineString
 );
 
--- Insert a test point (Chicago coordinates)
+-- Insert test geometries (Point and LineString)
 INSERT INTO postgis_test (name, geom) 
-VALUES ('Chicago', ST_GeomFromText('POINT(-87.6298 41.8781)', 4326))
+VALUES 
+    ('Chicago Point', ST_GeomFromText('POINT(-87.6298 41.8781)', 4326)),
+    ('Chicago Line', ST_GeomFromText('LINESTRING(-87.6298 41.8781, -87.6290 41.8785)', 4326))
 ON CONFLICT DO NOTHING;
 
--- Verify spatial query works
-SELECT 'PostGIS test query: ' || 
+-- Add constraint to ensure only Point or LineString geometries
+DO $$ BEGIN
+    ALTER TABLE postgis_test 
+    ADD CONSTRAINT check_test_geometry_type 
+    CHECK (ST_GeometryType(geom) IN ('ST_Point', 'ST_LineString'));
+EXCEPTION
+    WHEN duplicate_object THEN 
+        RAISE NOTICE 'Constraint check_test_geometry_type already exists, skipping...';
+END $$;
+
+-- Verify spatial queries work for both geometry types
+SELECT 'PostGIS Point test: ' || 
     ST_AsText(geom) || ' (' || name || ')' as test_result 
 FROM postgis_test 
-WHERE name = 'Chicago';
+WHERE name = 'Chicago Point';
+
+SELECT 'PostGIS LineString test: ' || 
+    ST_AsText(geom) || ' (' || name || ')' as test_result 
+FROM postgis_test 
+WHERE name = 'Chicago Line';
 
 -- Clean up test table
 DROP TABLE IF EXISTS postgis_test;

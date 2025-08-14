@@ -308,23 +308,17 @@ def custom_openapi():
 
 This API uses **OAuth2 Password Bearer** authentication with JWT tokens.
 
-**Quick Demo Flow:**
-1. Use `/auth/register` to create an account (if needed)
-2. Click the **Authorize** button below
-3. Enter your username and password in the OAuth2 form
-4. Now you can test all authenticated endpoints!
-
 ## 🗺️ Features
 
 - **🗄️ Geospatial Support**: Store and query road closures with PostGIS
-- **📍 OpenLR Integration**: Location referencing compatible with navigation systems  
+- **📍 Multiple Geometry Types**: Support for both LineString (road segments) and Point (intersections/locations) closures
+- **📍 OpenLR Integration**: Location referencing compatible with navigation systems (LineString only)
 - **🔐 Secure Authentication**: OAuth2 + JWT tokens with user management
 - **📊 Rich Querying**: Spatial, temporal, and type-based filtering
-- **🚀 High Performance**: Optimized for real-time navigation applications
 
 ## 📋 Example Usage
 
-**Create a Closure:**
+**Create a LineString Closure:**
 ```json
 {{
   "geometry": {{
@@ -335,6 +329,21 @@ This API uses **OAuth2 Password Bearer** authentication with JWT tokens.
   "closure_type": "construction",
   "start_time": "2025-07-03T08:00:00Z",
   "end_time": "2025-07-03T18:00:00Z"
+}}
+```
+
+
+**Create a Point Closure:**
+```json
+json{{
+  "geometry": {{
+    "type": "Point",
+    "coordinates": [-87.6201, 41.8902]
+  }},
+  "description": "Multi-car accident blocking southbound lanes",
+  "closure_type": "accident",
+  "start_time": "2025-08-13T15:30:00Z",
+  "end_time": "2025-08-13T18:45:00Z"
 }}
 ```
 
