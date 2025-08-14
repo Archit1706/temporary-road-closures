@@ -15,7 +15,11 @@ DO $$ BEGIN
         'maintenance', 
         'weather', 
         'emergency',
-        'other'
+        'other',
+        'sidewalk_repair',
+        'bike_lane_closure',
+        'bridge_closure',
+        'tunnel_closure'
     );
 EXCEPTION
     WHEN duplicate_object THEN 

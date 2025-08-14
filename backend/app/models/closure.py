@@ -40,6 +40,11 @@ class ClosureType(str, enum.Enum):
     WEATHER = "weather"
     EMERGENCY = "emergency"
     OTHER = "other"
+    # Infrastructure-specific types
+    SIDEWALK_REPAIR = "sidewalk_repair"
+    BIKE_LANE_CLOSURE = "bike_lane_closure"
+    BRIDGE_CLOSURE = "bridge_closure"
+    TUNNEL_CLOSURE = "tunnel_closure"
 
 
 class ClosureStatus(str, enum.Enum):

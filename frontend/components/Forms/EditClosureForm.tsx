@@ -30,6 +30,10 @@ const CLOSURE_TYPES = [
     { value: 'weather', label: 'Weather Conditions', icon: '🌧️' },
     { value: 'emergency', label: 'Emergency Services', icon: '🚨' },
     { value: 'other', label: 'Other', icon: '❓' },
+    { value: 'sidewalk_repair', label: 'Sidewalk Repair', icon: '🚶‍♂️' },
+    { value: 'bike_lane_closure', label: 'Bike Lane Closure', icon: '🚴‍♂️' },
+    { value: 'bridge_closure', label: 'Bridge Closure', icon: '🌉' },
+    { value: 'tunnel_closure', label: 'Tunnel Closure', icon: '🌳' },
 ];
 
 const CONFIDENCE_LEVELS = [
