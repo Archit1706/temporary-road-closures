@@ -268,7 +268,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             return;
         }
 
-        let finalCoordinates: number[][] | undefined;
+        let finalCoordinates: number[][] | number[] | undefined;
 
         // Handle Point geometry
         if (data.geometry_type === 'Point') {
@@ -345,7 +345,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     geometry: {
                         type: data.geometry_type,
                         coordinates: data.geometry_type === 'Point'
-                            ? [finalCoordinates as number[]]
+                            ? finalCoordinates as number[]
                             : finalCoordinates as number[][],
                     },
                 };

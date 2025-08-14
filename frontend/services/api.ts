@@ -75,7 +75,7 @@ export interface Closure {
 export interface CreateClosureData {
     geometry: {
         type: 'LineString' | 'Point';
-        coordinates: number[][];
+        coordinates: number[][] | number[];
     };
     start_time: string;
     end_time: string;
