@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from 'react-hot-toast';
 import { ClosuresProvider } from '@/context/ClosuresContext';
-import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X } from 'lucide-react';
+import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User } from 'lucide-react';
 import RoutingForm from '@/components/Demo/RoutingForm';
 import ClosuresList from '@/components/Demo/ClosuresList';
 import { Closure } from '@/services/api';
@@ -38,14 +38,39 @@ interface CalculatedRoute {
     excludedPoints: [number, number][];
 }
 
+export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
+
+// Define which closure types affect which transportation modes
+const closureTypeEffects: Record<string, TransportationMode[]> = {
+    'construction': ['auto', 'bicycle'], // Road construction affects cars and bicycles but not pedestrians
+    'accident': ['auto', 'bicycle'], // Traffic accidents typically affect vehicles
+    'event': ['auto'], // Street events typically only restrict vehicle access
+    'maintenance': ['auto', 'bicycle'], // Road maintenance affects vehicles
+    'weather': ['auto', 'bicycle', 'pedestrian'], // Weather can affect all modes
+    'emergency': ['auto', 'bicycle', 'pedestrian'], // Emergency closures affect all
+    'other': ['auto', 'bicycle', 'pedestrian'], // Generic closures affect all
+    'sidewalk_repair': ['pedestrian'], // Sidewalk repairs only affect pedestrians
+    'bike_lane_closure': ['bicycle'], // Bike lane closures only affect cyclists
+    'bridge_closure': ['auto', 'bicycle', 'pedestrian'], // Bridge closures affect all
+    'tunnel_closure': ['auto', 'bicycle'], // Tunnel closures typically affect vehicles
+};
+
+// Check if a closure affects a specific transportation mode
+const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
+    const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
+    return affectedModes.includes(mode);
+};
+
 const ClosureAwareRoutingPage: React.FC = () => {
     const [sourcePoint, setSourcePoint] = useState<RoutePoint | null>(null);
     const [destinationPoint, setDestinationPoint] = useState<RoutePoint | null>(null);
+    const [transportationMode, setTransportationMode] = useState<TransportationMode>('auto');
     const [route, setRoute] = useState<CalculatedRoute | null>(null);
     const [directRoute, setDirectRoute] = useState<CalculatedRoute | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [closuresInPath, setClosuresInPath] = useState<any[]>([]);
+    const [relevantClosures, setRelevantClosures] = useState<any[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     // Calculate bounding box with 1-mile buffer
@@ -92,10 +117,22 @@ const ClosureAwareRoutingPage: React.FC = () => {
         }
     }, []);
 
+    // Filter closures by transportation mode
+    const filterClosuresByMode = useCallback((closures: Closure[], mode: TransportationMode) => {
+        return closures.filter(closure => {
+            // Only consider active closures
+            if (closure.status !== 'active') return false;
+
+            // Check if this closure affects the selected transportation mode
+            return doesClosureAffectMode(closure, mode);
+        });
+    }, []);
+
     // Calculate route with Valhalla API
     const calculateRoute = useCallback(async (
         source: RoutePoint,
         destination: RoutePoint,
+        mode: TransportationMode,
         excludeLocations: [number, number][] = []
     ) => {
         const valhallaRequest = {
@@ -103,18 +140,13 @@ const ClosureAwareRoutingPage: React.FC = () => {
                 { lat: source.lat, lon: source.lng, type: 'break' as const },
                 { lat: destination.lat, lon: destination.lng, type: 'break' as const }
             ],
-            costing: 'auto' as const,
+            costing: mode,
             directions_options: {
                 units: 'kilometers' as const,
                 format: 'json' as const
             },
             ...(excludeLocations.length > 0 && {
-                // exclude_polygons: excludeLocations.map(([lat, lng]) => ({ lat, lon: lng }))
-
-                exclude_locations: excludeLocations.filter(([lat, lng]) => {
-                    const directRoutePoints = directRoute?.coordinates || [];
-                    return !directRoutePoints.some(point => point[0] === lat && point[1] === lng);
-                }).map(([lat, lng]) => ({ lat, lon: lng })).slice(0, 49)
+                exclude_locations: excludeLocations.map(([lat, lng]) => ({ lat, lon: lng })).slice(0, 49)
             }),
         };
 
@@ -173,13 +205,18 @@ const ClosureAwareRoutingPage: React.FC = () => {
             console.log('🗺️ Calculated bounding box:', bbox);
 
             // 2. Fetch closures in the path
-            const closures = await fetchClosuresInPath(bbox);
-            console.log('🚧 Found closures in path:', closures.length);
-            setClosuresInPath(closures);
+            const allClosures = await fetchClosuresInPath(bbox);
+            console.log('🚧 Found total closures in path:', allClosures.length);
+            setClosuresInPath(allClosures);
 
-            // 3. Extract exclude locations from closures
+            // 3. Filter closures by transportation mode
+            const relevantClosuresForMode = filterClosuresByMode(allClosures, transportationMode);
+            console.log(`🚧 Found closures relevant to ${transportationMode}:`, relevantClosuresForMode.length);
+            setRelevantClosures(relevantClosuresForMode);
+
+            // 4. Extract exclude locations from relevant closures only
             const excludeLocations: [number, number][] = [];
-            closures.forEach((closure: Closure) => {
+            relevantClosuresForMode.forEach((closure: Closure) => {
                 if (closure.status === 'active' && closure.geometry) {
                     if (closure.geometry.type === 'Point') {
                         const [lng, lat] = closure.geometry.coordinates[0];
@@ -193,32 +230,56 @@ const ClosureAwareRoutingPage: React.FC = () => {
                 }
             });
 
-            console.log('🚫 Exclude locations:', excludeLocations.length);
+            console.log(`🚫 Exclude locations for ${transportationMode}:`, excludeLocations.length);
 
-            // 4. Calculate direct route (no exclusions)
-            const directRouteResult = await calculateRoute(sourcePoint, destinationPoint, []);
+            // 5. Calculate direct route (no exclusions)
+            const directRouteResult = await calculateRoute(sourcePoint, destinationPoint, transportationMode, []);
             setDirectRoute(directRouteResult);
 
-            // 5. Calculate closure-aware route
-            const closureAwareRoute = await calculateRoute(sourcePoint, destinationPoint, excludeLocations);
+            // 6. Calculate closure-aware route
+            const closureAwareRoute = await calculateRoute(sourcePoint, destinationPoint, transportationMode, excludeLocations);
             setRoute(closureAwareRoute);
 
-            console.log('✅ Routes calculated successfully');
+            console.log(`✅ ${transportationMode} routes calculated successfully`);
         } catch (error) {
             console.error('❌ Route calculation failed:', error);
             setError(error instanceof Error ? error.message : 'Failed to calculate route');
         } finally {
             setIsCalculating(false);
         }
-    }, [sourcePoint, destinationPoint, calculateBoundingBox, fetchClosuresInPath, calculateRoute]);
+    }, [sourcePoint, destinationPoint, transportationMode, calculateBoundingBox, fetchClosuresInPath, filterClosuresByMode, calculateRoute]);
 
     // Clear route
     const handleClearRoute = useCallback(() => {
         setRoute(null);
         setDirectRoute(null);
         setClosuresInPath([]);
+        setRelevantClosures([]);
         setError(null);
     }, []);
+
+    // Handle transportation mode change
+    const handleTransportationModeChange = useCallback((mode: TransportationMode) => {
+        setTransportationMode(mode);
+        // Clear existing routes when mode changes
+        handleClearRoute();
+    }, [handleClearRoute]);
+
+    // Get the appropriate icon for the current transportation mode
+    const getTransportationIcon = (mode: TransportationMode) => {
+        switch (mode) {
+            case 'auto':
+                return Car;
+            case 'bicycle':
+                return Bike;
+            case 'pedestrian':
+                return User;
+            default:
+                return Navigation;
+        }
+    };
+
+    const TransportationIcon = getTransportationIcon(transportationMode);
 
     return (
         <div className="h-screen flex flex-col bg-gray-50">
@@ -227,14 +288,16 @@ const ClosureAwareRoutingPage: React.FC = () => {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
                         <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                            <Navigation className="w-6 h-6 text-white" />
+                            <TransportationIcon className="w-6 h-6 text-white" />
                         </div>
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">
                                 Closure-Aware Routing
                             </h1>
                             <p className="text-sm text-gray-500">
-                                Route planning that avoids temporary road closures
+                                {transportationMode === 'auto' && 'Car routing that avoids road closures'}
+                                {transportationMode === 'bicycle' && 'Bicycle routing that avoids relevant closures'}
+                                {transportationMode === 'pedestrian' && 'Walking routing that avoids pedestrian closures'}
                             </p>
                         </div>
                     </div>
@@ -257,6 +320,12 @@ const ClosureAwareRoutingPage: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
+                        {/* Transportation Mode Indicator */}
+                        <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
+                            <TransportationIcon className="w-4 h-4 text-gray-600" />
+                            <span className="text-sm text-gray-700 capitalize">{transportationMode}</span>
+                        </div>
 
                         <button
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -284,8 +353,10 @@ const ClosureAwareRoutingPage: React.FC = () => {
                                 <RoutingForm
                                     sourcePoint={sourcePoint}
                                     destinationPoint={destinationPoint}
+                                    transportationMode={transportationMode}
                                     onSourceChange={setSourcePoint}
                                     onDestinationChange={setDestinationPoint}
+                                    onTransportationModeChange={handleTransportationModeChange}
                                     onCalculateRoute={handleCalculateRoute}
                                     onClearRoute={handleClearRoute}
                                     isCalculating={isCalculating}
@@ -296,7 +367,11 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
                                 {/* Closures List */}
                                 {closuresInPath.length > 0 && (
-                                    <ClosuresList closures={closuresInPath} />
+                                    <ClosuresList
+                                        closures={closuresInPath}
+                                        transportationMode={transportationMode}
+                                        relevantClosures={relevantClosures}
+                                    />
                                 )}
                             </div>
 
@@ -307,7 +382,10 @@ const ClosureAwareRoutingPage: React.FC = () => {
                                         <Info className="w-3 h-3" />
                                         <span>Powered by Valhalla routing engine</span>
                                     </div>
-                                    <div>Uses OpenStreetMap data and real-time closure information</div>
+                                    <div>Uses OpenStreetMap data and transportation-aware closure filtering</div>
+                                    <div className="font-medium text-gray-600">
+                                        {relevantClosures.length} of {closuresInPath.length} closures affect {transportationMode}
+                                    </div>
                                 </div>
                             </div>
                         </>
@@ -319,9 +397,11 @@ const ClosureAwareRoutingPage: React.FC = () => {
                     <RoutingMapComponent
                         sourcePoint={sourcePoint}
                         destinationPoint={destinationPoint}
+                        transportationMode={transportationMode}
                         route={route}
                         directRoute={directRoute}
                         closures={closuresInPath}
+                        relevantClosures={relevantClosures}
                         onSourceSelect={setSourcePoint}
                         onDestinationSelect={setDestinationPoint}
                     />
@@ -351,7 +431,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         <div className="absolute top-4 right-4 z-10 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
                             <div className="flex items-center space-x-2">
                                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                <span className="text-sm font-medium">Calculating route...</span>
+                                <span className="text-sm font-medium">Calculating {transportationMode} route...</span>
                             </div>
                         </div>
                     )}
