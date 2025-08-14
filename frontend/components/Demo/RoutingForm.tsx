@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { MapPin, Navigation, Route, Zap, AlertTriangle, RotateCcw, ArrowRight, Clock, TrendingUp } from 'lucide-react';
+import { MapPin, Navigation, Route, Zap, AlertTriangle, RotateCcw, ArrowRight, Clock, TrendingUp, Car, Bike, User } from 'lucide-react';
 
 interface RoutePoint {
     lat: number;
@@ -16,11 +16,15 @@ interface CalculatedRoute {
     excludedPoints: [number, number][];
 }
 
+export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
+
 interface RoutingFormProps {
     sourcePoint: RoutePoint | null;
     destinationPoint: RoutePoint | null;
+    transportationMode: TransportationMode;
     onSourceChange: (point: RoutePoint | null) => void;
     onDestinationChange: (point: RoutePoint | null) => void;
+    onTransportationModeChange: (mode: TransportationMode) => void;
     onCalculateRoute: () => void;
     onClearRoute: () => void;
     isCalculating: boolean;
@@ -34,11 +38,37 @@ interface FormData {
     destination: string;
 }
 
+const transportationModes = [
+    {
+        key: 'auto' as TransportationMode,
+        label: 'Car',
+        icon: Car,
+        color: 'blue',
+        description: 'Driving routes using roads and highways'
+    },
+    {
+        key: 'bicycle' as TransportationMode,
+        label: 'Bicycle',
+        icon: Bike,
+        color: 'green',
+        description: 'Cycling routes using bike lanes and roads'
+    },
+    {
+        key: 'pedestrian' as TransportationMode,
+        label: 'Walking',
+        icon: User,
+        color: 'orange',
+        description: 'Walking routes using sidewalks and paths'
+    }
+];
+
 const RoutingForm: React.FC<RoutingFormProps> = ({
     sourcePoint,
     destinationPoint,
+    transportationMode,
     onSourceChange,
     onDestinationChange,
+    onTransportationModeChange,
     onCalculateRoute,
     onClearRoute,
     isCalculating,
@@ -57,10 +87,9 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
         watch
     } = useForm<FormData>();
 
-    // Geocoding function (simplified - you might want to use a proper geocoding service)
+    // Geocoding function
     const geocodeAddress = async (address: string): Promise<RoutePoint | null> => {
         try {
-            // This is a simplified geocoding - in production, use a proper service like Nominatim
             const response = await fetch(
                 `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1&countrycodes=us`
             );
@@ -132,6 +161,8 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
         timeDiff: route.duration - directRoute.duration
     } : null;
 
+    const selectedMode = transportationModes.find(mode => mode.key === transportationMode);
+
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
@@ -139,8 +170,54 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                 <Navigation className="w-6 h-6 text-blue-600" />
                 <div>
                     <h2 className="text-lg font-semibold text-gray-900">Route Planning</h2>
-                    <p className="text-sm text-gray-500">Plan routes that avoid road closures</p>
+                    <p className="text-sm text-gray-500">Plan routes that avoid relevant road closures</p>
                 </div>
+            </div>
+
+            {/* Transportation Mode Selection */}
+            <div className="space-y-3">
+                <label className="text-sm font-medium text-gray-700">Transportation Mode</label>
+                <div className="grid grid-cols-3 gap-2">
+                    {transportationModes.map((mode) => {
+                        const Icon = mode.icon;
+                        const isSelected = transportationMode === mode.key;
+                        const colorClasses = {
+                            blue: {
+                                selected: 'bg-blue-600 text-white border-blue-600',
+                                unselected: 'bg-white text-blue-600 border-blue-200 hover:bg-blue-50'
+                            },
+                            green: {
+                                selected: 'bg-green-600 text-white border-green-600',
+                                unselected: 'bg-white text-green-600 border-green-200 hover:bg-green-50'
+                            },
+                            orange: {
+                                selected: 'bg-orange-600 text-white border-orange-600',
+                                unselected: 'bg-white text-orange-600 border-orange-200 hover:bg-orange-50'
+                            }
+                        };
+
+                        return (
+                            <button
+                                key={mode.key}
+                                type="button"
+                                onClick={() => onTransportationModeChange(mode.key)}
+                                className={`
+                                    flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200
+                                    ${isSelected
+                                        ? colorClasses[mode.color].selected
+                                        : colorClasses[mode.color].unselected
+                                    }
+                                `}
+                            >
+                                <Icon className="w-5 h-5 mb-1" />
+                                <span className="text-xs font-medium">{mode.label}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+                <p className="text-xs text-gray-500">
+                    {selectedMode?.description}
+                </p>
             </div>
 
             {/* Route Input Form */}
@@ -186,8 +263,8 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     type="button"
                                     onClick={() => handleMapSelection('source')}
                                     className={`text-sm px-3 py-1 rounded ${isSelectingSource
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                 >
                                     {isSelectingSource ? 'Click on map' : 'Select on map'}
@@ -241,8 +318,8 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     type="button"
                                     onClick={() => handleMapSelection('destination')}
                                     className={`text-sm px-3 py-1 rounded ${isSelectingDestination
-                                            ? 'bg-red-600 text-white'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                                         }`}
                                 >
                                     {isSelectingDestination ? 'Click on map' : 'Select on map'}
@@ -300,6 +377,21 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                 </div>
             )}
 
+            {/* Transportation Mode Info */}
+            {route && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2 mb-2">
+                        {selectedMode && <selectedMode.icon className="w-4 h-4 text-gray-600" />}
+                        <span className="text-sm font-medium text-gray-900">
+                            Route optimized for {selectedMode?.label.toLowerCase()}
+                        </span>
+                    </div>
+                    <p className="text-xs text-gray-600">
+                        Only closures affecting {selectedMode?.label.toLowerCase()} traffic are considered for route avoidance.
+                    </p>
+                </div>
+            )}
+
             {/* Error Display */}
             {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -323,7 +415,9 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-3">
                             <div className="flex items-center space-x-2 mb-2">
                                 <Route className="w-5 h-5 text-green-600" />
-                                <span className="font-medium text-green-900">Closure-Aware Route</span>
+                                <span className="font-medium text-green-900">
+                                    Closure-Aware Route ({selectedMode?.label})
+                                </span>
                             </div>
                             <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div className="flex items-center space-x-2">
@@ -338,10 +432,10 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                         {Math.round(route.duration)} min
                                     </span>
                                 </div>
-                                <div className="flex items-center space-x-2">
+                                <div className="flex items-center space-x-2 col-span-2">
                                     <AlertTriangle className="w-4 h-4 text-green-600" />
                                     <span className="text-green-700">
-                                        {route.avoidedClosures} closure points avoided
+                                        {route.avoidedClosures} relevant closure points avoided
                                     </span>
                                 </div>
                             </div>
@@ -405,9 +499,10 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <h3 className="text-sm font-medium text-blue-900 mb-2">How it works</h3>
                     <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                        <li>Select your preferred mode of transportation</li>
                         <li>Enter or select your start and destination points</li>
-                        <li>We'll find all active road closures along your route</li>
-                        <li>Valhalla routing engine calculates the best path avoiding closures</li>
+                        <li>We'll find closures relevant to your chosen transportation mode</li>
+                        <li>Valhalla routing engine calculates the best path avoiding relevant closures</li>
                         <li>Compare the closure-aware route with the direct route</li>
                     </ol>
                 </div>
