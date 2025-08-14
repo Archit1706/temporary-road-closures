@@ -14,6 +14,7 @@ DO $$ BEGIN
         'event', 
         'maintenance', 
         'weather', 
+        'emergency',
         'other'
     );
 EXCEPTION

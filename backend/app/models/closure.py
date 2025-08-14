@@ -38,6 +38,7 @@ class ClosureType(str, enum.Enum):
     EVENT = "event"
     MAINTENANCE = "maintenance"
     WEATHER = "weather"
+    EMERGENCY = "emergency"
     OTHER = "other"
 
 
