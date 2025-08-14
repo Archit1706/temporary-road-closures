@@ -1,4 +1,4 @@
-// app/closures/page.tsx
+// app/closures/page.tsx 
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -9,7 +9,7 @@ import Layout from '@/components/Layout/Layout';
 import ClosureForm from '@/components/Forms/ClosureForm';
 import EditClosureForm from '@/components/Forms/EditClosureForm';
 import ClientOnly from '@/components/ClientOnly';
-import { LogIn, Info, MapPin, Route, Edit3, TriangleAlert } from 'lucide-react';
+import { LogIn, Info, MapPin, Route, Edit3, TriangleAlert, Target } from 'lucide-react';
 import L from 'leaflet';
 
 // Dynamically import MapComponent to avoid SSR issues
@@ -75,17 +75,37 @@ const PointSelectionInstructions: React.FC<{
   routeInfo?: { distance_km: number; points_count: number };
   onClear: () => void;
   onFinish: () => void;
-}> = ({ isSelecting, pointCount, hasRoute, routeInfo, onClear, onFinish }) => {
+  geometryType: 'Point' | 'LineString';
+}> = ({ isSelecting, pointCount, hasRoute, routeInfo, onClear, onFinish, geometryType }) => {
   if (!isSelecting) return null;
+
+  const getInstructionText = () => {
+    if (geometryType === 'Point') {
+      return pointCount === 0 ? "Click on the map to select a point location" : "Point location selected";
+    } else {
+      return pointCount === 0 ? "Click on the map to start selecting points" :
+        pointCount === 1 ? "Add at least one more point to calculate route" :
+          pointCount >= 2 && !hasRoute && !routeInfo ? "Calculating route with Valhalla..." :
+            hasRoute && routeInfo ? `Route calculated: ${routeInfo.points_count} points, ${routeInfo.distance_km.toFixed(2)} km` :
+              "Select points for road segment";
+    }
+  };
+
+  const getGeometryIcon = () => {
+    return geometryType === 'Point' ? Target : Route;
+  };
+
+  const GeometryIcon = getGeometryIcon();
 
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-md">
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
-          <div className="w-3 h-3 bg-blue-600 rounded-full animate-pulse"></div>
+          <div className={`w-3 h-3 rounded-full animate-pulse ${geometryType === 'Point' ? 'bg-orange-600' : 'bg-blue-600'}`}></div>
+          <GeometryIcon className={`w-4 h-4 ${geometryType === 'Point' ? 'text-orange-600' : 'text-blue-600'}`} />
           <span className="font-medium text-gray-900">
-            Selecting Points ({pointCount})
-            {hasRoute && routeInfo && (
+            {geometryType === 'Point' ? 'Point Selection' : 'Road Segment Selection'} ({pointCount}/{geometryType === 'Point' ? '1' : '2+'})
+            {hasRoute && routeInfo && geometryType === 'LineString' && (
               <span className="text-green-600 ml-2">
                 → Route: {routeInfo.distance_km.toFixed(2)}km
               </span>
@@ -95,19 +115,17 @@ const PointSelectionInstructions: React.FC<{
       </div>
 
       <div className="mt-2 text-sm text-gray-600">
-        {pointCount === 0 && "Click on the map to start selecting points"}
-        {pointCount === 1 && "Add at least one more point to calculate route"}
-        {pointCount >= 2 && !hasRoute && "Calculating route with Valhalla..."}
-        {hasRoute && routeInfo && (
-          <div className="text-green-700">
-            ✅ Route calculated: {routeInfo.points_count} points, {routeInfo.distance_km.toFixed(2)} km
-          </div>
-        )}
+        {getInstructionText()}
       </div>
 
       <div className="flex items-center justify-between mt-3">
         <div className="text-xs text-gray-500">
-          {hasRoute ? (
+          {geometryType === 'Point' ? (
+            <div className="flex items-center space-x-1">
+              <Target className="w-3 h-3" />
+              <span>Single point location</span>
+            </div>
+          ) : hasRoute ? (
             <div className="flex items-center space-x-1">
               <Route className="w-3 h-3" />
               <span>Using Valhalla routing</span>
@@ -129,7 +147,8 @@ const PointSelectionInstructions: React.FC<{
           )}
           <button
             onClick={onFinish}
-            className="bg-blue-600 text-white hover:bg-blue-700 px-3 py-1 rounded text-sm font-medium"
+            className={`text-white hover:opacity-90 px-3 py-1 rounded text-sm font-medium ${geometryType === 'Point' ? 'bg-orange-600' : 'bg-blue-600'
+              }`}
           >
             Done
           </button>
@@ -145,7 +164,9 @@ const RouteStatus: React.FC<{
   hasRoute: boolean;
   routeError?: string;
   routeInfo?: { distance_km: number; points_count: number };
-}> = ({ isRouting, hasRoute, routeError, routeInfo }) => {
+  geometryType: 'Point' | 'LineString';
+}> = ({ isRouting, hasRoute, routeError, routeInfo, geometryType }) => {
+  if (geometryType === 'Point') return null; // No routing for points
   if (!isRouting && !hasRoute && !routeError) return null;
 
   return (
@@ -214,6 +235,7 @@ function ClosuresPageContent() {
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);
   const [isSelectingPoints, setIsSelectingPoints] = useState(false);
+  const [geometryType, setGeometryType] = useState<'Point' | 'LineString'>('LineString');
 
   const { state, stopEditingClosure } = useClosures();
   const { editingClosure, editLoading } = state;
@@ -233,7 +255,6 @@ function ClosuresPageContent() {
   useEffect(() => {
     if (editingClosure && !isEditFormOpen) {
       setIsEditFormOpen(true);
-      // Close create form if open
       setIsFormOpen(false);
     }
   }, [editingClosure, isEditFormOpen]);
@@ -252,28 +273,44 @@ function ClosuresPageContent() {
       setIsSelectingPoints(false);
     };
 
+    // Listen for geometry type changes from the form
+    const handleGeometryTypeChange = (event: CustomEvent) => {
+      const newGeometryType = event.detail.geometryType;
+      setGeometryType(newGeometryType);
+
+      // Clear points when switching between Point and LineString
+      if (newGeometryType !== geometryType) {
+        setSelectedPoints([]);
+        setRouteState({
+          isRouting: false,
+          hasRoute: false
+        });
+      }
+    };
+
     window.addEventListener('clearPoints', handleClearPoints);
     window.addEventListener('finishSelection', handleFinishSelection);
+    window.addEventListener('geometryTypeChanged', handleGeometryTypeChange as EventListener);
 
     return () => {
       window.removeEventListener('clearPoints', handleClearPoints);
       window.removeEventListener('finishSelection', handleFinishSelection);
+      window.removeEventListener('geometryTypeChanged', handleGeometryTypeChange as EventListener);
     };
-  }, []);
+  }, [geometryType]);
 
   const handleToggleForm = () => {
     if (isFormOpen) {
-      // Reset point selection when closing form
       setSelectedPoints([]);
       setIsSelectingPoints(false);
       setRouteState({
         isRouting: false,
         hasRoute: false
       });
+      setGeometryType('LineString'); // Reset to default
     }
     setIsFormOpen(!isFormOpen);
 
-    // Close edit form if create form is being opened
     if (!isFormOpen && isEditFormOpen) {
       setIsEditFormOpen(false);
       stopEditingClosure();
@@ -287,7 +324,6 @@ function ClosuresPageContent() {
       stopEditingClosure();
     }
 
-    // Close create form if edit form is being opened
     if (!isEditFormOpen && isFormOpen) {
       setIsFormOpen(false);
       setSelectedPoints([]);
@@ -300,11 +336,8 @@ function ClosuresPageContent() {
   };
 
   const handleEditClosure = (closureId: number) => {
-    // The editing state is already handled by the context
-    // Just open the edit form
     setIsEditFormOpen(true);
 
-    // Close create form if open
     if (isFormOpen) {
       setIsFormOpen(false);
       setSelectedPoints([]);
@@ -326,17 +359,17 @@ function ClosuresPageContent() {
 
   const handleMapClick = (latlng: L.LatLng) => {
     if (isSelectingPoints && isFormOpen && !isEditFormOpen) {
-      // Add point to the selection
-      setSelectedPoints(prev => {
-        const newPoints = [...prev, latlng];
+      // For Point geometry, replace the existing point; for LineString, add to the array
+      if (geometryType === 'Point') {
+        setSelectedPoints([latlng]); // Replace with single point
+      } else {
+        setSelectedPoints(prev => [...prev, latlng]); // Add to array
+      }
 
-        // Reset route state when new points are added
-        setRouteState({
-          isRouting: false,
-          hasRoute: false
-        });
-
-        return newPoints;
+      // Reset route state when new points are added
+      setRouteState({
+        isRouting: false,
+        hasRoute: false
       });
     }
   };
@@ -353,14 +386,16 @@ function ClosuresPageContent() {
     setIsSelectingPoints(false);
   };
 
-  // Handle route calculation from MapComponent - THIS IS THE KEY CHANGE
+  // Handle route calculation from MapComponent
   const handleRouteCalculated = (coordinates: [number, number][], stats: any) => {
+    // Only handle route calculation for LineString geometry
+    if (geometryType !== 'LineString') return;
+
     console.log('📍 Route calculated in page:', {
       pointsCount: coordinates.length,
       distance: stats.distance_km
     });
 
-    // Update local route state
     setRouteState({
       isRouting: false,
       hasRoute: true,
@@ -371,7 +406,6 @@ function ClosuresPageContent() {
       }
     });
 
-    // Dispatch event for form component
     const event = new CustomEvent('routeCalculated', {
       detail: { coordinates, stats }
     });
@@ -380,21 +414,46 @@ function ClosuresPageContent() {
 
   // Handle routing state changes
   const handleRoutingStart = () => {
-    setRouteState(prev => ({
-      ...prev,
-      isRouting: true,
-      hasRoute: false,
-      routeError: undefined
-    }));
+    if (geometryType === 'LineString') {
+      setRouteState(prev => ({
+        ...prev,
+        isRouting: true,
+        hasRoute: false,
+        routeError: undefined
+      }));
+    }
   };
 
   const handleRoutingError = (error: string) => {
-    setRouteState({
-      isRouting: false,
-      hasRoute: false,
-      routeError: error
-    });
+    if (geometryType === 'LineString') {
+      setRouteState({
+        isRouting: false,
+        hasRoute: false,
+        routeError: error
+      });
+    }
   };
+
+  // Listen for geometry type changes from the form
+  useEffect(() => {
+    const handleGeometryChange = (event: CustomEvent) => {
+      const newGeometryType = event.detail.geometryType;
+      setGeometryType(newGeometryType);
+
+      // Clear points when changing geometry type
+      setSelectedPoints([]);
+      setRouteState({
+        isRouting: false,
+        hasRoute: false
+      });
+    };
+
+    window.addEventListener('geometryTypeChanged', handleGeometryChange as EventListener);
+
+    return () => {
+      window.removeEventListener('geometryTypeChanged', handleGeometryChange as EventListener);
+    };
+  }, []);
 
   return (
     <div className="h-screen">
@@ -410,6 +469,7 @@ function ClosuresPageContent() {
           onClearPoints={handleClearPoints}
           onFinishSelection={handleFinishSelection}
           onRouteCalculated={handleRouteCalculated}
+          geometryType={geometryType}
         />
 
         {/* Create Form Sidebar */}
@@ -447,6 +507,7 @@ function ClosuresPageContent() {
         hasRoute={routeState.hasRoute}
         routeError={routeState.routeError}
         routeInfo={routeState.routeInfo}
+        geometryType={geometryType}
       />
 
       {/* Point Selection Instructions */}
@@ -457,6 +518,7 @@ function ClosuresPageContent() {
         routeInfo={routeState.routeInfo}
         onClear={handleClearPoints}
         onFinish={handleFinishSelection}
+        geometryType={geometryType}
       />
 
       {/* Demo Control Panel - Client-side only */}
@@ -468,12 +530,16 @@ function ClosuresPageContent() {
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
         <div className="fixed top-20 right-[25rem] z-40 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
-            <MapPin className="w-4 h-4" />
+            {geometryType === 'Point' ? <Target className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
             <span className="text-sm font-medium">
-              {selectedPoints.length === 0 ? 'Click on map to add points' :
-                selectedPoints.length === 1 ? '1 point selected - add more for routing' :
-                  `${selectedPoints.length} points selected`}
-              {routeState.hasRoute && routeState.routeInfo && (
+              {geometryType === 'Point' ? (
+                selectedPoints.length === 0 ? 'Click on map to select point' : 'Point selected'
+              ) : (
+                selectedPoints.length === 0 ? 'Click on map to add points' :
+                  selectedPoints.length === 1 ? '1 point selected - add more for routing' :
+                    `${selectedPoints.length} points selected`
+              )}
+              {routeState.hasRoute && routeState.routeInfo && geometryType === 'LineString' && (
                 <span className="text-green-200 ml-2">
                   → {routeState.routeInfo.distance_km.toFixed(2)}km route
                 </span>
@@ -496,9 +562,28 @@ function ClosuresPageContent() {
         </div>
       )}
 
-      {/* Valhalla Integration Notice */}
-      {selectedPoints.length >= 2 && !routeState.hasRoute && !routeState.isRouting && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg">
+      {/* Geometry Type Indicator */}
+      {isSelectingPoints && isFormOpen && !isEditFormOpen && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-2">
+          <div className="flex items-center space-x-2">
+            {geometryType === 'Point' ? (
+              <>
+                <Target className="w-4 h-4 text-orange-600" />
+                <span className="text-sm font-medium text-orange-700">Point Closure Mode</span>
+              </>
+            ) : (
+              <>
+                <Route className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-700">Road Segment Mode</span>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Valhalla Integration Notice - Only for LineString */}
+      {geometryType === 'LineString' && selectedPoints.length >= 2 && !routeState.hasRoute && !routeState.isRouting && isFormOpen && !isEditFormOpen && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
             <Route className="w-4 h-4" />
             <span className="text-sm font-medium">
@@ -508,13 +593,25 @@ function ClosuresPageContent() {
         </div>
       )}
 
-      {/* Route Success Notice */}
-      {routeState.hasRoute && routeState.routeInfo && isFormOpen && !isEditFormOpen && (
+      {/* Route Success Notice - Only for LineString */}
+      {geometryType === 'LineString' && routeState.hasRoute && routeState.routeInfo && isFormOpen && !isEditFormOpen && (
         <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="flex items-center space-x-2">
             <Route className="w-4 h-4" />
             <span className="text-sm font-medium">
               ✅ Valhalla route ready: {routeState.routeInfo.distance_km.toFixed(2)}km ({routeState.routeInfo.points_count} points)
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Point Selection Success Notice - Only for Point */}
+      {geometryType === 'Point' && selectedPoints.length === 1 && isFormOpen && !isEditFormOpen && (
+        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+          <div className="flex items-center space-x-2">
+            <Target className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              📍 Point location selected
             </span>
           </div>
         </div>

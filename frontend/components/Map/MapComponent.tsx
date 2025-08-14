@@ -5,8 +5,8 @@ import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useClosures } from '@/context/ClosuresContext';
-import { Closure, BoundingBox, getDirectionArrowFromCoords, calculateSimpleDirection, debugDirections } from '@/services/api';
-import { valhallaAPI, RoutePoint, RoutingState } from '@/services/valhallaApi';
+import { Closure, BoundingBox, getDirectionArrowFromCoords } from '@/services/api';
+import { valhallaAPI } from '@/services/valhallaApi';
 import toast from 'react-hot-toast';
 
 // Fix for default markers in react-leaflet
@@ -24,6 +24,7 @@ interface MapComponentProps {
     onClearPoints?: () => void;
     onFinishSelection?: () => void;
     onRouteCalculated?: (coordinates: [number, number][], stats: any) => void;
+    geometryType?: 'Point' | 'LineString'; // New prop to handle geometry type
 }
 
 // Helper function to safely extract coordinates
@@ -102,7 +103,6 @@ function createDirectionArrows(points: [number, number][], isBidirectional: bool
         const [lat1, lng1] = points[i];
         const [lat2, lng2] = points[i + 1];
 
-        // Use the improved direction calculation
         const arrowSymbol = getDirectionArrowFromCoords(lat1, lng1, lat2, lng2);
 
         // Calculate midpoint of segment for arrow placement
@@ -175,7 +175,8 @@ const MapEventHandler: React.FC<{
     isSelecting?: boolean;
     selectedPoints?: L.LatLng[];
     onRouteCalculated?: (coordinates: [number, number][], stats: any) => void;
-}> = ({ onMapClick, isSelecting, selectedPoints = [], onRouteCalculated }) => {
+    geometryType?: 'Point' | 'LineString';
+}> = ({ onMapClick, isSelecting, selectedPoints = [], onRouteCalculated, geometryType = 'LineString' }) => {
     const map = useMap();
     const { state, fetchClosures, selectClosure } = useClosures();
     const { closures, selectedClosure } = state;
@@ -183,38 +184,34 @@ const MapEventHandler: React.FC<{
     const selectionLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
     const routeLayersRef = useRef<L.LayerGroup>(new L.LayerGroup());
 
-    const [routingState, setRoutingState] = useState<RoutingState>({
+    const [routingState, setRoutingState] = useState<{
+        isRouting: boolean;
+        hasRoute: boolean;
+        routeCoordinates: [number, number][];
+        error?: string;
+    }>({
         isRouting: false,
         hasRoute: false,
         routeCoordinates: []
     });
 
-    // Debug directions on component mount
-    useEffect(() => {
-        if (process.env.NODE_ENV === 'development') {
-            debugDirections();
-        }
-    }, []);
-
-    // Handle automatic routing when 2+ points are selected
+    // Handle automatic routing when 2+ points are selected for LineString
     useEffect(() => {
         const calculateRoute = async () => {
-            if (selectedPoints.length >= 2 && !routingState.isRouting) {
+            if (geometryType === 'LineString' && selectedPoints.length >= 2 && !routingState.isRouting) {
                 setRoutingState(prev => ({ ...prev, isRouting: true, error: undefined }));
 
                 try {
-                    // Convert L.LatLng to route points
                     const routePoints = selectedPoints.map(point => ({
                         lat: point.lat,
                         lng: point.lng
                     }));
 
-                    console.log('🗺️ Calculating route for points:', routePoints);
+                    console.log('🗺️ Calculating route for LineString:', routePoints);
 
-                    // Get route from Valhalla
                     const routeCoordinates = await valhallaAPI.getRouteCoordinates(
                         routePoints.map(p => ({ lat: p.lat, lon: p.lng, type: 'break' as const })),
-                        'auto' // Default to auto routing
+                        'auto'
                     );
 
                     const routeStats = {
@@ -230,12 +227,9 @@ const MapEventHandler: React.FC<{
                         error: undefined
                     });
 
-                    // Notify parent component
                     if (onRouteCalculated) {
                         onRouteCalculated(routeCoordinates, routeStats);
                     }
-
-                    // toast.success(`Route calculated: ${routeStats.distance_km.toFixed(2)} km with ${routeCoordinates.length} points`);
 
                 } catch (error) {
                     console.error('❌ Routing failed:', error);
@@ -250,8 +244,8 @@ const MapEventHandler: React.FC<{
 
                     toast.error(`Routing failed: ${errorMessage}`);
                 }
-            } else if (selectedPoints.length < 2) {
-                // Clear route when less than 2 points
+            } else if (geometryType === 'Point' || selectedPoints.length < 2) {
+                // Clear route when not applicable
                 setRoutingState({
                     isRouting: false,
                     hasRoute: false,
@@ -261,9 +255,9 @@ const MapEventHandler: React.FC<{
             }
         };
 
-        const debounceTimer = setTimeout(calculateRoute, 500); // Debounce routing calls
+        const debounceTimer = setTimeout(calculateRoute, 500);
         return () => clearTimeout(debounceTimer);
-    }, [selectedPoints, onRouteCalculated]);
+    }, [selectedPoints, onRouteCalculated, geometryType]);
 
     // Helper function to calculate route distance
     const calculateRouteDistance = (coordinates: [number, number][]): number => {
@@ -293,10 +287,16 @@ const MapEventHandler: React.FC<{
         return R * c;
     };
 
-    // Handle map click events
+    // Handle map click events with geometry type awareness
     useMapEvents({
         click: (e) => {
             if (onMapClick && isSelecting) {
+                // For Point geometry, only allow one point
+                if (geometryType === 'Point' && selectedPoints.length >= 1) {
+                    toast.warning('Point closure can only have one location. Clear existing point first.');
+                    return;
+                }
+
                 onMapClick(e.latlng);
             }
         },
@@ -313,18 +313,16 @@ const MapEventHandler: React.FC<{
         },
     });
 
-    // Update route visualization
+    // Update route visualization (only for LineString)
     useEffect(() => {
         const routeLayerGroup = routeLayersRef.current;
         routeLayerGroup.clearLayers();
 
-        if (routingState.hasRoute && routingState.routeCoordinates.length > 1) {
-            // Convert route coordinates to Leaflet format [lat, lng]
+        if (geometryType === 'LineString' && routingState.hasRoute && routingState.routeCoordinates.length > 1) {
             const latlngs = routingState.routeCoordinates.map(([lat, lng]) => [lat, lng] as [number, number]);
 
-            // Create route polyline
             const routePolyline = L.polyline(latlngs, {
-                color: '#2563eb', // Blue color for route
+                color: '#2563eb',
                 weight: 5,
                 opacity: 0.8,
                 dashArray: '10, 5',
@@ -335,11 +333,9 @@ const MapEventHandler: React.FC<{
 
             routeLayerGroup.addLayer(routePolyline);
 
-            // Add route direction arrows
             const routeArrows = createDirectionArrows(latlngs, false, '#2563eb');
             routeArrows.forEach(arrow => routeLayerGroup.addLayer(arrow));
 
-            // Fit map to route bounds
             if (latlngs.length > 1) {
                 const routeBounds = L.latLngBounds(latlngs);
                 map.fitBounds(routeBounds, { padding: [20, 20] });
@@ -351,7 +347,7 @@ const MapEventHandler: React.FC<{
         return () => {
             routeLayerGroup.clearLayers();
         };
-    }, [routingState, map]);
+    }, [routingState, map, geometryType]);
 
     // Update selection visualization
     useEffect(() => {
@@ -359,23 +355,28 @@ const MapEventHandler: React.FC<{
         layerGroup.clearLayers();
 
         if (selectedPoints.length > 0) {
-            // Add markers for each selected point
             selectedPoints.forEach((point, index) => {
                 const isStart = index === 0;
                 const isEnd = index === selectedPoints.length - 1;
+                const isOnlyPoint = selectedPoints.length === 1;
 
                 let iconHtml = '';
                 let className = 'selection-marker';
 
-                if (isStart) {
-                    iconHtml = '<div class="marker-content start">🚩</div>';
-                    className += ' start-point';
-                } else if (isEnd && selectedPoints.length > 1) {
-                    iconHtml = '<div class="marker-content end">🏁</div>';
-                    className += ' end-point';
+                if (geometryType === 'Point') {
+                    iconHtml = '<div class="marker-content point">📍</div>';
+                    className += ' point-marker';
                 } else {
-                    iconHtml = `<div class="marker-content waypoint">${index}</div>`;
-                    className += ' waypoint';
+                    if (isStart) {
+                        iconHtml = '<div class="marker-content start">🚩</div>';
+                        className += ' start-point';
+                    } else if (isEnd && selectedPoints.length > 1) {
+                        iconHtml = '<div class="marker-content end">🏁</div>';
+                        className += ' end-point';
+                    } else {
+                        iconHtml = `<div class="marker-content waypoint">${index}</div>`;
+                        className += ' waypoint';
+                    }
                 }
 
                 const customIcon = L.divIcon({
@@ -385,22 +386,22 @@ const MapEventHandler: React.FC<{
                     iconAnchor: [15, 15],
                 });
 
+                const tooltipText = geometryType === 'Point' ? 'Point Location' :
+                    isStart ? 'Start Point' :
+                        isEnd ? 'End Point' :
+                            `Waypoint ${index}`;
+
                 const marker = L.marker([point.lat, point.lng], { icon: customIcon })
-                    .bindTooltip(
-                        isStart ? 'Start Point' :
-                            isEnd ? 'End Point' :
-                                `Waypoint ${index}`,
-                        { permanent: false }
-                    );
+                    .bindTooltip(tooltipText, { permanent: false });
 
                 layerGroup.addLayer(marker);
             });
 
-            // Add direct connection line (before routing)
-            if (selectedPoints.length > 1 && !routingState.hasRoute && !routingState.isRouting) {
+            // Add direct connection line for LineString (before routing)
+            if (geometryType === 'LineString' && selectedPoints.length > 1 && !routingState.hasRoute && !routingState.isRouting) {
                 const latlngs = selectedPoints.map(point => [point.lat, point.lng] as [number, number]);
                 const directLine = L.polyline(latlngs, {
-                    color: '#dc2626', // Red for direct line
+                    color: '#dc2626',
                     weight: 3,
                     opacity: 0.6,
                     dashArray: '5, 5',
@@ -415,7 +416,7 @@ const MapEventHandler: React.FC<{
         return () => {
             layerGroup.clearLayers();
         };
-    }, [selectedPoints, routingState.hasRoute, routingState.isRouting, map]);
+    }, [selectedPoints, routingState.hasRoute, routingState.isRouting, map, geometryType]);
 
     // Update closures on map
     useEffect(() => {
@@ -451,14 +452,12 @@ const MapEventHandler: React.FC<{
                     .bindPopup(createClosurePopup(closure));
 
             } else if (closure.geometry.type === 'LineString') {
-                // Create the main polyline
                 layer = L.polyline(points, {
                     color: closureColor,
                     weight: 6,
                     opacity: 0.8,
                 }).bindPopup(createClosurePopup(closure));
 
-                // Add direction arrows
                 const isBidirectional = closure.is_bidirectional || false;
                 const arrows = createDirectionArrows(points, isBidirectional, closureColor);
                 arrows.forEach(arrow => layerGroup.addLayer(arrow));
@@ -515,30 +514,41 @@ const MapEventHandler: React.FC<{
 
     return (
         <>
-            {/* Routing Status Indicator */}
-            {routingState.isRouting && (
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
-                    <div className="flex items-center space-x-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        <span className="text-sm font-medium">Calculating route...</span>
-                    </div>
-                </div>
+            {/* Routing Status Indicators - Only for LineString */}
+            {geometryType === 'LineString' && (
+                <>
+                    {routingState.isRouting && (
+                        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                            <div className="flex items-center space-x-2">
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <span className="text-sm font-medium">Calculating route...</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {routingState.error && (
+                        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm">⚠️ {routingState.error}</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {routingState.hasRoute && selectedPoints.length >= 2 && (
+                        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                            <div className="flex items-center space-x-2">
+                                <span className="text-sm">✅ Route calculated ({routingState.routeCoordinates.length} points)</span>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
-            {/* Route Error Indicator */}
-            {routingState.error && (
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
+            {/* Point Selection Status */}
+            {geometryType === 'Point' && selectedPoints.length === 1 && (
+                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm">⚠️ {routingState.error}</span>
-                    </div>
-                </div>
-            )}
-
-            {/* Route Success Indicator */}
-            {routingState.hasRoute && selectedPoints.length >= 2 && (
-                <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
-                    <div className="flex items-center space-x-2">
-                        <span className="text-sm">✅ Route calculated ({routingState.routeCoordinates.length} points)</span>
+                        <span className="text-sm">📍 Point location selected</span>
                     </div>
                 </div>
             )}
@@ -572,7 +582,7 @@ function createClosurePopup(closure: Closure): string {
     };
 
     const getDirectionText = (closure: Closure) => {
-        if (closure.geometry.type === 'Point') return '';
+        if (closure.geometry.type === 'Point') return '<div><strong>Type:</strong> Point Closure</div>';
         if (closure.is_bidirectional) return '<div><strong>Direction:</strong> Bidirectional ↔</div>';
         return '<div><strong>Direction:</strong> Unidirectional →</div>';
     };
@@ -609,13 +619,13 @@ const MapComponent: React.FC<MapComponentProps> = ({
     isSelecting = false,
     onClearPoints,
     onFinishSelection,
-    onRouteCalculated
+    onRouteCalculated,
+    geometryType = 'LineString'
 }) => {
     const { fetchClosures } = useClosures();
 
     // Initial map load
     useEffect(() => {
-        // Fetch closures for Chicago area initially
         const chicagoBounds: BoundingBox = {
             north: 42.0,
             south: 41.6,
@@ -624,6 +634,16 @@ const MapComponent: React.FC<MapComponentProps> = ({
         };
         fetchClosures(chicagoBounds);
     }, [fetchClosures]);
+
+    const getMaxPoints = () => geometryType === 'Point' ? 1 : Infinity;
+    const getSelectionText = () => {
+        if (geometryType === 'Point') {
+            return selectedPoints.length === 0 ? 'Click to select point' : 'Point selected';
+        }
+        return selectedPoints.length === 0 ? 'Click to add points' :
+            selectedPoints.length === 1 ? '1 point - add more for routing' :
+                `${selectedPoints.length} points selected`;
+    };
 
     return (
         <>
@@ -750,6 +770,12 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     color: white;
                     font-size: 12px;
                 }
+
+                .marker-content.point {
+                    background-color: #ea580c;
+                    color: white;
+                    font-size: 14px;
+                }
             `}</style>
 
             <MapContainer
@@ -768,28 +794,32 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     isSelecting={isSelecting}
                     selectedPoints={selectedPoints}
                     onRouteCalculated={onRouteCalculated}
+                    geometryType={geometryType}
                 />
             </MapContainer>
 
             {/* Selection Controls */}
-            {isSelecting && selectedPoints.length > 0 && (
+            {isSelecting && (
                 <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white rounded-lg shadow-lg border border-gray-200 p-3">
                     <div className="flex items-center space-x-4">
                         <div className="text-sm text-gray-600">
-                            <span className="font-medium">{selectedPoints.length}</span> points selected
+                            <span className="font-medium">{getSelectionText()}</span>
+                            {geometryType === 'Point' && selectedPoints.length === 0 && (
+                                <div className="text-xs text-orange-600 mt-1">📍 Point closure - select one location</div>
+                            )}
+                            {geometryType === 'LineString' && selectedPoints.length >= 2 && (
+                                <div className="text-xs text-green-600 mt-1">✅ Route will be calculated automatically</div>
+                            )}
                         </div>
-                        {selectedPoints.length >= 2 && (
-                            <div className="text-xs text-green-600 font-medium">
-                                ✅ Route will be calculated automatically
-                            </div>
-                        )}
                         <div className="flex space-x-2">
-                            <button
-                                onClick={onClearPoints}
-                                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                            >
-                                Clear
-                            </button>
+                            {selectedPoints.length > 0 && (
+                                <button
+                                    onClick={onClearPoints}
+                                    className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                                >
+                                    Clear ({selectedPoints.length})
+                                </button>
+                            )}
                             <button
                                 onClick={onFinishSelection}
                                 className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"

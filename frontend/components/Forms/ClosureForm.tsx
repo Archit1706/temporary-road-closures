@@ -1,7 +1,7 @@
-// components/Forms/ClosureForm.tsx
+// components/Forms/ClosureForm.tsx - Updated with Point/LineString selection
 import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation, Route, Edit } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation, Route, Edit, Target } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { CreateClosureData, authApi, UpdateClosureData, Closure } from '@/services/api';
 import L from 'leaflet';
@@ -33,7 +33,7 @@ interface RouteInfo {
     distance_km: number;
     points_count: number;
     direct_distance: number;
-    route_efficiency: number; // ratio of direct distance to route distance
+    route_efficiency: number;
 }
 
 const CLOSURE_TYPES = [
@@ -48,6 +48,25 @@ const CLOSURE_TYPES = [
     { value: 'bike_lane_closure', label: 'Bike Lane Closure', icon: '🚴‍♂️' },
     { value: 'bridge_closure', label: 'Bridge Closure', icon: '🌉' },
     { value: 'tunnel_closure', label: 'Tunnel Closure', icon: '🌳' },
+];
+
+const GEOMETRY_TYPES = [
+    {
+        value: 'Point',
+        label: 'Point Closure',
+        icon: Target,
+        description: 'Single location closure (intersection, specific address)',
+        examples: 'Intersection blocked, building entrance closed, specific accident location',
+        color: 'border-orange-500 bg-orange-50'
+    },
+    {
+        value: 'LineString',
+        label: 'Road Segment',
+        icon: Route,
+        description: 'Multiple points creating a road segment closure',
+        examples: 'Construction along a street, parade route, multiple-block closure',
+        color: 'border-blue-500 bg-blue-50'
+    }
 ];
 
 const STATUS_OPTIONS = [
@@ -91,11 +110,11 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         if (closure.geometry.type === 'Point') {
             const coords = closure.geometry.coordinates[0] || closure.geometry.coordinates;
             if (Array.isArray(coords) && coords.length >= 2) {
-                return [L.latLng(coords[1], coords[0])]; // [lng, lat] to [lat, lng]
+                return [L.latLng(coords[1], coords[0])];
             }
         } else if (closure.geometry.type === 'LineString') {
             return closure.geometry.coordinates.map(coord =>
-                L.latLng(coord[1], coord[0]) // [lng, lat] to [lat, lng]
+                L.latLng(coord[1], coord[0])
             );
         }
         return [];
@@ -131,11 +150,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         if (isEditMode && editingClosure) {
             console.log('🔄 Initializing form for editing:', editingClosure);
 
-            // Convert coordinates to points
             const points = convertClosureToPoints(editingClosure);
             setEditPoints(points);
 
-            // Set form values
             setValue('description', editingClosure.description);
             setValue('closure_type', editingClosure.closure_type);
             setValue('source', editingClosure.source || '');
@@ -181,29 +198,39 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     // Add event listener for route calculation
     useEffect(() => {
         const handleGlobalRouteCalculated = (event: CustomEvent) => {
-            if (isOpen && !isEditMode) { // Only handle route calculation for create mode
+            if (isOpen && !isEditMode && watchedGeometryType === 'LineString') {
                 handleRouteCalculated(event.detail.coordinates, event.detail.stats);
             }
         };
 
-        // Listen for route calculation events
         window.addEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
 
         return () => {
             window.removeEventListener('routeCalculated', handleGlobalRouteCalculated as EventListener);
         };
-    }, [isOpen, isEditMode]);
+    }, [isOpen, isEditMode, watchedGeometryType]);
 
-    // Clear route info when selected points change
+    // Clear route info when geometry type or selected points change
     useEffect(() => {
-        if (selectedPoints.length < 2) {
+        if (watchedGeometryType === 'Point' || selectedPoints.length < 2) {
             setRouteInfo(null);
         }
-    }, [selectedPoints]);
+    }, [selectedPoints, watchedGeometryType]);
+
+    // Watch for geometry type changes and notify parent
+    useEffect(() => {
+        if (!isEditMode) {
+            // Dispatch geometry type change event for the map component
+            const event = new CustomEvent('geometryTypeChanged', {
+                detail: { geometryType: watchedGeometryType }
+            });
+            window.dispatchEvent(event);
+        }
+    }, [watchedGeometryType, isEditMode]);
 
     const nextStep = async () => {
         const fieldsToValidate = currentStep === 1
-            ? ['description', 'closure_type', 'confidence_level']
+            ? ['description', 'closure_type', 'confidence_level', 'geometry_type']
             : currentStep === 2
                 ? ['start_time', 'end_time', 'source']
                 : [];
@@ -224,50 +251,59 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         return isEditMode ? editPoints : selectedPoints;
     };
 
+    const getRequiredPointsCount = (): number => {
+        return watchedGeometryType === 'Point' ? 1 : 2;
+    };
+
+    const getPointsSelectionText = (): string => {
+        if (watchedGeometryType === 'Point') {
+            return 'Click on the map to select a single point';
+        }
+        return 'Click on the map to select multiple points (minimum 2)';
+    };
+
     const onSubmit = async (data: FormData) => {
-        // Check authentication before processing
         if (!authApi.isTokenValid()) {
             alert('Your session has expired. Please log in again to ' + (isEditMode ? 'update' : 'create') + ' closures.');
             return;
         }
 
-        // Use routed coordinates if available, otherwise fall back to selected points
         let finalCoordinates: number[][] | undefined;
 
-        if (routeInfo && routeInfo.coordinates.length >= 2 && !isEditMode) {
-            // Use Valhalla routed coordinates (already in [lat, lng] format)
-            // Convert to GeoJSON format [lng, lat]
-            finalCoordinates = routeInfo.coordinates.map(([lat, lng]) => [lng, lat]);
-            console.log('✅ Using Valhalla routed coordinates:', finalCoordinates.length, 'points');
-        } else {
-            // Fall back to direct point-to-point coordinates
+        // Handle Point geometry
+        if (data.geometry_type === 'Point') {
             const currentPoints = getCurrentPoints();
-
-            if (!isEditMode && (!currentPoints || currentPoints.length === 0)) {
-                alert('Please select at least one point on the map');
+            if (!isEditMode && currentPoints.length !== 1) {
+                alert('Point closure requires exactly one point. Please select a single point on the map.');
                 return;
             }
-
-            if (!isEditMode && data.geometry_type === 'LineString' && currentPoints.length < 2) {
-                alert('LineString requires at least 2 points. Please select more points on the map.');
-                return;
-            }
-
             if (currentPoints.length > 0) {
-                finalCoordinates = currentPoints.map(point => [point.lng, point.lat]);
-                console.log('⚠️ Using direct coordinates (no route):', finalCoordinates.length, 'points');
+                finalCoordinates = [currentPoints[0].lng, currentPoints[0].lat];
+            }
+        }
+        // Handle LineString geometry
+        else {
+            if (routeInfo && routeInfo.coordinates.length >= 2 && !isEditMode) {
+                finalCoordinates = routeInfo.coordinates.map(([lat, lng]) => [lng, lat]);
+                console.log('✅ Using Valhalla routed coordinates:', finalCoordinates.length, 'points');
+            } else {
+                const currentPoints = getCurrentPoints();
+                if (!isEditMode && currentPoints.length < 2) {
+                    alert('LineString requires at least 2 points. Please select more points on the map.');
+                    return;
+                }
+                if (currentPoints.length > 0) {
+                    finalCoordinates = currentPoints.map(point => [point.lng, point.lat]);
+                    console.log('⚠️ Using direct coordinates (no route):', finalCoordinates.length, 'points');
+                }
             }
         }
 
-        // Convert datetime-local values to UTC ISO strings
         const startTime = new Date(data.start_time).toISOString();
         const endTime = new Date(data.end_time).toISOString();
 
         try {
             if (isEditMode && editingClosure) {
-                // Update existing closure
-                console.log('🔄 Updating closure:', editingClosure.id);
-
                 const updateData: UpdateClosureData = {
                     description: data.description,
                     closure_type: data.closure_type,
@@ -278,26 +314,23 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     status: data.status,
                 };
 
-                // Only update geometry if points were modified
                 if (finalCoordinates && finalCoordinates.length > 0) {
                     updateData.geometry = {
                         type: data.geometry_type,
                         coordinates: data.geometry_type === 'Point'
-                            ? [finalCoordinates[0]]
+                            ? [finalCoordinates as number[]]
                             : finalCoordinates as number[][],
                     };
                 }
 
-                // Only add bidirectional for LineString
                 if (data.geometry_type === 'LineString' || editingClosure.geometry.type === 'LineString') {
                     updateData.is_bidirectional = data.is_bidirectional;
                 }
 
                 await updateClosure(editingClosure.id, updateData);
             } else {
-                // Create new closure
                 if (!finalCoordinates || finalCoordinates.length === 0) {
-                    alert('Please select at least one point on the map');
+                    alert(`Please select ${watchedGeometryType === 'Point' ? 'a point' : 'at least 2 points'} on the map`);
                     return;
                 }
 
@@ -312,7 +345,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     geometry: {
                         type: data.geometry_type,
                         coordinates: data.geometry_type === 'Point'
-                            ? [finalCoordinates[0]]
+                            ? [finalCoordinates as number[]]
                             : finalCoordinates as number[][],
                     },
                 };
@@ -356,10 +389,58 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             )}
                         </div>
 
-                        {/* Closure Type */}
+                        {/* Geometry Type Selection */}
+                        {!isEditMode && (
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-gray-700">
+                                    Closure Type * <Info className="w-4 h-4 inline ml-1 text-blue-500" />
+                                </label>
+                                <div className="space-y-3">
+                                    {GEOMETRY_TYPES.map(type => {
+                                        const Icon = type.icon;
+                                        return (
+                                            <label
+                                                key={type.value}
+                                                className={`
+                                                    flex items-start space-x-3 p-4 border-2 rounded-lg cursor-pointer transition-all
+                                                    ${watchedGeometryType === type.value
+                                                        ? `${type.color} shadow-md`
+                                                        : 'border-gray-200 hover:border-gray-300'
+                                                    }
+                                                `}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    value={type.value}
+                                                    className="mt-1 text-blue-600"
+                                                    {...register('geometry_type', { required: 'Please select a closure type' })}
+                                                />
+                                                <Icon className="w-5 h-5 mt-0.5 text-gray-600" />
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-gray-900 text-sm">
+                                                        {type.label}
+                                                    </div>
+                                                    <div className="text-xs text-gray-600 mt-1">
+                                                        {type.description}
+                                                    </div>
+                                                    <div className="text-xs text-gray-500 mt-1 italic">
+                                                        Examples: {type.examples}
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                                {errors.geometry_type && (
+                                    <p className="text-sm text-red-600">{errors.geometry_type.message}</p>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Closure Reason */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-gray-700">
-                                Closure Type *
+                                Reason for Closure *
                             </label>
                             <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto scrollbar-thin border border-gray-200 rounded-lg p-2">
                                 {CLOSURE_TYPES.map(type => (
@@ -377,7 +458,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             type="radio"
                                             value={type.value}
                                             className="text-blue-600"
-                                            {...register('closure_type', { required: 'Please select a closure type' })}
+                                            {...register('closure_type', { required: 'Please select a closure reason' })}
                                         />
                                         <span className="text-sm">{type.icon}</span>
                                         <span className="text-xs font-medium">{type.label}</span>
@@ -471,14 +552,44 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
             case 2:
                 const currentPoints = getCurrentPoints();
+                const requiredPoints = getRequiredPointsCount();
                 return (
                     <div className="space-y-4">
                         {/* Location Selection */}
                         <div className="space-y-2">
                             <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
                                 <MapPin className="w-4 h-4" />
-                                <span>Road Segment Points {isEditMode ? '(Optional - keep existing if not changed)' : '*'}</span>
+                                <span>
+                                    Location {watchedGeometryType === 'Point' ? 'Point' : 'Points'}
+                                    {isEditMode ? ' (Optional - keep existing if not changed)' : ' *'}
+                                </span>
                             </label>
+
+                            {/* Geometry Type Info */}
+                            <div className={`
+                                p-3 rounded-lg border-2
+                                ${watchedGeometryType === 'Point'
+                                    ? 'bg-orange-50 border-orange-200'
+                                    : 'bg-blue-50 border-blue-200'
+                                }
+                            `}>
+                                <div className="flex items-start space-x-2">
+                                    {watchedGeometryType === 'Point' ? (
+                                        <Target className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                    ) : (
+                                        <Route className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                    )}
+                                    <div className={`text-sm ${watchedGeometryType === 'Point' ? 'text-orange-700' : 'text-blue-700'}`}>
+                                        <p className="font-medium mb-1">
+                                            {watchedGeometryType === 'Point' ? 'Point Closure Selected' : 'Road Segment Closure Selected'}
+                                        </p>
+                                        <p className="text-xs">
+                                            {getPointsSelectionText()}
+                                            {watchedGeometryType === 'LineString' && ' for automatic route calculation.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
 
                             {isEditMode && currentPoints.length > 0 && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
@@ -495,22 +606,6 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 </div>
                             )}
 
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <div className="flex items-start space-x-2">
-                                    <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                    <div className="text-sm text-blue-700">
-                                        <p className="font-medium mb-1">How to select points:</p>
-                                        <ol className="list-decimal list-inside text-xs space-y-0.5">
-                                            <li>Click "Start Selecting" below</li>
-                                            <li>Click on the map to add points</li>
-                                            <li>Need at least 2 points for LineString</li>
-                                            <li>Valhalla will automatically calculate the road route</li>
-                                            <li>Click "Done" when finished</li>
-                                        </ol>
-                                    </div>
-                                </div>
-                            </div>
-
                             <button
                                 type="button"
                                 onClick={onPointsSelect}
@@ -518,25 +613,25 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                     w-full p-3 border rounded-lg text-left transition-colors text-sm
                                     ${isSelectingPoints
                                         ? 'border-blue-500 bg-blue-50 text-blue-700'
-                                        : currentPoints.length > 0 || (isEditMode && editingClosure)
+                                        : currentPoints.length >= requiredPoints || (isEditMode && editingClosure)
                                             ? 'border-green-500 bg-green-50 text-green-700'
                                             : 'border-gray-300 hover:border-gray-400'
                                     }
                                 `}
                             >
                                 {isSelectingPoints ? (
-                                    'Selecting points... click on the map'
-                                ) : currentPoints.length > 0 ? (
-                                    `✓ ${currentPoints.length} points selected${isEditMode ? ' (will replace existing)' : ''}`
+                                    `Selecting ${watchedGeometryType === 'Point' ? 'point' : 'points'}... click on the map`
+                                ) : currentPoints.length >= requiredPoints ? (
+                                    `✓ ${currentPoints.length} point${currentPoints.length !== 1 ? 's' : ''} selected${isEditMode ? ' (will replace existing)' : ''}`
                                 ) : isEditMode && editingClosure ? (
                                     `✓ Using existing location (${editingClosure.geometry.type})`
                                 ) : (
-                                    'Start Selecting Points'
+                                    `Select ${watchedGeometryType === 'Point' ? 'Point' : 'Points'}`
                                 )}
                             </button>
 
-                            {/* Route Information */}
-                            {routeInfo && !isEditMode && (
+                            {/* Route Information - Only for LineString */}
+                            {watchedGeometryType === 'LineString' && routeInfo && !isEditMode && (
                                 <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                     <h4 className="text-sm font-medium text-green-800 mb-2 flex items-center">
                                         <Route className="w-4 h-4 mr-1" />
@@ -560,28 +655,28 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         {isEditMode ? 'New ' : ''}Selected Points:
                                     </h4>
                                     <div className="space-y-0.5 max-h-16 overflow-y-auto scrollbar-thin">
-                                        {currentPoints.slice(0, 3).map((point, index) => (
+                                        {currentPoints.slice(0, watchedGeometryType === 'Point' ? 1 : 3).map((point, index) => (
                                             <div key={index} className="text-xs text-gray-600 font-mono">
-                                                {index + 1}: [{point.lng.toFixed(4)}, {point.lat.toFixed(4)}]
+                                                {watchedGeometryType === 'Point' ? 'Point' : index + 1}: [{point.lng.toFixed(4)}, {point.lat.toFixed(4)}]
                                             </div>
                                         ))}
-                                        {currentPoints.length > 3 && (
+                                        {watchedGeometryType === 'LineString' && currentPoints.length > 3 && (
                                             <div className="text-xs text-gray-500">
                                                 ... and {currentPoints.length - 3} more
                                             </div>
                                         )}
                                     </div>
-                                    {currentPoints.length < 2 && watchedGeometryType === 'LineString' && (
+                                    {watchedGeometryType === 'LineString' && currentPoints.length < 2 && (
                                         <p className="text-xs text-red-600 mt-1">
-                                            Need at least 2 points for LineString
+                                            Need at least 2 points for road segment
                                         </p>
                                     )}
                                 </div>
                             )}
                         </div>
 
-                        {/* Bidirectional Option */}
-                        {((currentPoints.length >= 2) || (isEditMode && editingClosure?.geometry.type === 'LineString')) && (
+                        {/* Bidirectional Option - Only for LineString */}
+                        {watchedGeometryType === 'LineString' && ((currentPoints.length >= 2) || (isEditMode && editingClosure?.geometry.type === 'LineString')) && (
                             <div className="space-y-2">
                                 <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
                                     <Navigation className="w-4 h-4" />
@@ -683,6 +778,12 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <div>
                                     <span className="font-medium text-gray-700">Type: </span>
                                     <span className="text-gray-900">
+                                        {watchedGeometryType === 'Point' ? 'Point Closure' : 'Road Segment'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="font-medium text-gray-700">Reason: </span>
+                                    <span className="text-gray-900">
                                         {watchedClosureType && CLOSURE_TYPES.find(t => t.value === watchedClosureType)?.label}
                                     </span>
                                 </div>
@@ -701,18 +802,19 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                     </span>
                                 </div>
                                 <div>
-                                    <span className="font-medium text-gray-700">Points: </span>
+                                    <span className="font-medium text-gray-700">Location: </span>
                                     <span className="text-gray-900">
                                         {currentPointsStep3.length > 0
-                                            ? `${currentPointsStep3.length} ${isEditMode ? 'new ' : ''}selected`
+                                            ? `${currentPointsStep3.length} ${isEditMode ? 'new ' : ''}point${currentPointsStep3.length !== 1 ? 's' : ''} (${watchedGeometryType})`
                                             : isEditMode && editingClosure
                                                 ? `Keeping existing (${editingClosure.geometry.type})`
                                                 : 'None selected'
                                         }
                                     </span>
                                 </div>
-                                {/* Route Information in Summary */}
-                                {routeInfo && !isEditMode && (
+
+                                {/* Route Information in Summary - Only for LineString */}
+                                {watchedGeometryType === 'LineString' && routeInfo && !isEditMode && (
                                     <div>
                                         <span className="font-medium text-gray-700">Route: </span>
                                         <span className="text-green-600">
@@ -720,7 +822,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         </span>
                                     </div>
                                 )}
-                                {((currentPointsStep3.length >= 2) || (isEditMode && editingClosure?.geometry.type === 'LineString')) && (
+
+                                {/* Direction info - Only for LineString */}
+                                {watchedGeometryType === 'LineString' && ((currentPointsStep3.length >= 2) || (isEditMode && editingClosure?.geometry.type === 'LineString')) && (
                                     <div>
                                         <span className="font-medium text-gray-700">Direction: </span>
                                         <span className="text-gray-900">
@@ -728,6 +832,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         </span>
                                     </div>
                                 )}
+
                                 <div>
                                     <span className="font-medium text-gray-700">Duration: </span>
                                     <span className="text-gray-900">
@@ -739,8 +844,8 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             </div>
                         </div>
 
-                        {/* Route Integration Notice */}
-                        {routeInfo && !isEditMode && (
+                        {/* Route Integration Notice - Only for LineString */}
+                        {watchedGeometryType === 'LineString' && routeInfo && !isEditMode && (
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                                 <div className="flex items-start space-x-2">
                                     <Route className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
@@ -749,6 +854,21 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         <p>
                                             This closure will use the automatically calculated road path from Valhalla
                                             ({routeInfo.points_count} coordinate points) instead of direct point-to-point lines.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Point Closure Notice */}
+                        {watchedGeometryType === 'Point' && !isEditMode && (
+                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                                <div className="flex items-start space-x-2">
+                                    <Target className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
+                                    <div className="text-xs text-orange-700">
+                                        <p className="font-medium mb-1">Point Closure</p>
+                                        <p>
+                                            This closure will affect a specific location or intersection. No route calculation needed.
                                         </p>
                                     </div>
                                 </div>
@@ -779,22 +899,38 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                     <p className="font-medium mb-1">Backend API Integration</p>
                                     <p>
                                         This closure will be {isEditMode ? 'updated' : 'submitted'} with OpenLR encoding,
-                                        directional information, and timezone-aware timestamps.
+                                        {watchedGeometryType === 'LineString' && ' directional information,'}
+                                        and timezone-aware timestamps.
                                     </p>
                                 </div>
                             </div>
                         </div>
 
                         {/* Validation Warnings */}
-                        {!isEditMode && !routeInfo && currentPointsStep3.length < 2 && watchedGeometryType === 'LineString' && (
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                <div className="flex items-center space-x-2">
-                                    <TriangleAlert className="w-4 h-4 text-red-600" />
-                                    <span className="text-sm text-red-700 font-medium">
-                                        LineString requires at least 2 points for route calculation
-                                    </span>
-                                </div>
-                            </div>
+                        {!isEditMode && (
+                            <>
+                                {watchedGeometryType === 'Point' && currentPointsStep3.length !== 1 && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <div className="flex items-center space-x-2">
+                                            <TriangleAlert className="w-4 h-4 text-red-600" />
+                                            <span className="text-sm text-red-700 font-medium">
+                                                Point closure requires exactly 1 point selected
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {watchedGeometryType === 'LineString' && !routeInfo && currentPointsStep3.length < 2 && (
+                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                                        <div className="flex items-center space-x-2">
+                                            <TriangleAlert className="w-4 h-4 text-red-600" />
+                                            <span className="text-sm text-red-700 font-medium">
+                                                Road segment requires at least 2 points for route calculation
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
 
                         {/* Authentication Warning */}
@@ -822,6 +958,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
     return (
         <>
+            {/* Rest of the component remains the same as before - sidebar, header, form controls, etc. */}
+            {/* ... (keeping the existing JSX structure for the sidebar, header, and form controls) */}
+
             {/* Backdrop for mobile */}
             {isOpen && (
                 <div
@@ -968,7 +1107,12 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                         ) : (
                                             <button
                                                 type="submit"
-                                                disabled={loading || (!isEditMode && !routeInfo && getCurrentPoints().length < 2 && watchedGeometryType === 'LineString')}
+                                                disabled={loading || (
+                                                    !isEditMode && (
+                                                        (watchedGeometryType === 'Point' && getCurrentPoints().length !== 1) ||
+                                                        (watchedGeometryType === 'LineString' && !routeInfo && getCurrentPoints().length < 2)
+                                                    )
+                                                )}
                                                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
                                             >
                                                 {loading ? (

@@ -1,4 +1,4 @@
-// data/mockClosures.ts - Updated with bidirectional examples and realistic direction scenarios
+// data/mockClosures.ts
 import { Closure, ClosureStats } from '@/services/api';
 
 // Generate realistic timestamps
@@ -37,11 +37,14 @@ export const mockClosures: any[] = [
         reason: "emergency",
         status: "active",
         submitter: "Chicago Water Management",
+        submitter_id: 1, // chicago_mapper user
         severity: "critical",
         created_at: oneHourAgo.toISOString(),
         updated_at: thirtyMinutesAgo.toISOString(),
         openlr: "CwRbWyNG9RpsCQCaAL4=",
-        is_bidirectional: true
+        is_bidirectional: true,
+        confidence_level: 9,
+        source: "Chicago Water Department"
     },
 
     // UNIDIRECTIONAL CONSTRUCTION - Northbound only
@@ -63,31 +66,37 @@ export const mockClosures: any[] = [
         reason: "maintenance",
         status: "active",
         submitter: "Peoples Gas Emergency Response",
+        submitter_id: 1, // chicago_mapper user
         severity: "medium",
         created_at: twoHoursAgo.toISOString(),
         updated_at: oneHourAgo.toISOString(),
         openlr: "CwRbWyNG9RpsCQCaAL5=",
-        is_bidirectional: false
+        is_bidirectional: false,
+        confidence_level: 8,
+        source: "Peoples Gas"
     },
 
-    // POINT CLOSURE - No direction (intersection)
+    // POINT CLOSURE - Intersection (no direction) - User 2 (different user) - cannot be edited by user 1
     {
         id: "closure-003",
         geometry: {
             type: "Point",
             coordinates: [-87.6180, 41.8690] // South Loop intersection
         },
-        start_time: fourHoursAgo.toISOString(),
-        end_time: twoHoursFromNow.toISOString(),
-        description: "Intersection closure for emergency fire department response",
+        start_time: now.toISOString(),
+        end_time: sixHoursFromNow.toISOString(),
+        description: "Intersection closure for water main repair - all traffic redirected",
         reason: "emergency",
         status: "active",
-        submitter: "Chicago Fire Department",
+        submitter: "Chicago Water Management",
+        submitter_id: 2, // Different user
         severity: "high",
-        created_at: fourHoursAgo.toISOString(),
-        updated_at: thirtyMinutesAgo.toISOString(),
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCaAL6=",
-        is_bidirectional: undefined // Not applicable for points
+        is_bidirectional: undefined, // Not applicable for points
+        confidence_level: 9,
+        source: "Chicago Water Department"
     },
 
     // BIDIRECTIONAL EVENT CLOSURE - East-West street
@@ -109,11 +118,14 @@ export const mockClosures: any[] = [
         reason: "event",
         status: "inactive",
         submitter: "Chicago Special Events",
+        submitter_id: 1, // chicago_mapper user
         severity: "critical",
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCbBM6=",
-        is_bidirectional: true
+        is_bidirectional: true,
+        confidence_level: 10,
+        source: "Chicago Mayor's Office"
     },
 
     // UNIDIRECTIONAL CONSTRUCTION - Diagonal direction (Southeast)
@@ -135,11 +147,14 @@ export const mockClosures: any[] = [
         reason: "construction",
         status: "inactive",
         submitter: "Walsh Construction",
+        submitter_id: 3, // Different user
         severity: "medium",
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCcCN7=",
-        is_bidirectional: false
+        is_bidirectional: false,
+        confidence_level: 7,
+        source: "Walsh Construction Company"
     },
 
     // BIDIRECTIONAL ACCIDENT - North-South direction
@@ -160,16 +175,42 @@ export const mockClosures: any[] = [
         reason: "accident",
         status: "active",
         submitter: "Chicago Police Traffic Division",
+        submitter_id: 2, // Different user
         severity: "high",
         created_at: thirtyMinutesAgo.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCeEP1=",
-        is_bidirectional: true
+        is_bidirectional: true,
+        confidence_level: 10,
+        source: "CPD Traffic Division"
+    },
+
+    // POINT CLOSURE - Navy Pier entrance - User 1 (chicago_mapper) - can be edited
+    {
+        id: "closure-007",
+        geometry: {
+            type: "Point",
+            coordinates: [-87.6067, 41.8857] // Navy Pier area
+        },
+        start_time: twoHoursFromNow.toISOString(),
+        end_time: new Date(twoHoursFromNow.getTime() + 4 * 60 * 60 * 1000).toISOString(),
+        description: "Special event setup - Navy Pier entrance temporarily closed",
+        reason: "event",
+        status: "inactive",
+        submitter: "Navy Pier Event Management",
+        submitter_id: 1, // chicago_mapper user - can be edited
+        severity: "medium",
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+        openlr: "CwRbWyNG9RpsCQCjJT2=",
+        is_bidirectional: undefined, // Not applicable for points
+        confidence_level: 8,
+        source: "Navy Pier Special Events"
     },
 
     // UNIDIRECTIONAL MAINTENANCE - Westbound only
     {
-        id: "closure-007",
+        id: "closure-008",
         geometry: {
             type: "LineString",
             coordinates: [
@@ -185,16 +226,42 @@ export const mockClosures: any[] = [
         reason: "maintenance",
         status: "inactive",
         submitter: "Streets & Sanitation",
+        submitter_id: 2, // Different user
         severity: "low",
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCdDO9=",
-        is_bidirectional: false
+        is_bidirectional: false,
+        confidence_level: 6,
+        source: "Chicago Streets & Sanitation"
+    },
+
+    // POINT CLOSURE - Downtown accident - User 1 (chicago_mapper) - can be edited
+    {
+        id: "closure-009",
+        geometry: {
+            type: "Point",
+            coordinates: [-87.6244, 41.8756] // Downtown intersection
+        },
+        start_time: thirtyMinutesAgo.toISOString(),
+        end_time: oneHourFromNow.toISOString(),
+        description: "Vehicle accident blocking intersection - emergency response in progress",
+        reason: "accident",
+        status: "active",
+        submitter: "Chicago Police District 1",
+        submitter_id: 1, // chicago_mapper user - can be edited
+        severity: "critical",
+        created_at: thirtyMinutesAgo.toISOString(),
+        updated_at: now.toISOString(),
+        openlr: "CwRbWyNG9RpsCQCkKU3=",
+        is_bidirectional: undefined, // Not applicable for points
+        confidence_level: 10,
+        source: "CPD Emergency Dispatch"
     },
 
     // BIDIRECTIONAL WEATHER CLOSURE - Complex curved path
     {
-        id: "closure-008",
+        id: "closure-010",
         geometry: {
             type: "LineString",
             coordinates: [
@@ -211,16 +278,42 @@ export const mockClosures: any[] = [
         reason: "weather",
         status: "active",
         submitter: "CDOT Snow Operations",
+        submitter_id: 2, // Different user
         severity: "medium",
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCeEP0=",
-        is_bidirectional: true
+        is_bidirectional: true,
+        confidence_level: 8,
+        source: "Chicago DOT"
+    },
+
+    // POINT CLOSURE - Building entrance - User 1 (chicago_mapper) - can be edited
+    {
+        id: "closure-011",
+        geometry: {
+            type: "Point",
+            coordinates: [-87.6298, 41.8902] // Willis Tower area
+        },
+        start_time: fourHoursFromNow.toISOString(),
+        end_time: new Date(fourHoursFromNow.getTime() + 2 * 60 * 60 * 1000).toISOString(),
+        description: "Building maintenance - Willis Tower loading dock entrance temporarily closed",
+        reason: "maintenance",
+        status: "inactive",
+        submitter: "Willis Tower Management",
+        submitter_id: 1, // chicago_mapper user - can be edited
+        severity: "low",
+        created_at: now.toISOString(),
+        updated_at: now.toISOString(),
+        openlr: "CwRbWyNG9RpsCQClLV4=",
+        is_bidirectional: undefined, // Not applicable for points
+        confidence_level: 7,
+        source: "Willis Tower Facility Management"
     },
 
     // UNIDIRECTIONAL EVENT - Marathon route (Northeast direction)
     {
-        id: "closure-009",
+        id: "closure-012",
         geometry: {
             type: "LineString",
             coordinates: [
@@ -237,66 +330,42 @@ export const mockClosures: any[] = [
         reason: "event",
         status: "inactive",
         submitter: "Chicago Marathon Organizers",
+        submitter_id: 3, // Different user
         severity: "critical",
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQCcCN8=",
-        is_bidirectional: false
+        is_bidirectional: false,
+        confidence_level: 10,
+        source: "Chicago Marathon"
     },
 
-    // BIDIRECTIONAL EMERGENCY - Fire response
+    // POINT CLOSURE - Emergency services - User 2 (different user) - cannot be edited by user 1
     {
-        id: "closure-010",
+        id: "closure-013",
         geometry: {
-            type: "LineString",
-            coordinates: [
-                [-87.6500, 41.8500], // Bridgeport area - Start
-                [-87.6480, 41.8510], // Northeast direction
-                [-87.6460, 41.8520], // Continue northeast
-                [-87.6440, 41.8530]  // End point
-            ]
+            type: "Point",
+            coordinates: [-87.6390, 41.8830] // River North area
         },
-        start_time: sixHoursAgo.toISOString(),
-        end_time: oneHourAgo.toISOString(),
-        description: "Building fire response completed - All lanes reopened on 35th Street",
+        start_time: oneHourAgo.toISOString(),
+        end_time: twoHoursFromNow.toISOString(),
+        description: "Gas leak investigation - Building entrance and sidewalk area closed",
         reason: "emergency",
-        status: "inactive",
-        submitter: "Chicago Emergency Management",
-        severity: "critical",
-        created_at: sixHoursAgo.toISOString(),
-        updated_at: oneHourAgo.toISOString(),
-        openlr: "CwRbWyNG9RpsCQCfFQ9=",
-        is_bidirectional: true
+        status: "active",
+        submitter: "Peoples Gas Emergency",
+        submitter_id: 2, // Different user
+        severity: "high",
+        created_at: oneHourAgo.toISOString(),
+        updated_at: thirtyMinutesAgo.toISOString(),
+        openlr: "CwRbWyNG9RpsCQCmMW5=",
+        is_bidirectional: undefined, // Not applicable for points
+        confidence_level: 9,
+        source: "Peoples Gas Emergency Response"
     },
 
-    // UNIDIRECTIONAL CONSTRUCTION - Northwest direction
+    // BIDIRECTIONAL CONSTRUCTION - Bridge work
     {
-        id: "closure-011",
-        geometry: {
-            type: "LineString",
-            coordinates: [
-                [-87.6200, 41.8650], // Start - Southeast
-                [-87.6220, 41.8670], // Northwest direction
-                [-87.6240, 41.8690], // Continue northwest
-                [-87.6260, 41.8710]  // End point - Northwest
-            ]
-        },
-        start_time: fourHoursFromNow.toISOString(),
-        end_time: new Date(fourHoursFromNow.getTime() + 4 * 60 * 60 * 1000).toISOString(),
-        description: "Northwestbound lane closure for utility installation on Cermak Road",
-        reason: "construction",
-        status: "inactive",
-        submitter: "ComEd Infrastructure",
-        severity: "medium",
-        created_at: now.toISOString(),
-        updated_at: now.toISOString(),
-        openlr: "CwRbWyNG9RpsCQCgGR0=",
-        is_bidirectional: false
-    },
-
-    // BIDIRECTIONAL MAINTENANCE - Bridge work
-    {
-        id: "closure-012",
+        id: "closure-014",
         geometry: {
             type: "LineString",
             coordinates: [
@@ -312,15 +381,18 @@ export const mockClosures: any[] = [
         reason: "maintenance",
         status: "inactive",
         submitter: "Chicago Bridge Engineering",
+        submitter_id: 2, // Different user
         severity: "high",
         created_at: now.toISOString(),
         updated_at: now.toISOString(),
         openlr: "CwRbWyNG9RpsCQChHS1=",
-        is_bidirectional: true
+        is_bidirectional: true,
+        confidence_level: 8,
+        source: "Chicago DOT Bridge Division"
     }
 ];
 
-// Calculate comprehensive statistics including direction data
+// Calculate comprehensive statistics including direction data and point closures
 const calculateStats = (): ClosureStats => {
     const currentTime = now;
 
@@ -351,11 +423,11 @@ const calculateStats = (): ClosureStats => {
         return acc;
     }, {} as Record<string, number>);
 
-    // Calculate direction statistics
+    // Calculate geometry type statistics
+    const pointClosures = mockClosures.filter(c => c.geometry.type === 'Point').length;
     const lineStringClosures = mockClosures.filter(c => c.geometry.type === 'LineString');
     const bidirectionalCount = lineStringClosures.filter(c => c.is_bidirectional === true).length;
     const unidirectionalCount = lineStringClosures.filter(c => c.is_bidirectional === false).length;
-    const pointCount = mockClosures.filter(c => c.geometry.type === 'Point').length;
 
     // Calculate durations
     const durations = mockClosures.map(closure => {
@@ -372,8 +444,8 @@ const calculateStats = (): ClosureStats => {
         active,
         upcoming,
         expired,
-        byReason,
-        bySeverity,
+        byClosureType: byReason,
+        byStatus: bySeverity,
         byTimeOfDay: {
             morning: Math.floor(mockClosures.length * 0.25),
             afternoon: Math.floor(mockClosures.length * 0.35),
@@ -385,7 +457,7 @@ const calculateStats = (): ClosureStats => {
         byDirection: {
             bidirectional: bidirectionalCount,
             unidirectional: unidirectionalCount,
-            point: pointCount
+            point: pointClosures // Point closures don't have direction
         }
     };
 };

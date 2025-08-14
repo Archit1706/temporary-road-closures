@@ -1,6 +1,6 @@
 "use client"
 import React from 'react';
-import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2 } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2, Target, Route } from 'lucide-react';
 import { format, isAfter, isBefore } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
@@ -51,16 +51,25 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
         return `${Math.round(hours / 24)}d`;
     };
 
-    const getDirectionIcon = (closure: Closure) => {
-        if (closure.geometry.type === 'Point') return null;
-        if (closure.is_bidirectional) return '↔️';
-        return '→';
+    const getGeometryIcon = (closure: Closure) => {
+        if (closure.geometry.type === 'Point') {
+            return Target;
+        }
+        return Route;
     };
 
-    const getDirectionLabel = (closure: Closure) => {
-        if (closure.geometry.type === 'Point') return 'Point closure';
+    const getGeometryLabel = (closure: Closure) => {
+        if (closure.geometry.type === 'Point') {
+            return 'Point closure';
+        }
         if (closure.is_bidirectional) return 'Bidirectional';
         return 'Unidirectional';
+    };
+
+    const getDirectionIcon = (closure: Closure) => {
+        if (closure.geometry.type === 'Point') return '📍';
+        if (closure.is_bidirectional) return '↔️';
+        return '→';
     };
 
     const handleClosureClick = (closure: Closure) => {
@@ -71,7 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
     };
 
     const handleEditClick = async (e: React.MouseEvent, closureId: number) => {
-        e.stopPropagation(); // Prevent closure selection
+        e.stopPropagation();
 
         try {
             await startEditingClosure(closureId);
@@ -84,7 +93,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
     };
 
     const handleDeleteClick = async (e: React.MouseEvent, closureId: number, description: string) => {
-        e.stopPropagation(); // Prevent closure selection
+        e.stopPropagation();
 
         const confirmed = window.confirm(
             `Are you sure you want to delete this closure?\n\n"${description}"\n\nThis action cannot be undone.`
@@ -103,7 +112,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
     const upcomingClosures = closures.filter(c => getClosureStatus(c) === 'upcoming').length;
     const expiredClosures = closures.filter(c => getClosureStatus(c) === 'expired').length;
 
-    // Calculate direction statistics
+    // Calculate geometry statistics
+    const pointClosures = closures.filter(c => c.geometry.type === 'Point').length;
     const lineStringClosures = closures.filter(c => c.geometry.type === 'LineString');
     const bidirectionalClosures = lineStringClosures.filter(c => c.is_bidirectional === true).length;
     const unidirectionalClosures = lineStringClosures.filter(c => c.is_bidirectional === false).length;
@@ -149,19 +159,41 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                         </div>
                     </div>
 
-                    {/* Direction Statistics */}
-                    {lineStringClosures.length > 0 && (
+                    {/* Geometry Type Statistics */}
+                    {(pointClosures > 0 || lineStringClosures.length > 0) && (
                         <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
                             <div className="flex items-center justify-between text-xs">
                                 <div className="flex items-center space-x-1">
-                                    <Navigation className="w-3 h-3 text-blue-600" />
-                                    <span className="text-blue-800 font-medium">Direction Info</span>
+                                    <MapPin className="w-3 h-3 text-blue-600" />
+                                    <span className="text-blue-800 font-medium">Geometry Types</span>
                                 </div>
                                 <div className="flex space-x-2 text-blue-700">
-                                    <span>↔ {bidirectionalClosures}</span>
-                                    <span>→ {unidirectionalClosures}</span>
+                                    {pointClosures > 0 && (
+                                        <div className="flex items-center space-x-1">
+                                            <Target className="w-3 h-3" />
+                                            <span>{pointClosures}</span>
+                                        </div>
+                                    )}
+                                    {lineStringClosures.length > 0 && (
+                                        <div className="flex items-center space-x-1">
+                                            <Route className="w-3 h-3" />
+                                            <span>{lineStringClosures.length}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
+                            {lineStringClosures.length > 0 && (
+                                <div className="flex items-center justify-between text-xs mt-1">
+                                    <div className="flex items-center space-x-1">
+                                        <Navigation className="w-3 h-3 text-blue-600" />
+                                        <span className="text-blue-800 font-medium">Direction Info</span>
+                                    </div>
+                                    <div className="flex space-x-2 text-blue-700">
+                                        <span>↔ {bidirectionalClosures}</span>
+                                        <span>→ {unidirectionalClosures}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -209,8 +241,9 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                                 const status = getClosureStatus(closure);
                                 const isSelected = selectedClosure?.id === closure.id;
                                 const directionIcon = getDirectionIcon(closure);
-                                const directionLabel = getDirectionLabel(closure);
+                                const geometryLabel = getGeometryLabel(closure);
                                 const canEdit = canEditClosure(closure);
+                                const GeometryIcon = getGeometryIcon(closure);
 
                                 return (
                                     <div
@@ -279,7 +312,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                                                 {closure.description}
                                             </h3>
 
-                                            {/* Closure Type and Direction */}
+                                            {/* Closure Type and Geometry Info */}
                                             <div className="flex items-center justify-between mb-2">
                                                 <div className="flex items-center space-x-1">
                                                     <div className="w-2 h-2 rounded-full bg-blue-500"></div>
@@ -287,16 +320,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                                                         {closure.closure_type.replace('_', ' ')}
                                                     </span>
                                                 </div>
-                                                {directionIcon && (
-                                                    <div className="flex items-center space-x-1">
-                                                        <span className="text-sm" title={directionLabel}>
-                                                            {directionIcon}
-                                                        </span>
-                                                        <span className="text-xs text-gray-500">
-                                                            {closure.is_bidirectional ? 'Both ways' : 'One way'}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                <div className="flex items-center space-x-1">
+                                                    <GeometryIcon className={`w-3 h-3 ${closure.geometry.type === 'Point' ? 'text-orange-600' : 'text-blue-600'
+                                                        }`} />
+                                                    <span className="text-sm" title={geometryLabel}>
+                                                        {directionIcon}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {closure.geometry.type === 'Point' ? 'Point' :
+                                                            closure.is_bidirectional ? 'Both ways' : 'One way'}
+                                                    </span>
+                                                </div>
                                             </div>
 
                                             {/* Timing */}
@@ -323,17 +357,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                                                     </div>
                                                 )}
 
-                                                {/* Direction information for LineString closures */}
-                                                {closure.geometry.type === 'LineString' && (
-                                                    <div className="flex items-center space-x-1">
-                                                        <Navigation className="w-3 h-3" />
-                                                        <span className="text-xs">
-                                                            {closure.is_bidirectional
-                                                                ? 'Bidirectional closure'
-                                                                : 'Unidirectional closure'}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                {/* Geometry information */}
+                                                <div className="flex items-center space-x-1">
+                                                    <GeometryIcon className="w-3 h-3" />
+                                                    <span className="text-xs">
+                                                        {closure.geometry.type === 'Point' ? 'Point closure' :
+                                                            closure.is_bidirectional
+                                                                ? 'Bidirectional road segment'
+                                                                : 'Unidirectional road segment'}
+                                                    </span>
+                                                </div>
 
                                                 {/* Submitter info */}
                                                 <div className="flex items-center space-x-1">
@@ -369,9 +402,16 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                             <span>⚠ Using demo data</span>
                         )}
                     </div>
-                    {lineStringClosures.length > 0 && (
+                    {(pointClosures > 0 || lineStringClosures.length > 0) && (
                         <div className="text-xs text-gray-400 text-center mt-1">
-                            ↔ {bidirectionalClosures} bidirectional • → {unidirectionalClosures} unidirectional
+                            {pointClosures > 0 && `📍 ${pointClosures} points`}
+                            {pointClosures > 0 && lineStringClosures.length > 0 && ' • '}
+                            {lineStringClosures.length > 0 && `🛣️ ${lineStringClosures.length} segments`}
+                            {lineStringClosures.length > 0 && (
+                                <span className="ml-1">
+                                    (↔ {bidirectionalClosures} • → {unidirectionalClosures})
+                                </span>
+                            )}
                         </div>
                     )}
                     {isAuthenticated && (
