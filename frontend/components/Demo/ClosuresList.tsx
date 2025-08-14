@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Clock, MapPin, Navigation, Building2, Zap } from 'lucide-react';
+import { AlertTriangle, Clock, MapPin, Navigation, Building2, Zap, Car, Bike, User, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface Closure {
@@ -18,11 +18,30 @@ interface Closure {
     is_bidirectional?: boolean;
 }
 
+export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
+
 interface ClosuresListProps {
     closures: Closure[];
+    transportationMode: TransportationMode;
+    relevantClosures: Closure[];
 }
 
-const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
+// Define which closure types affect which transportation modes
+const closureTypeEffects: Record<string, TransportationMode[]> = {
+    'construction': ['auto', 'bicycle'],
+    'accident': ['auto', 'bicycle'],
+    'event': ['auto'],
+    'maintenance': ['auto', 'bicycle'],
+    'weather': ['auto', 'bicycle', 'pedestrian'],
+    'emergency': ['auto', 'bicycle', 'pedestrian'],
+    'other': ['auto', 'bicycle', 'pedestrian'],
+    'sidewalk_repair': ['pedestrian'],
+    'bike_lane_closure': ['bicycle'],
+    'bridge_closure': ['auto', 'bicycle', 'pedestrian'],
+    'tunnel_closure': ['auto', 'bicycle'],
+};
+
+const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMode, relevantClosures }) => {
     const getClosureTypeIcon = (type: string) => {
         switch (type) {
             case 'construction':
@@ -37,6 +56,14 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                 return '🌧️';
             case 'emergency':
                 return '🚨';
+            case 'sidewalk_repair':
+                return '🚶';
+            case 'bike_lane_closure':
+                return '🚲';
+            case 'bridge_closure':
+                return '🌉';
+            case 'tunnel_closure':
+                return '🚇';
             default:
                 return '⚠️';
         }
@@ -93,9 +120,34 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
         return now >= start && now <= end;
     };
 
+    // Check if closure affects the selected transportation mode
+    const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
+        const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
+        return affectedModes.includes(mode);
+    };
+
+    const getTransportationIcon = (mode: TransportationMode) => {
+        switch (mode) {
+            case 'auto':
+                return Car;
+            case 'bicycle':
+                return Bike;
+            case 'pedestrian':
+                return User;
+            default:
+                return Navigation;
+        }
+    };
+
+    const TransportationIcon = getTransportationIcon(transportationMode);
+
     const activeClosures = closures.filter(isClosureActive);
     const upcomingClosures = closures.filter(c => new Date(c.start_time) > new Date());
     const expiredClosures = closures.filter(c => new Date(c.end_time) < new Date());
+
+    // Count relevant vs irrelevant closures
+    const relevantActiveClosures = activeClosures.filter(c => doesClosureAffectMode(c, transportationMode));
+    const irrelevantActiveClosures = activeClosures.filter(c => !doesClosureAffectMode(c, transportationMode));
 
     if (closures.length === 0) {
         return null;
@@ -112,11 +164,46 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                     <span className="text-sm text-gray-500">({closures.length})</span>
                 </div>
 
+                {/* Transportation Mode Header */}
+                <div className="flex items-center space-x-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <TransportationIcon className="w-4 h-4 text-blue-600" />
+                    <div className="flex-1">
+                        <div className="text-sm font-medium text-blue-900 capitalize">
+                            {transportationMode} Mode Analysis
+                        </div>
+                        <div className="text-xs text-blue-700">
+                            Showing which closures affect your selected transportation mode
+                        </div>
+                    </div>
+                </div>
+
                 {/* Summary Stats */}
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                    <div className="text-center p-3 bg-red-50 rounded-lg">
+                        <div className="text-lg font-bold text-red-800">
+                            {relevantActiveClosures.length}
+                        </div>
+                        <div className="text-xs text-red-600">Affecting Route</div>
+                        <div className="text-xs text-red-500 mt-1">
+                            {relevantActiveClosures.length > 0 ? '🚫 Avoided in routing' : '✅ No restrictions'}
+                        </div>
+                    </div>
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                        <div className="text-lg font-bold text-green-800">
+                            {irrelevantActiveClosures.length}
+                        </div>
+                        <div className="text-xs text-green-600">Not Affecting</div>
+                        <div className="text-xs text-green-500 mt-1">
+                            ✅ Safe to ignore
+                        </div>
+                    </div>
+                </div>
+
+                {/* Secondary Stats */}
                 <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="text-center p-2 bg-red-50 rounded-lg">
-                        <div className="text-sm font-semibold text-red-800">{activeClosures.length}</div>
-                        <div className="text-xs text-red-600">Active</div>
+                    <div className="text-center p-2 bg-gray-50 rounded-lg">
+                        <div className="text-sm font-semibold text-gray-800">{activeClosures.length}</div>
+                        <div className="text-xs text-gray-600">Active Now</div>
                     </div>
                     <div className="text-center p-2 bg-yellow-50 rounded-lg">
                         <div className="text-sm font-semibold text-yellow-800">{upcomingClosures.length}</div>
@@ -132,19 +219,32 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                     {closures
                         .sort((a, b) => {
-                            // Sort by status (active first), then by start time
+                            // Sort by relevance first, then by status, then by start time
+                            const aRelevant = doesClosureAffectMode(a, transportationMode);
+                            const bRelevant = doesClosureAffectMode(b, transportationMode);
+
+                            if (aRelevant && !bRelevant) return -1;
+                            if (!aRelevant && bRelevant) return 1;
+
                             if (isClosureActive(a) && !isClosureActive(b)) return -1;
                             if (!isClosureActive(a) && isClosureActive(b)) return 1;
+
                             return new Date(a.start_time).getTime() - new Date(b.start_time).getTime();
                         })
                         .map((closure) => {
                             const active = isClosureActive(closure);
                             const direction = getDirectionInfo(closure);
+                            const affectsMode = doesClosureAffectMode(closure, transportationMode);
+                            const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
 
                             return (
                                 <div
                                     key={closure.id}
-                                    className={`border rounded-lg p-3 transition-colors ${active ? 'border-red-200 bg-red-50' : 'border-gray-200 bg-gray-50'
+                                    className={`border rounded-lg p-3 transition-colors ${active && affectsMode
+                                        ? 'border-red-200 bg-red-50'
+                                        : active && !affectsMode
+                                            ? 'border-green-200 bg-green-50'
+                                            : 'border-gray-200 bg-gray-50'
                                         }`}
                                 >
                                     {/* Header */}
@@ -154,6 +254,19 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                                             <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(closure.status)}`}>
                                                 {closure.status}
                                             </span>
+                                            {active && (
+                                                affectsMode ? (
+                                                    <div className="inline-flex items-center space-x-1 px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">
+                                                        <XCircle className="w-3 h-3" />
+                                                        <span>Blocks Route</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">
+                                                        <CheckCircle className="w-3 h-3" />
+                                                        <span>Doesn't Affect</span>
+                                                    </div>
+                                                )
+                                            )}
                                         </div>
                                         <div className="flex items-center space-x-1">
                                             <Zap className="w-3 h-3 text-gray-400" />
@@ -167,6 +280,40 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                                     <h4 className="font-medium text-gray-900 mb-2 text-sm line-clamp-2">
                                         {closure.description}
                                     </h4>
+
+                                    {/* Transportation Mode Effects */}
+                                    <div className="flex items-center space-x-3 mb-2 text-xs">
+                                        <span className="text-gray-600">Affects:</span>
+                                        <div className="flex items-center space-x-2">
+                                            {['auto', 'bicycle', 'pedestrian'].map((mode) => {
+                                                const Icon = getTransportationIcon(mode as TransportationMode);
+                                                const isAffected = affectedModes.includes(mode as TransportationMode);
+                                                const isCurrentMode = mode === transportationMode;
+
+                                                return (
+                                                    <div
+                                                        key={mode}
+                                                        className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full ${isAffected
+                                                            ? isCurrentMode
+                                                                ? 'bg-red-100 text-red-700 border border-red-200'
+                                                                : 'bg-orange-100 text-orange-600'
+                                                            : isCurrentMode
+                                                                ? 'bg-green-100 text-green-700 border border-green-200'
+                                                                : 'bg-gray-100 text-gray-400'
+                                                            }`}
+                                                        title={`${isAffected ? 'Affects' : 'Does not affect'} ${mode}`}
+                                                    >
+                                                        <Icon className="w-3 h-3" />
+                                                        {isCurrentMode && (
+                                                            <span className="text-xs">
+                                                                {isAffected ? '✗' : '✓'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
 
                                     {/* Details */}
                                     <div className="space-y-1 text-xs text-gray-600">
@@ -211,13 +358,25 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                                         </div>
                                     </div>
 
-                                    {/* Active indicator */}
-                                    {active && (
+                                    {/* Active indicator for relevant closures */}
+                                    {active && affectsMode && (
                                         <div className="mt-2 pt-2 border-t border-red-200">
                                             <div className="flex items-center space-x-2">
                                                 <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                                                 <span className="text-xs font-medium text-red-700">
-                                                    Currently active - will be avoided in route
+                                                    Currently blocking {transportationMode} traffic - avoided in route
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Active indicator for irrelevant closures */}
+                                    {active && !affectsMode && (
+                                        <div className="mt-2 pt-2 border-t border-green-200">
+                                            <div className="flex items-center space-x-2">
+                                                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                <span className="text-xs font-medium text-green-700">
+                                                    Active but doesn't affect {transportationMode} traffic
                                                 </span>
                                             </div>
                                         </div>
@@ -232,11 +391,14 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures }) => {
                     <div className="flex items-start space-x-2">
                         <Navigation className="w-4 h-4 text-blue-600 mt-0.5" />
                         <div className="text-sm text-blue-700">
-                            <p className="font-medium mb-1">Route Optimization</p>
+                            <p className="font-medium mb-1">Smart Transportation Mode Filtering</p>
                             <p>
-                                Active closures are automatically excluded from route calculation using
-                                Valhalla's <code className="bg-blue-100 px-1 rounded">exclude_locations</code> parameter.
+                                Only closures that affect <span className="font-medium capitalize">{transportationMode}</span> traffic
+                                are excluded from route calculation using Valhalla's routing engine.
                             </p>
+                            <div className="mt-2 text-xs">
+                                <p><strong>Example:</strong> Construction work typically affects cars and bicycles but not pedestrians.</p>
+                            </div>
                         </div>
                     </div>
                 </div>
