@@ -21,6 +21,12 @@ import FrontendSetup from './Sections/Frontend/Setup';
 import FrontendFeatures from './Sections/Frontend/Features';
 import FrontendArchitecture from './Sections/Frontend/Architecture';
 
+// Closure Routing sections
+import ClosureRoutingIntroduction from './Sections/ClosureAwareRouting/Introduction';
+import ClosureRoutingUsage from './Sections/ClosureAwareRouting/Usage';
+import TransportationModesAndClosures from './Sections/ClosureAwareRouting/TransportationModesAndClosures';
+import TechnicalArchitecture from './Sections/ClosureAwareRouting/TechnicalArchitecture';
+
 // Contribute and Acknowledgements sections
 import Contribute from './Sections/Contribute';
 import Acknowledgements from './Sections/Acknowledgements';
@@ -45,6 +51,12 @@ const sectionComponents = {
     'frontend-setup': FrontendSetup,
     'frontend-features': FrontendFeatures,
     'frontend-architecture': FrontendArchitecture,
+
+    // Closure Routing sections
+    'closure-routing-intro': ClosureRoutingIntroduction,
+    'closure-routing-usage': ClosureRoutingUsage,
+    'closure-routing-modes': TransportationModesAndClosures,
+    'closure-routing-technical': TechnicalArchitecture,
 } as const;
 
 type SectionKey = keyof typeof sectionComponents;

@@ -33,13 +33,14 @@ const DocsSidebar = ({ isOpen, activeSection, onSectionChange }: {
     };
 
     const sidebarItems = [
-        { id: 'introduction', label: 'Introduction', icon: Home },
-        { id: 'getting-started', label: 'Getting Started', icon: Zap },
+        { id: 'introduction', label: 'Introduction', icon: Home, disabled: false },
+        { id: 'getting-started', label: 'Getting Started', icon: Zap, disabled: false },
         {
             id: 'backend-api',
             label: 'Backend API',
             icon: Server,
             expandable: true,
+            disabled: false,
             children: [
                 { id: 'authentication', label: 'Authentication' },
                 { id: 'closures', label: 'Closures' },
@@ -53,6 +54,7 @@ const DocsSidebar = ({ isOpen, activeSection, onSectionChange }: {
             label: 'Frontend Application',
             icon: Monitor,
             expandable: true,
+            disabled: false,
             children: [
                 { id: 'frontend-intro', label: 'Introduction' },
                 { id: 'frontend-usage', label: 'Usage Guide' },
@@ -61,10 +63,22 @@ const DocsSidebar = ({ isOpen, activeSection, onSectionChange }: {
                 { id: 'frontend-architecture', label: 'Architecture' }
             ]
         },
-        { id: 'closure-routing', label: 'Closure Aware Routing', icon: Globe, disabled: true },
-        { id: 'deployment', label: 'Deployment', icon: Wrench },
-        { id: 'contribute', label: 'Contribute', icon: Users },
-        { id: 'acknowledgements', label: 'Acknowledgements', icon: Heart }
+        {
+            id: 'closure-routing',
+            label: 'Closure Aware Routing',
+            icon: Globe,
+            expandable: true,
+            disabled: true,
+            children: [
+                { id: 'closure-routing-intro', label: 'Introduction' },
+                { id: 'closure-routing-usage', label: 'Usage Guide' },
+                { id: 'closure-routing-modes', label: 'Transportation Modes' },
+                { id: 'closure-routing-technical', label: 'Technical Architecture' }
+            ]
+        },
+        { id: 'deployment', label: 'Deployment', icon: Wrench, disabled: false },
+        { id: 'contribute', label: 'Contribute', icon: Users, disabled: false },
+        { id: 'acknowledgements', label: 'Acknowledgements', icon: Heart, disabled: false }
     ];
 
     return (
