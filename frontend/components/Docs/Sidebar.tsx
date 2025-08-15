@@ -10,7 +10,8 @@ import {
     Home,
     Wrench,
     Heart,
-    Globe
+    Globe,
+    Monitor
 } from 'lucide-react';
 
 // Sidebar Component
@@ -20,7 +21,8 @@ const DocsSidebar = ({ isOpen, activeSection, onSectionChange }: {
     onSectionChange: (section: string) => void
 }) => {
     const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
-        'backend-api': true
+        'backend-api': true,
+        'frontend-guide': true
     });
 
     const toggleSection = (section: string) => {
@@ -46,7 +48,19 @@ const DocsSidebar = ({ isOpen, activeSection, onSectionChange }: {
                 { id: 'health', label: 'Health Check' }
             ]
         },
-        { id: 'frontend-closures', label: 'Frontend Closure Reporting', icon: MapPin, disabled: true },
+        {
+            id: 'frontend-guide',
+            label: 'Frontend Application',
+            icon: Monitor,
+            expandable: true,
+            children: [
+                { id: 'frontend-intro', label: 'Introduction' },
+                { id: 'frontend-usage', label: 'Usage Guide' },
+                { id: 'frontend-setup', label: 'Local Setup' },
+                { id: 'frontend-features', label: 'Features' },
+                { id: 'frontend-architecture', label: 'Architecture' }
+            ]
+        },
         { id: 'closure-routing', label: 'Closure Aware Routing', icon: Globe, disabled: true },
         { id: 'deployment', label: 'Deployment', icon: Wrench },
         { id: 'contribute', label: 'Contribute', icon: Users },
