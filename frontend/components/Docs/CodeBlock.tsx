@@ -1,9 +1,16 @@
-"use client"
-import React, { useState } from 'react';
-import { Check, Copy } from 'lucide-react';
+"use client";
+import React, { useState } from "react";
+import { Check, Copy } from "lucide-react";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-// Code Block Component
-const CodeBlock = ({ code, language = 'json' }: { code: string, language?: string }) => {
+interface CodeBlockProps {
+    code: string;
+    language?: string;
+}
+
+// Code Block Component with syntax highlighting
+const CodeBlock: React.FC<CodeBlockProps> = ({ code, language = "json" }) => {
     const [copied, setCopied] = useState(false);
 
     const copyToClipboard = () => {
@@ -13,7 +20,7 @@ const CodeBlock = ({ code, language = 'json' }: { code: string, language?: strin
     };
 
     return (
-        <div className="relative bg-gray-900 rounded-lg overflow-hidden">
+        <div className="relative bg-[#282c34] rounded-lg overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
                 <span className="text-sm text-gray-300 font-medium">{language}</span>
                 <button
@@ -33,9 +40,20 @@ const CodeBlock = ({ code, language = 'json' }: { code: string, language?: strin
                     )}
                 </button>
             </div>
-            <pre className="p-4 overflow-x-auto">
-                <code className="text-sm text-gray-100">{code}</code>
-            </pre>
+
+            <SyntaxHighlighter
+                language={language}
+                style={oneDark}
+                customStyle={{
+                    margin: 0,
+                    padding: "1rem",
+                    fontSize: "0.875rem",
+                    backgroundColor: "transparent",
+                }}
+                wrapLongLines
+            >
+                {code}
+            </SyntaxHighlighter>
         </div>
     );
 };
