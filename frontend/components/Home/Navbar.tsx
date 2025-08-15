@@ -28,6 +28,8 @@ const Navbar: React.FC = () => {
     const navLinks = [
         { href: '/', label: 'Home' },
         { href: '/closures', label: 'Closures' },
+        { href: '/docs', label: 'Docs' },
+        { href: '/closure-aware-routing', label: 'Closure-Aware Routing' },
     ];
 
     return (
