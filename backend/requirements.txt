@@ -5,7 +5,6 @@ gunicorn==21.2.0
 
 # Database and ORM
 sqlalchemy==2.0.23
-# alembic==1.12.1
 psycopg2-binary==2.9.9
 geoalchemy2==0.14.2
 
@@ -27,9 +26,9 @@ httpx==0.25.2
 shapely==2.0.2
 geojson==3.1.0
 
-# OpenLR and location referencin
-xmltodict==0.13.0  # For XML OpenLR format support
-pyproj==3.6.1      # For coordinate transformations
+# OpenLR and location referencing
+xmltodict==0.13.0
+pyproj==3.6.1
 
 # General utilities
 requests==2.31.0
@@ -43,7 +42,3 @@ pytest-asyncio==0.21.1
 black==23.11.0
 isort==5.12.0
 flake8==6.1.0
-
-# Additional OpenLR-related packages (optional)
-openlr-dereferencer==1.0.0
-osmapi==3.1.0          

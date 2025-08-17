@@ -20,7 +20,7 @@ mkdir -p logs backups nginx/ssl
 
 # Stop existing containers
 echo "🛑 Stopping existing containers..."
-docker-compose -f "${COMPOSE_FILE}" down
+docker-compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" down
 
 # Remove unused Docker resources
 echo "🧹 Cleaning up Docker resources..."
@@ -28,7 +28,7 @@ docker system prune -f
 
 # Build and start containers
 echo "🔨 Building and starting containers..."
-docker-compose -f "${COMPOSE_FILE}" up -d --build
+docker-compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d --build
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."
@@ -36,6 +36,6 @@ sleep 30
 
 # Display service status
 echo "📊 Service Status:"
-docker-compose -f "${COMPOSE_FILE}" ps
+docker-compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" ps
 
 echo "✨ Deployment completed!"
