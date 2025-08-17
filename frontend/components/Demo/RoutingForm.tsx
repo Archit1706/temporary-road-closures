@@ -43,21 +43,21 @@ const transportationModes = [
         key: 'auto' as TransportationMode,
         label: 'Car',
         icon: Car,
-        color: 'blue',
+        color: 'blue' as const,
         description: 'Driving routes using roads and highways'
     },
     {
         key: 'bicycle' as TransportationMode,
         label: 'Bicycle',
         icon: Bike,
-        color: 'green',
+        color: 'green' as const,
         description: 'Cycling routes using bike lanes and roads'
     },
     {
         key: 'pedestrian' as TransportationMode,
         label: 'Walking',
         icon: User,
-        color: 'orange',
+        color: 'orange' as const,
         description: 'Walking routes using sidewalks and paths'
     }
 ];
@@ -204,8 +204,8 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                 className={`
                                     flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all duration-200
                                     ${isSelected
-                                        ? colorClasses[mode.color].selected
-                                        : colorClasses[mode.color].unselected
+                                        ? colorClasses[mode.color as keyof typeof colorClasses].selected
+                                        : colorClasses[mode.color as keyof typeof colorClasses].unselected
                                     }
                                 `}
                             >
