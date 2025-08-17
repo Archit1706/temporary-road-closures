@@ -1,0 +1,123 @@
+version: "3.8"
+
+services:
+    # PostgreSQL database with PostGIS
+    db:
+        image: postgis/postgis:15-3.5
+        container_name: osm_closures_db_prod
+        environment:
+            POSTGRES_DB: osm_closures_prod
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_HOST_AUTH_METHOD: md5
+        volumes:
+            - postgres_data_prod:/var/lib/postgresql/data
+            - ./backend/scripts/init_postgis.sql:/docker-entrypoint-initdb.d/init_postgis.sql
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # Redis for caching and rate limiting
+    redis:
+        image: redis:7-alpine
+        container_name: osm_closures_redis_prod
+        volumes:
+            - redis_data_prod:/data
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # FastAPI backend application
+    api:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile.prod
+        container_name: osm_closures_api_prod
+        environment:
+            DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/osm_closures_prod
+            REDIS_URL: redis://redis:6379/0
+            SECRET_KEY: ${SECRET_KEY}
+            DEBUG: "false"
+            ENVIRONMENT: production
+            ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+            OPENLR_ENABLED: "true"
+            LOG_LEVEL: "WARNING"
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+        # Add init container for database setup
+        command: >
+            sh -c "
+              echo 'Waiting for database to be ready...' &&
+              python scripts/init_db_without_alembic.py &&
+              echo 'Starting application...' &&
+              gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile -
+            "
+
+    # Next.js frontend application
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile.prod
+            args:
+                NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        container_name: osm_closures_frontend_prod
+        environment:
+            NODE_ENV: production
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3000"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # Nginx reverse proxy
+    nginx:
+        image: nginx:alpine
+        container_name: osm_closures_nginx_prod
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+            - ./nginx/sites-available:/etc/nginx/sites-available
+            - ./nginx/ssl:/etc/nginx/ssl
+            - /var/log/nginx:/var/log/nginx
+        depends_on:
+            - api
+            - frontend
+        networks:
+            - osm_network
+        restart: unless-stopped
+
+volumes:
+    postgres_data_prod:
+        driver: local
+    redis_data_prod:
+        driver: local
+
+networks:
+    osm_network:
+        driver: bridge
