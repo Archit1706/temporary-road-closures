@@ -5,36 +5,44 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from 'react-hot-toast';
 import { ClosuresProvider, useClosures } from '@/context/ClosuresContext';
-import Layout from '@/components/Layout/Layout';
-import ClosureForm from '@/components/Forms/ClosureForm';
-import EditClosureForm from '@/components/Forms/EditClosureForm';
+// import Layout from '@/components/Layout/Layout';
+// import ClosureForm from '@/components/Forms/ClosureForm';
+// import EditClosureForm from '@/components/Forms/EditClosureForm';
 import ClientOnly from '@/components/ClientOnly';
 import { LogIn, Info, MapPin, Route, Edit3, TriangleAlert, Target } from 'lucide-react';
 import L from 'leaflet';
 
-// Dynamically import MapComponent to avoid SSR issues
-const MapComponent = dynamic(
-  () => import('@/components/Map/MapComponent'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-full w-full bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading map...</p>
-        </div>
-      </div>
-    )
-  }
-);
+// // Dynamically import MapComponent to avoid SSR issues
+// const MapComponent = dynamic(
+//   () => import('@/components/Map/MapComponent'),
+//   {
+//     ssr: false,
+//     loading: () => (
+//       <div className="h-full w-full bg-gray-100 flex items-center justify-center">
+//         <div className="text-center">
+//           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+//           <p className="text-gray-600">Loading map...</p>
+//         </div>
+//       </div>
+//     )
+//   }
+// );
 
-// Dynamically import DemoControlPanel to avoid SSR issues with localStorage
-const DemoControlPanel = dynamic(
-  () => import('@/components/Demo/DemoControlPanel'),
-  {
-    ssr: false,
-    loading: () => null
-  }
+// Dynamically import all components that use browser APIs
+const Layout = dynamic(() => import('@/components/Layout/Layout'), { ssr: false });
+const ClosureForm = dynamic(() => import('@/components/Forms/ClosureForm'), { ssr: false });
+const EditClosureForm = dynamic(() => import('@/components/Forms/EditClosureForm'), { ssr: false });
+const MapComponent = dynamic(() => import('@/components/Map/MapComponent'), { ssr: false });
+const DemoControlPanel = dynamic(() => import('@/components/Demo/DemoControlPanel'), { ssr: false });
+
+// Loading component
+const LoadingSpinner = () => (
+  <div className="h-screen w-full bg-gray-100 flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading application...</p>
+    </div>
+  </div>
 );
 
 // Auth Notice Component
@@ -231,6 +239,17 @@ const EditStatus: React.FC<{
 };
 
 function ClosuresPageContent() {
+
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <LoadingSpinner />;
+  }
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);

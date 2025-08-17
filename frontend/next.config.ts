@@ -122,6 +122,11 @@ const nextConfig = {
     } : false,
   },
 
+  // Page generation config
+  generateBuildId: async () => {
+    return 'osm-closures-build'
+  },
+
   // Output configuration
   output: 'standalone',
 
