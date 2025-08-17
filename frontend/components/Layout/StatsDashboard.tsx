@@ -52,12 +52,12 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
         }).length;
 
         const byReason = closures.reduce((acc, closure) => {
-            acc[closure.reason] = (acc[closure.reason] || 0) + 1;
+            acc[closure.closure_type] = (acc[closure.closure_type] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
 
         const bySeverity = closures.reduce((acc, closure) => {
-            const severity = closure.severity || 'medium';
+            const severity = closure.status || 'inactive';
             acc[severity] = (acc[severity] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -77,7 +77,7 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
-            <div 
+            <div
                 className="absolute inset-0 bg-black bg-opacity-50"
                 onClick={onClose}
             />
@@ -170,8 +170,8 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
                                                         {reason.replace('_', ' ')}
                                                     </div>
                                                     <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                                        <div 
-                                                            className="bg-blue-600 h-2 rounded-full" 
+                                                        <div
+                                                            className="bg-blue-600 h-2 rounded-full"
                                                             style={{ width: `${percentage}%` }}
                                                         />
                                                     </div>
@@ -196,14 +196,14 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
                                                 high: 'bg-orange-500',
                                                 critical: 'bg-red-500',
                                             };
-                                            
+
                                             return (
                                                 <div key={severity} className="flex items-center space-x-3">
                                                     <div className="w-16 text-sm text-gray-600 capitalize">
                                                         {severity}
                                                     </div>
                                                     <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                                        <div 
+                                                        <div
                                                             className={`${colors[severity as keyof typeof colors]} h-2 rounded-full`}
                                                             style={{ width: `${percentage}%` }}
                                                         />
@@ -233,12 +233,11 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
                                                     <div className="flex-1">
                                                         <p className="text-sm font-medium text-gray-900">{closure.description}</p>
                                                         <p className="text-xs text-gray-500">
-                                                            {closure.reason.replace('_', ' ')} • by {closure.submitter} • {new Date(closure.created_at).toLocaleDateString()}
+                                                            {closure.closure_type.replace('_', ' ')} • by {closure.submitter_id} • {new Date(closure.created_at).toLocaleDateString()}
                                                         </p>
                                                     </div>
-                                                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                        isActive ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                                                    }`}>
+                                                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
+                                                        }`}>
                                                         {isActive ? 'Active' : 'Inactive'}
                                                     </div>
                                                 </div>
@@ -253,13 +252,13 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="text-center">
                                         <div className="text-2xl font-bold text-purple-600">
-                                            {closures.filter(c => c.openlr).length}
+                                            {closures.filter(c => c.openlr_code).length}
                                         </div>
                                         <div className="text-sm text-gray-600">With OpenLR Data</div>
                                     </div>
                                     <div className="text-center">
                                         <div className="text-2xl font-bold text-blue-600">
-                                            {Math.round((closures.filter(c => c.openlr).length / Math.max(closures.length, 1)) * 100)}%
+                                            {Math.round((closures.filter(c => c.openlr_code).length / Math.max(closures.length, 1)) * 100)}%
                                         </div>
                                         <div className="text-sm text-gray-600">Coverage Rate</div>
                                     </div>
@@ -272,8 +271,8 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
                                 </div>
                                 <div className="mt-4 p-3 bg-white rounded-lg border border-purple-200">
                                     <p className="text-sm text-gray-600">
-                                        <strong>OpenLR Integration:</strong> This system uses OpenLR (Open Location Referencing) 
-                                        to encode road locations in a map-agnostic format, enabling interoperability with various 
+                                        <strong>OpenLR Integration:</strong> This system uses OpenLR (Open Location Referencing)
+                                        to encode road locations in a map-agnostic format, enabling interoperability with various
                                         navigation systems and OSM applications.
                                     </p>
                                 </div>
