@@ -293,7 +293,10 @@ const MapEventHandler: React.FC<{
             if (onMapClick && isSelecting) {
                 // For Point geometry, only allow one point
                 if (geometryType === 'Point' && selectedPoints.length >= 1) {
-                    toast.warning('Point closure can only have one location. Clear existing point first.');
+                    toast('Point closure can only have one location. Clear existing point first.', {
+                        icon: '⚠️',
+                        style: { background: '#fbbf24', color: '#92400e' }
+                    });
                     return;
                 }
 
