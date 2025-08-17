@@ -2,7 +2,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-
   // Environment variables
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
@@ -103,16 +102,6 @@ const nextConfig = {
         destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/:path*`,
       },
     ];
-  },
-
-  // Experimental features
-  experimental: {
-    // Enable modern JavaScript features
-    esmExternals: true,
-    // Optimize CSS
-    optimizeCss: true,
-    // Enable SWC minification
-    swcMinify: true,
   },
 
   // Compiler options
