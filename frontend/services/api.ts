@@ -471,7 +471,7 @@ const realApi = {
             return response.data;
         } catch (error) {
             console.error('❌ Error fetching closure:', error);
-            if (error.response?.status === 404) {
+            if ((error as any).response?.status === 404) {
                 throw new Error(`Closure with ID ${id} not found`);
             }
             throw error;
@@ -491,7 +491,7 @@ const realApi = {
             console.log('✅ Closure created successfully:', response.data);
             return response.data;
         } catch (error) {
-            if (error.response?.status === 401) {
+            if ((error as any).response?.status === 401) {
                 console.error('🚫 Authentication failed - token may be expired');
                 throw new Error('Authentication failed. Please log in again.');
             }
@@ -512,14 +512,14 @@ const realApi = {
             console.log('✅ Closure updated successfully:', response.data);
             return response.data;
         } catch (error) {
-            if (error.response?.status === 401) {
+            if ((error as any).response?.status === 401) {
                 console.error('🚫 Authentication failed - token may be expired');
                 throw new Error('Authentication failed. Please log in again.');
             }
-            if (error.response?.status === 403) {
+            if ((error as any).response?.status === 403) {
                 throw new Error('You do not have permission to edit this closure.');
             }
-            if (error.response?.status === 404) {
+            if ((error as any).response?.status === 404) {
                 throw new Error(`Closure with ID ${id} not found.`);
             }
             console.error('❌ Error updating closure:', error);
@@ -649,7 +649,7 @@ export const closuresApi = {
             return mockResponse.map(convertMockToBackendFormat);
         }
 
-        const response = await realApi.getClosures(bbox, page, size);
+        const response = await realApi.getClosures(bbox);
         return response.items;
     },
 
