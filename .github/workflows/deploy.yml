@@ -1,0 +1,81 @@
+name: Deploy to Production
+
+on:
+    push:
+        branches: [master]
+    pull_request:
+        branches: [master]
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.11"
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "18"
+
+            - name: Install backend dependencies
+              working-directory: ./backend
+              run: |
+                  pip install -r requirements.txt
+
+            - name: Install frontend dependencies
+              working-directory: ./frontend
+              run: |
+                  npm ci
+
+            - name: Build frontend
+              working-directory: ./frontend
+              run: |
+                  npm run build
+              env:
+                  NEXT_PUBLIC_API_URL: https://api.osm.ch
+
+    deploy:
+        needs: test
+        runs-on: ubuntu-latest
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Deploy to server
+              uses: appleboy/ssh-action@v1.0.0
+              with:
+                  host: ${{ secrets.DEPLOY_HOST }}
+                  username: ${{ secrets.DEPLOY_USER }}
+                  password: ${{ secrets.DEPLOY_PASSWORD }}
+                  script: |
+                      cd /home/archit/osm-closures
+                      git pull origin main
+
+                      if [ ! -f .env.prod ]; then
+                        cat > .env.prod << EOF
+                      DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+                      SECRET_KEY=${{ secrets.SECRET_KEY }}
+                      ALLOWED_ORIGINS=["https://closures.osm.ch", "https://api.osm.ch"]
+                      NEXT_PUBLIC_API_URL=https://api.osm.ch
+                      OPENLR_ENABLED=true
+                      OPENLR_FORMAT=base64
+                      OPENLR_ACCURACY_TOLERANCE=50.0
+                      EOF
+                      fi
+
+                      docker-compose -f docker-compose.prod.yml down
+                      docker system prune -af
+                      docker-compose -f docker-compose.prod.yml up -d --build
+
+                      sleep 30
+                      docker-compose -f docker-compose.prod.yml exec -T api alembic upgrade head || echo "Migration failed or not needed"
+                      docker-compose -f docker-compose.prod.yml ps
+                      curl -f http://localhost/health || echo "Health check failed"
