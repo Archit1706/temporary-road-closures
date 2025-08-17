@@ -1,7 +1,7 @@
-// next.config.ts
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+
   // Environment variables
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
@@ -21,7 +21,7 @@ const nextConfig = {
   },
 
   // Webpack configuration for Leaflet and routing libraries
-  webpack: (config: { resolve: { fallback: any; alias: any; }; }, { isServer }: any) => {
+  webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
@@ -104,6 +104,16 @@ const nextConfig = {
     ];
   },
 
+  // Experimental features
+  experimental: {
+    // Enable modern JavaScript features
+    esmExternals: true,
+    // Optimize CSS
+    optimizeCss: true,
+    // Enable SWC minification
+    swcMinify: true,
+  },
+
   // Compiler options
   compiler: {
     // Remove console logs in production
@@ -138,12 +148,6 @@ const nextConfig = {
   // Trailing slash configuration
   trailingSlash: false,
 
-  // Asset prefix for CDN
-  // assetPrefix: process.env.NODE_ENV === 'production' ? 'https://cdn.example.com' : '',
-
-  // Custom build directory
-  // distDir: 'build',
-
   // TypeScript configuration
   typescript: {
     // Ignore type errors during build (not recommended for production)
@@ -160,20 +164,6 @@ const nextConfig = {
 
   // Source maps
   productionBrowserSourceMaps: process.env.NODE_ENV !== 'production',
-
-  // Bundle analyzer (uncomment to analyze bundle)
-  // ...(process.env.ANALYZE === 'true' && {
-  //   webpack: (config: any) => {
-  //     const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-  //     config.plugins.push(
-  //       new BundleAnalyzerPlugin({
-  //         analyzerMode: 'static',
-  //         openAnalyzer: false,
-  //       })
-  //     );
-  //     return config;
-  //   },
-  // }),
 };
 
 module.exports = nextConfig;
