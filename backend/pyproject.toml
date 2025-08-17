@@ -19,6 +19,7 @@ psutil = "^5.9.6"
 pydantic = {extras = ["email"], version = "^2.5.0"}
 pydantic-settings = "^2.1.0"
 python-jose = {extras = ["cryptography"], version = "^3.3.0"}
+PyJWT = "^2.8.0"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 bcrypt = "3.2.0"
 python-multipart = "^0.0.6"
