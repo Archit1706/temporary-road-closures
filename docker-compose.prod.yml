@@ -50,6 +50,7 @@ services:
             ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
             OPENLR_ENABLED: "true"
             LOG_LEVEL: "WARNING"
+            ALLOWED_HOSTS: '["*"]'
         depends_on:
             db:
                 condition: service_healthy
@@ -63,13 +64,20 @@ services:
             interval: 30s
             timeout: 10s
             retries: 5
+            start_period: 60s
         # Add init container for database setup
         command: >
             sh -c "
               echo 'Waiting for database to be ready...' &&
+              until python -c \"import psycopg2; psycopg2.connect('${DATABASE_URL}')\" 2>/dev/null; do
+                echo 'Database not ready, waiting...'
+                sleep 2
+              done &&
+              echo 'Database is ready!' &&
+              echo 'Initializing database...' &&
               python scripts/init_db.py &&
               echo 'Starting application...' &&
-              gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile -
+              gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --timeout 120 --preload
             "
 
     # Next.js frontend application

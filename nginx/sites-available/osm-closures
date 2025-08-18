@@ -11,10 +11,51 @@ upstream frontend_backend {
 # API Server Configuration
 server {
     listen 80;
-    server_name api.osm.ch;
+    server_name api.osm.ch localhost;
     
     limit_req zone=api burst=20 nodelay;
     
+    # FIXED: Health check endpoints with proper headers
+    location /health {
+        proxy_pass http://api_backend/health;
+        proxy_set_header Host localhost;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_http_version 1.1;
+        
+        # Health check specific settings
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 5s;
+        proxy_read_timeout 5s;
+        
+        # Disable caching for health checks
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+    
+    location /health/detailed {
+        proxy_pass http://api_backend/health/detailed;
+        proxy_set_header Host localhost;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_http_version 1.1;
+    }
+    
+    # Ping endpoint
+    location /ping {
+        proxy_pass http://api_backend/ping;
+        proxy_set_header Host localhost;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # API endpoints
     location /api/v1/ {
         proxy_pass http://api_backend/api/v1/;
         proxy_http_version 1.1;
@@ -30,15 +71,17 @@ server {
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
         
+        # CORS headers
         add_header 'Access-Control-Allow-Origin' '*' always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
-        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization' always;
-        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range' always;
+        add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key' always;
+        add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Process-Time' always;
         
+        # Handle preflight requests
         if ($request_method = 'OPTIONS') {
             add_header 'Access-Control-Allow-Origin' '*';
             add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
-            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization';
+            add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key';
             add_header 'Access-Control-Max-Age' 1728000;
             add_header 'Content-Type' 'text/plain; charset=utf-8';
             add_header 'Content-Length' 0;
@@ -46,16 +89,28 @@ server {
         }
     }
     
-    location /health {
-        proxy_pass http://api_backend/health;
+    # Root API endpoint
+    location / {
+        proxy_pass http://api_backend/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Connection "";
+        proxy_http_version 1.1;
+    }
+    
+    # API Documentation
+    location /docs {
+        proxy_pass http://api_backend/api/v1/docs;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
     
-    location /docs {
-        proxy_pass http://api_backend/api/v1/docs;
+    location /redoc {
+        proxy_pass http://api_backend/api/v1/redoc;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -66,10 +121,11 @@ server {
 # Frontend Server Configuration
 server {
     listen 80;
-    server_name closures.osm.ch;
+    server_name closures.osm.ch frontend.localhost;
     
     limit_req zone=general burst=50 nodelay;
     
+    # Static assets with caching
     location /_next/static/ {
         proxy_pass http://frontend_backend;
         proxy_set_header Host $host;
@@ -81,6 +137,16 @@ server {
         add_header Cache-Control "public, immutable";
     }
     
+    # Next.js assets
+    location /_next/ {
+        proxy_pass http://frontend_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # Frontend application
     location / {
         proxy_pass http://frontend_backend;
         proxy_http_version 1.1;
@@ -98,9 +164,22 @@ server {
     }
 }
 
-# Default server block (fallback)
+# Default server block (catch-all)
 server {
     listen 80 default_server;
     server_name _;
-    return 444;
+    
+    # FIXED: Handle health checks for any hostname
+    location /health {
+        proxy_pass http://api_backend/health;
+        proxy_set_header Host localhost;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # Redirect everything else
+    location / {
+        return 301 http://api.osm.ch$request_uri;
+    }
 }
