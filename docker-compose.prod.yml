@@ -42,17 +42,18 @@ services:
             dockerfile: Dockerfile.prod
         container_name: osm_closures_api_prod
         environment:
-            DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/osm_closures_prod
-            REDIS_URL: redis://redis:6379/0
+            DATABASE_URL: ${DATABASE_URL}
+            REDIS_URL: ${REDIS_URL}
             SECRET_KEY: ${SECRET_KEY}
             DEBUG: "false"
-            ENVIRONMENT: production
-            ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-            # ALLOWED_HOSTS: ${ALLOWED_HOSTS}
-            OPENLR_ENABLED: "true"
-            OPENLR_ACCURACY_TOLERANCE: "50.0"
-            LOG_LEVEL: "WARNING"
-            ALLOWED_HOSTS: '["*"]'
+            ENVIRONMENT: ${ENVIRONMENT}
+            ALLOWED_ORIGINS: '["https://closures.osm.ch", "http://closures.osm.ch"]'
+            ALLOWED_HOSTS: '["api.closures.osm.ch", "closures.osm.ch", "localhost", "127.0.0.1"]'
+            OPENLR_ENABLED: ${OPENLR_ENABLED}
+            OPENLR_FORMAT: ${OPENLR_FORMAT}
+            OPENLR_ACCURACY_TOLERANCE: ${OPENLR_ACCURACY_TOLERANCE}
+            LOG_LEVEL: ${LOG_LEVEL}
+            # ALLOWED_HOSTS: '["*"]'
         depends_on:
             db:
                 condition: service_healthy
@@ -92,7 +93,7 @@ services:
         container_name: osm_closures_frontend_prod
         environment:
             NODE_ENV: production
-            NEXT_PUBLIC_API_URL: https://api.closures.osm.ch
+            NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
             NEXT_PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de/route
             NEXT_PUBLIC_USE_MOCK_API: "false"
             NEXT_PUBLIC_DEBUG_ROUTING: "false"
