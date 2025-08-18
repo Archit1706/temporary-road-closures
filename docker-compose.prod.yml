@@ -48,7 +48,9 @@ services:
             DEBUG: "false"
             ENVIRONMENT: production
             ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+            # ALLOWED_HOSTS: ${ALLOWED_HOSTS}
             OPENLR_ENABLED: "true"
+            OPENLR_ACCURACY_TOLERANCE: "50.0"
             LOG_LEVEL: "WARNING"
             ALLOWED_HOSTS: '["*"]'
         depends_on:
@@ -90,6 +92,10 @@ services:
         container_name: osm_closures_frontend_prod
         environment:
             NODE_ENV: production
+            NEXT_PUBLIC_API_URL: https://api.closures.osm.ch
+            NEXT_PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de/route
+            NEXT_PUBLIC_USE_MOCK_API: "false"
+            NEXT_PUBLIC_DEBUG_ROUTING: "false"
         networks:
             - osm_network
         restart: unless-stopped
@@ -98,6 +104,7 @@ services:
             interval: 30s
             timeout: 10s
             retries: 5
+            start_period: 30s
 
     # Nginx reverse proxy
     nginx:

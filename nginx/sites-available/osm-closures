@@ -11,14 +11,15 @@ upstream frontend_backend {
 # API Server Configuration
 server {
     listen 80;
-    server_name api.osm.ch localhost;
+    listen [::]:80;
+    server_name api.closures.osm.ch;
     
     limit_req zone=api burst=20 nodelay;
     
-    # FIXED: Health check endpoints with proper headers
+    # Health check endpoints with proper headers
     location /health {
         proxy_pass http://api_backend/health;
-        proxy_set_header Host localhost;
+        proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -38,7 +39,7 @@ server {
     
     location /health/detailed {
         proxy_pass http://api_backend/health/detailed;
-        proxy_set_header Host localhost;
+        proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -49,7 +50,7 @@ server {
     # Ping endpoint
     location /ping {
         proxy_pass http://api_backend/ping;
-        proxy_set_header Host localhost;
+        proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -72,14 +73,16 @@ server {
         proxy_read_timeout 60s;
         
         # CORS headers
-        add_header 'Access-Control-Allow-Origin' '*' always;
+        add_header 'Access-Control-Allow-Origin' 'https://closures.osm.ch' always;
+        add_header 'Access-Control-Allow-Credentials' 'true' always;
         add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS' always;
         add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key' always;
         add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Process-Time' always;
         
         # Handle preflight requests
         if ($request_method = 'OPTIONS') {
-            add_header 'Access-Control-Allow-Origin' '*';
+            add_header 'Access-Control-Allow-Origin' 'https://closures.osm.ch';
+            add_header 'Access-Control-Allow-Credentials' 'true';
             add_header 'Access-Control-Allow-Methods' 'GET, POST, PUT, DELETE, OPTIONS';
             add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key';
             add_header 'Access-Control-Max-Age' 1728000;
@@ -121,7 +124,8 @@ server {
 # Frontend Server Configuration
 server {
     listen 80;
-    server_name closures.osm.ch frontend.localhost;
+    listen [::]:80;
+    server_name closures.osm.ch;
     
     limit_req zone=general burst=50 nodelay;
     
@@ -164,22 +168,23 @@ server {
     }
 }
 
-# Default server block (catch-all)
+# Default server block (catch-all) - redirect to the main domain
 server {
     listen 80 default_server;
+    listen [::]:80 default_server;
     server_name _;
     
-    # FIXED: Handle health checks for any hostname
+    # Handle health checks for any hostname
     location /health {
         proxy_pass http://api_backend/health;
-        proxy_set_header Host localhost;
+        proxy_set_header Host api.closures.osm.ch;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
     }
     
-    # Redirect everything else
+    # Redirect everything else to frontend
     location / {
-        return 301 http://api.osm.ch$request_uri;
+        return 301 http://closures.osm.ch$request_uri;
     }
 }

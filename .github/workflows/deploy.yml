@@ -38,7 +38,7 @@ jobs:
               run: |
                   npm run build
               env:
-                  NEXT_PUBLIC_API_URL: https://api.osm.ch
+                  NEXT_PUBLIC_API_URL: https://api.closures.osm.ch
 
     deploy:
         needs: test
@@ -63,8 +63,8 @@ jobs:
                         cat > .env.prod << EOF
                       DB_PASSWORD=${{ secrets.DB_PASSWORD }}
                       SECRET_KEY=${{ secrets.SECRET_KEY }}
-                      ALLOWED_ORIGINS=["https://closures.osm.ch", "https://api.osm.ch"]
-                      NEXT_PUBLIC_API_URL=https://api.osm.ch
+                      ALLOWED_ORIGINS=["https://closures.osm.ch", "https://api.closures.osm.ch"]
+                      NEXT_PUBLIC_API_URL=https://api.closures.osm.ch
                       OPENLR_ENABLED=true
                       OPENLR_FORMAT=base64
                       OPENLR_ACCURACY_TOLERANCE=50.0
