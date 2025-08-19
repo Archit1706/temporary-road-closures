@@ -239,23 +239,14 @@ const EditStatus: React.FC<{
 };
 
 function ClosuresPageContent() {
-
   const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return <LoadingSpinner />;
-  }
-
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);
   const [isSelectingPoints, setIsSelectingPoints] = useState(false);
   const [geometryType, setGeometryType] = useState<'Point' | 'LineString'>('LineString');
 
+  // Move useClosures hook here, before any conditional returns
   const { state, stopEditingClosure } = useClosures();
   const { editingClosure, editLoading } = state;
 
@@ -270,6 +261,10 @@ function ClosuresPageContent() {
     hasRoute: false
   });
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Watch for editing state changes
   useEffect(() => {
     if (editingClosure && !isEditFormOpen) {
@@ -278,7 +273,7 @@ function ClosuresPageContent() {
     }
   }, [editingClosure, isEditFormOpen]);
 
-  // Handle custom events from the form
+  // Consolidated event listeners
   useEffect(() => {
     const handleClearPoints = () => {
       setSelectedPoints([]);
@@ -292,7 +287,7 @@ function ClosuresPageContent() {
       setIsSelectingPoints(false);
     };
 
-    // Listen for geometry type changes from the form
+    // Consolidated geometry type change handler
     const handleGeometryTypeChange = (event: CustomEvent) => {
       const newGeometryType = event.detail.geometryType;
       setGeometryType(newGeometryType);
@@ -317,6 +312,11 @@ function ClosuresPageContent() {
       window.removeEventListener('geometryTypeChanged', handleGeometryTypeChange as EventListener);
     };
   }, [geometryType]);
+
+  // Early return after ALL hooks have been called
+  if (!mounted) {
+    return <LoadingSpinner />;
+  }
 
   const handleToggleForm = () => {
     if (isFormOpen) {
@@ -452,27 +452,6 @@ function ClosuresPageContent() {
       });
     }
   };
-
-  // Listen for geometry type changes from the form
-  useEffect(() => {
-    const handleGeometryChange = (event: CustomEvent) => {
-      const newGeometryType = event.detail.geometryType;
-      setGeometryType(newGeometryType);
-
-      // Clear points when changing geometry type
-      setSelectedPoints([]);
-      setRouteState({
-        isRouting: false,
-        hasRoute: false
-      });
-    };
-
-    window.addEventListener('geometryTypeChanged', handleGeometryChange as EventListener);
-
-    return () => {
-      window.removeEventListener('geometryTypeChanged', handleGeometryChange as EventListener);
-    };
-  }, []);
 
   return (
     <div className="h-screen">
