@@ -43,7 +43,7 @@ jobs:
     deploy:
         needs: test
         runs-on: ubuntu-latest
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
         steps:
             - name: Checkout code
@@ -57,25 +57,14 @@ jobs:
                   password: ${{ secrets.DEPLOY_PASSWORD }}
                   script: |
                       cd /home/archit/osm-closures
-                      git pull origin main
-
-                      if [ ! -f .env.prod ]; then
-                        cat > .env.prod << EOF
-                      DB_PASSWORD=${{ secrets.DB_PASSWORD }}
-                      SECRET_KEY=${{ secrets.SECRET_KEY }}
-                      ALLOWED_ORIGINS=["https://closures.osm.ch", "https://api.closures.osm.ch"]
-                      NEXT_PUBLIC_API_URL=https://api.closures.osm.ch
-                      OPENLR_ENABLED=true
-                      OPENLR_FORMAT=base64
-                      OPENLR_ACCURACY_TOLERANCE=50.0
-                      EOF
-                      fi
+                      git pull origin master
 
                       docker-compose -f docker-compose.prod.yml down
                       docker system prune -af
-                      docker-compose -f docker-compose.prod.yml up -d --build
+                      docker-compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
 
                       sleep 30
-                      docker-compose -f docker-compose.prod.yml exec -T api alembic upgrade head || echo "Migration failed or not needed"
-                      docker-compose -f docker-compose.prod.yml ps
+
+                      docker-compose -f docker-compose.prod.yml --env-file .env.prod ps
+
                       curl -f http://localhost/health || echo "Health check failed"
