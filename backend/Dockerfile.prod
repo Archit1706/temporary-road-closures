@@ -6,7 +6,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     POETRY_VENV_IN_PROJECT=1 \
     POETRY_CACHE_DIR=/opt/poetry \
     POETRY_HOME="/opt/poetry" \
-    POETRY_VERSION=1.6.1
+    POETRY_VERSION=1.6.1 \
+    ENVIRONMENT=production \
+    DEBUG=false \
+    LOG_LEVEL=DEBUG \
+    ALLOWED_HOSTS=["*"] \
+    RATE_LIMIT_REQUESTS=1000 \
+    
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

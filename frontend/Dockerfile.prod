@@ -18,7 +18,11 @@ COPY . .
 
 # Build arguments
 ARG NEXT_PUBLIC_API_URL
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
+    NODE_ENV=production \
+    NEXT_PUBLIC_VALHALLA_URL=https://valhalla1.openstreetmap.de/route \
+    NEXT_PUBLIC_USE_MOCK_API=false \
+    NEXT_PUBLIC_DEBUG_ROUTING=false
 
 # Build the application
 RUN npm run build
@@ -26,8 +30,6 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine AS runner
 WORKDIR /app
-
-ENV NODE_ENV=production
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs
