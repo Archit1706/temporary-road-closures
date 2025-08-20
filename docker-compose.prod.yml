@@ -3,6 +3,8 @@ services:
     db:
         image: postgis/postgis:15-3.5
         container_name: osm_closures_db_prod
+        env_file:
+            - .env.prod
         environment:
             POSTGRES_DB: osm_closures_prod
             POSTGRES_USER: postgres
@@ -41,11 +43,13 @@ services:
             context: ./backend
             dockerfile: Dockerfile.prod
         container_name: osm_closures_api_prod
+        env_file:
+            - .env.prod
         environment:
-            DATABASE_URL: ${DATABASE_URL}
-            REDIS_URL: ${REDIS_URL}
+            DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/osm_closures_prod
+            REDIS_URL: redis://redis:6379/0
             SECRET_KEY: ${SECRET_KEY}
-            DEBUG: "false"
+            DEBUG: ${DEBUG}
             ENVIRONMENT: ${ENVIRONMENT}
             # ALLOWED_ORIGINS: '["https://closures.osm.ch", "http://closures.osm.ch"]'
             # ALLOWED_HOSTS: '["api.closures.osm.ch", "closures.osm.ch", "localhost", "127.0.0.1"]'
@@ -53,8 +57,8 @@ services:
             OPENLR_FORMAT: ${OPENLR_FORMAT}
             OPENLR_ACCURACY_TOLERANCE: ${OPENLR_ACCURACY_TOLERANCE}
             LOG_LEVEL: ${LOG_LEVEL}
-            ALLOWED_HOSTS: '["*"]'
-            ALLOWED_ORIGINS: '["*"]'
+            # ALLOWED_HOSTS: '["*"]'
+            # ALLOWED_ORIGINS: '["*"]'
         depends_on:
             db:
                 condition: service_healthy
@@ -92,6 +96,8 @@ services:
             args:
                 NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         container_name: osm_closures_frontend_prod
+        env_file:
+            - .env.prod
         environment:
             NODE_ENV: production
             NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
