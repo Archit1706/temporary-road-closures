@@ -8,15 +8,58 @@ upstream frontend_backend {
     keepalive 32;
 }
 
-# API Server Configuration
+# HTTP server for API (for Let's Encrypt challenge and redirect to HTTPS)
 server {
     listen 80;
     listen [::]:80;
     server_name api.closures.osm.ch;
     
+    # Include Let's Encrypt challenge location
+    include /etc/nginx/snippets/letsencrypt.conf;
+    
+    # Redirect all other requests to HTTPS
+    location / {
+        return 301 https://$server_name$request_uri;
+    }
+}
+
+# HTTP server for Frontend (for Let's Encrypt challenge and redirect to HTTPS)
+server {
+    listen 80;
+    listen [::]:80;
+    server_name closures.osm.ch;
+    
+    # Include Let's Encrypt challenge location
+    include /etc/nginx/snippets/letsencrypt.conf;
+    
+    # Redirect all other requests to HTTPS
+    location / {
+        return 301 https://$server_name$request_uri;
+    }
+}
+
+# HTTPS API Server Configuration
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name api.closures.osm.ch;
+    
+    # SSL Configuration (will be added by certbot)
+    ssl_certificate /etc/letsencrypt/live/api.closures.osm.ch/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.closures.osm.ch/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    
     limit_req zone=api burst=20 nodelay;
     
-    # Health check endpoints with proper headers
+    # Security headers
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    
+    # Health check endpoints
     location /health {
         proxy_pass http://api_backend/health;
         proxy_set_header Host $host;
@@ -26,12 +69,10 @@ server {
         proxy_set_header Connection "";
         proxy_http_version 1.1;
         
-        # Health check specific settings
         proxy_connect_timeout 5s;
         proxy_send_timeout 5s;
         proxy_read_timeout 5s;
         
-        # Disable caching for health checks
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
@@ -47,7 +88,6 @@ server {
         proxy_http_version 1.1;
     }
     
-    # Ping endpoint
     location /ping {
         proxy_pass http://api_backend/ping;
         proxy_set_header Host $host;
@@ -79,7 +119,6 @@ server {
         add_header 'Access-Control-Allow-Headers' 'DNT,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Range,Authorization,X-API-Key' always;
         add_header 'Access-Control-Expose-Headers' 'Content-Length,Content-Range,X-Process-Time' always;
         
-        # Handle preflight requests
         if ($request_method = 'OPTIONS') {
             add_header 'Access-Control-Allow-Origin' '*';
             add_header 'Access-Control-Allow-Credentials' 'true';
@@ -121,13 +160,26 @@ server {
     }
 }
 
-# Frontend Server Configuration
+# HTTPS Frontend Server Configuration
 server {
-    listen 80;
-    listen [::]:80;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name closures.osm.ch;
     
+    # SSL Configuration (will be added by certbot)
+    ssl_certificate /etc/letsencrypt/live/closures.osm.ch/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/closures.osm.ch/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+    
     limit_req zone=general burst=50 nodelay;
+    
+    # Security headers
+    add_header X-Frame-Options DENY always;
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     
     # Static assets with caching
     location /_next/static/ {
@@ -168,11 +220,17 @@ server {
     }
 }
 
-# Default server block (catch-all) - redirect to the main domain
+# Default server block (catch-all)
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
     server_name _;
+    
+    # SSL Configuration (placeholder certificates)
+    ssl_certificate /etc/letsencrypt/live/closures.osm.ch/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/closures.osm.ch/privkey.pem;
     
     # Handle health checks for any hostname
     location /health {
@@ -185,6 +243,6 @@ server {
     
     # Redirect everything else to frontend
     location / {
-        return 301 http://closures.osm.ch$request_uri;
+        return 301 https://closures.osm.ch$request_uri;
     }
 }
