@@ -475,8 +475,8 @@ This API uses **OAuth2 Password Bearer** authentication with JWT tokens.
     openapi_schema["servers"] = [
         {"url": "http://localhost:8000", "description": "Development server"},
         {
-            "url": "https://api.osmclosures.org",
-            "description": "Production server (future)",
+            "url": "https://api.closures.osm.ch",
+            "description": "Production server",
         },
     ]
 

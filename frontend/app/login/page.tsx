@@ -208,10 +208,20 @@ function LoginContent() {
             </div>
 
             {/* Footer */}
-            <div className="mt-8 text-center text-sm text-gray-500">
-                <p>This connects to your local FastAPI backend</p>
-                <p className="mt-1">Default: http://localhost:8000</p>
-            </div>
+            {/* development server */}
+            {/* {process.env.NEXT_PUBLIC_API_URL === 'http://localhost:8000' &&
+                <div className="mt-8 text-center text-sm text-gray-500">
+                    <p>This connects to your local FastAPI backend</p>
+                    <p className="mt-1">Default: {process.env.NEXT_PUBLIC_API_URL}</p>
+                </div>
+            } */}
+            {/* production server */}
+            {/* {process.env.NEXT_PUBLIC_API_URL !== 'http://localhost:8000' &&
+                <div className="mt-8 text-center text-sm text-gray-500">
+                    <p>This connects to the production server</p>
+                    <p className="mt-1">Default: {process.env.NEXT_PUBLIC_API_URL}</p>
+                </div>
+            } */}
         </div>
     );
 }

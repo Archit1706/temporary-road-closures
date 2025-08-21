@@ -25,7 +25,7 @@ export default function HomePage() {
           title="API Documentation"
           description="Integrate our road closures data into your applications with our comprehensive API"
           buttonText="View API Docs"
-          buttonLink="http://localhost:8000/docs"
+          buttonLink="/docs"
           variant="secondary"
           isExternal
         />

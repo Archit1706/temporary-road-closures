@@ -15,7 +15,7 @@ const Footer: React.FC = () => {
     const quickLinks = [
         { href: '/', label: 'Home' },
         { href: '/closures', label: 'View Closures' },
-        { href: 'http://localhost:8000/docs', label: 'API Documentation', external: true },
+        { href: '/docs', label: 'API Documentation', external: true },
         { href: 'https://github.com/Archit1706/temporary-road-closures', label: 'GitHub Repository', external: true }
     ];
 
@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
                                 <Github className="w-6 h-6" />
                             </a>
                             <a
-                                href="http://localhost:8000/docs"
+                                href="/docs"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-gray-400 hover:text-white transition-colors"

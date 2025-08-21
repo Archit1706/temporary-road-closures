@@ -161,12 +161,12 @@ const Login: React.FC<LoginProps> = ({ isOpen, onClose }) => {
                     </form>
 
                     {/* Footer */}
-                    <div className="mt-6 pt-4 border-t border-gray-200">
+                    {/* <div className="mt-6 pt-4 border-t border-gray-200">
                         <div className="text-center text-sm text-gray-500">
                             <p>This connects to your local FastAPI backend</p>
                             <p className="text-xs mt-1">Default: http://localhost:8000</p>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </div>
