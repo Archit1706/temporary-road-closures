@@ -54,7 +54,7 @@ export interface Closure {
     id: number;
     geometry: {
         type: 'LineString' | 'Point';
-        coordinates: number[][];
+        coordinates: number[][] | number[];
     };
     start_time: string;
     end_time: string;
@@ -211,8 +211,8 @@ export const getClosureDirection = (closure: Closure): string => {
     // Calculate overall direction for LineString
     const coordinates = closure.geometry.coordinates;
     if (coordinates.length >= 2) {
-        const [startLng, startLat] = coordinates[0];
-        const [endLng, endLat] = coordinates[coordinates.length - 1];
+        const [startLng, startLat] = coordinates[0] as number[];
+        const [endLng, endLat] = coordinates[coordinates.length - 1] as number[];
         const bearing = calculateBearing(startLat, startLng, endLat, endLng);
         const direction = getDirectionFromBearing(bearing);
         return `${direction}bound`;

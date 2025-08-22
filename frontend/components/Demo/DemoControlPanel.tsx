@@ -102,7 +102,7 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
     const connectionStatus = getConnectionStatus();
 
     return (
-        <div className={`fixed bottom-4 right-4 z-50 ${className}`}>
+        <div className={`fixed bottom-4 left-84 z-50 ${className}`}>
             {/* Collapsed state - just the indicator */}
             {!isExpanded && (
                 <button

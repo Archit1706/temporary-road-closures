@@ -37,7 +37,7 @@ interface Closure {
     confidence_level: number;
     geometry: {
         type: 'Point' | 'LineString';
-        coordinates: number[][];
+        coordinates: number[] | number[][];
     };
     is_bidirectional?: boolean;
 }
@@ -151,7 +151,7 @@ const MapEventHandler: React.FC<{
             }
 
             if (closure.geometry.type === 'Point') {
-                const [lng, lat] = closure.geometry.coordinates[0];
+                const [lng, lat] = closure.geometry.coordinates as number[];
 
                 const icon = L.divIcon({
                     className: 'custom-closure-icon',
@@ -200,7 +200,7 @@ const MapEventHandler: React.FC<{
                 layers.push(marker);
 
             } else if (closure.geometry.type === 'LineString') {
-                const coordinates = closure.geometry.coordinates.map(([lng, lat]) => [lat, lng] as [number, number]);
+                const coordinates = (closure.geometry.coordinates as number[][]).map(([lng, lat]) => [lat, lng] as [number, number]);
 
                 const polyline = L.polyline(coordinates, {
                     color,

@@ -219,10 +219,10 @@ const ClosureAwareRoutingPage: React.FC = () => {
             relevantClosuresForMode.forEach((closure: Closure) => {
                 if (closure.status === 'active' && closure.geometry) {
                     if (closure.geometry.type === 'Point') {
-                        const [lng, lat] = closure.geometry.coordinates[0];
+                        const [lng, lat] = closure.geometry.coordinates as number[];
                         excludeLocations.push([lat, lng]);
                     } else if (closure.geometry.type === 'LineString') {
-                        closure.geometry.coordinates.forEach((coord: number[]) => {
+                        (closure.geometry.coordinates as number[][]).forEach((coord: number[]) => {
                             const [lng, lat] = coord;
                             excludeLocations.push([lat, lng]);
                         });
