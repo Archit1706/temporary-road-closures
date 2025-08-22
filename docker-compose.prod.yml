@@ -126,7 +126,9 @@ services:
         volumes:
             - ./nginx/nginx.conf:/etc/nginx/nginx.conf
             - ./nginx/sites-available:/etc/nginx/sites-available
-            - ./nginx/ssl:/etc/nginx/ssl
+            - ./nginx/snippets:/etc/nginx/snippets
+            - /etc/letsencrypt:/etc/letsencrypt:ro
+            - /var/lib/letsencrypt:/var/lib/letsencrypt
             - /var/log/nginx:/var/log/nginx
         depends_on:
             - api
@@ -134,6 +136,11 @@ services:
         networks:
             - osm_network
         restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "nginx", "-t"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
 
 volumes:
     postgres_data_prod:
