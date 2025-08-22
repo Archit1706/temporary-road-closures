@@ -43,7 +43,10 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = [
         "http://localhost:3000",  # React development server
         "http://localhost:8080",  # Alternative frontend port
-        "https://your-frontend-domain.com",
+        "https://closures.osm.ch",
+        "https://api.closures.osm.ch",
+        "https://closures.osm.ch",
+        "*",
     ]
 
     # Pagination defaults
