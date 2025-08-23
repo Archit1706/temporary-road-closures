@@ -68,7 +68,7 @@ const DocsSidebar = ({ isOpen, activeSection, onSectionChange }: {
             label: 'Closure Aware Routing',
             icon: Globe,
             expandable: true,
-            disabled: true,
+            disabled: false,
             children: [
                 { id: 'closure-routing-intro', label: 'Introduction' },
                 { id: 'closure-routing-usage', label: 'Usage Guide' },

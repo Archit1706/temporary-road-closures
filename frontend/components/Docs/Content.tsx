@@ -1,5 +1,5 @@
 "use client"
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Construction } from 'lucide-react';
 
 // Backend sections
@@ -67,6 +67,10 @@ interface DocsContentProps {
 
 const DocsContent: React.FC<DocsContentProps> = ({ activeSection }) => {
     const SectionComponent = sectionComponents[activeSection as SectionKey];
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [activeSection]);
 
     if (SectionComponent) {
         return (

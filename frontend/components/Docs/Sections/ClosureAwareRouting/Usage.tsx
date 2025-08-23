@@ -2,6 +2,7 @@ import React from 'react';
 import { Play, Info, AlertCircle, CheckCircle, Target, Route, Edit, Settings, Wifi, RefreshCw, MousePointer, MapPin, Navigation, Car, Bike, User, Clock } from 'lucide-react';
 import { InfoBox, StepCard } from '../../Common';
 import CodeBlock from '../../CodeBlock';
+import Image from 'next/image';
 
 const ClosureRoutingUsage: React.FC = () => {
     return (
@@ -34,13 +35,9 @@ const ClosureRoutingUsage: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Initial view of the closure-aware routing interface showing the map with sample closures,
-                                the routing form sidebar, and transportation mode selector]
+                            <Image src="/assets/closure-aware-routing/main_page.png" alt="Closure Aware Routing Interface" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Initial view of the closure-aware routing interface showing the map the routing form sidebar and transportation mode selector
                             </p>
                         </div>
 
@@ -127,13 +124,10 @@ const ClosureRoutingUsage: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">GIF Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add animated GIF: Clicking through the different transportation mode options and showing
-                                how the interface updates, including the icon changes in the header]
+                            <Image src="/assets/closure-aware-routing/transportation_mode.png" alt="Closure Aware Routing Interface" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Clicking through the different transportation mode options and showing
+                                how the interface updates, including the icon changes in the header
                             </p>
                         </div>
 
@@ -196,13 +190,10 @@ Destination: 41.8919, -87.6051 (Near Lincoln Park)`}
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">GIF Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add animated GIF: Demonstrating all three methods of setting source and destination -
-                                clicking on map, entering coordinates manually, and using sample locations]
+                            <Image src="/assets/closure-aware-routing/source_and_destination.png" alt="Closure Aware Routing Interface" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Demonstration of setting source and destination -
+                                clicking on map, entering coordinates manually, and using sample locations
                             </p>
                         </div>
 
@@ -243,31 +234,27 @@ Destination: 41.8919, -87.6051 (Near Lincoln Park)`}
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Route calculation in progress, showing the loading state and then the
-                                completed calculation with both routes displayed]
+                            <Image src="/assets/closure-aware-routing/closure_aware_routing.png" alt="Closure Aware Routing Interface" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Route calculation with both routes displayed
                             </p>
                         </div>
 
                         <div>
                             <h3 className="text-lg font-semibold text-gray-800 mb-2">Understanding the Results</h3>
                             <div className="grid md:grid-cols-2 gap-4">
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <h4 className="font-medium text-blue-800 mb-2">🔵 Direct Route (Blue)</h4>
-                                    <ul className="space-y-1 text-blue-700 text-sm">
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                                    <h4 className="font-medium text-gray-700 mb-2">🔘 Direct Route (Grey Dotted Line)</h4>
+                                    <ul className="space-y-1 text-gray-600 text-sm">
                                         <li>• Fastest route ignoring closures</li>
                                         <li>• Shows what traditional routing would suggest</li>
                                         <li>• Baseline for comparison</li>
                                         <li>• May go through blocked areas</li>
                                     </ul>
                                 </div>
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                    <h4 className="font-medium text-green-800 mb-2">🟢 Closure-Aware Route (Green)</h4>
-                                    <ul className="space-y-1 text-green-700 text-sm">
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <h4 className="font-medium text-blue-800 mb-2">🔵 Closure-Aware Route (Blue)</h4>
+                                    <ul className="space-y-1 text-blue-700 text-sm">
                                         <li>• Optimal route avoiding closures</li>
                                         <li>• Actually passable in real conditions</li>
                                         <li>• Recommended route to follow</li>
@@ -338,13 +325,10 @@ Destination: 41.8919, -87.6051 (Near Lincoln Park)`}
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Bottom section of sidebar showing the closures list with detailed information,
-                                highlighting which closures affect the selected transportation mode]
+                            <Image src="/assets/closure-aware-routing/sidebar.png" alt="Closure Aware Routing Interface" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Bottom section of sidebar showing the closures list with detailed information,
+                                highlighting which closures affect the selected transportation mode
                             </p>
                         </div>
 
