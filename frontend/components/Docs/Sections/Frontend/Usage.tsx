@@ -1,6 +1,7 @@
 import React from 'react';
 import { Play, Info, AlertCircle, CheckCircle, Target, Route, Edit, Settings, Wifi, RefreshCw, MousePointer } from 'lucide-react';
 import { InfoBox, StepCard } from '../../Common';
+import Image from 'next/image';
 
 const Usage: React.FC = () => {
     return (
@@ -32,12 +33,9 @@ const Usage: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Main application interface showing the map, header, and sidebar]
+                            <Image src="/assets/closures/main_start.png" alt="Opening the Web App" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Main application interface showing the map, header, and sidebar (demo mode)
                             </p>
                         </div>
 
@@ -85,12 +83,9 @@ const Usage: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Login modal with form fields and demo credentials section]
+                            <Image src="/assets/closures/login.png" alt="Login Modal" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Login form with form fields and demo credentials section
                             </p>
                         </div>
 
@@ -119,12 +114,9 @@ const Usage: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Map showing various closures with different colors and direction arrows]
+                            <Image src="/assets/closures/closures.png" alt="Map View" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Map showing various closures with different colors and direction arrows
                             </p>
                         </div>
 
@@ -182,12 +174,9 @@ const Usage: React.FC = () => {
                             </ol>
 
                             <div className="bg-gray-50 rounded-lg p-4 mt-3">
-                                <div className="flex items-center space-x-2 mb-2">
-                                    <Info className="w-4 h-4 text-blue-600" />
-                                    <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                                </div>
-                                <p className="text-blue-700 text-sm">
-                                    [Add screenshot: Report Closure button highlighted and form opening on the right]
+                                <Image src="/assets/closures/closure_form.png" alt="Report Closure" width={1000} height={1000} />
+                                <p className="text-blue-700 text-sm text-center">
+                                    Report Closure button highlighted and form opening on the right
                                 </p>
                             </div>
                         </div>
@@ -241,12 +230,9 @@ const Usage: React.FC = () => {
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-4">
-                                    <div className="flex items-center space-x-2 mb-2">
-                                        <Info className="w-4 h-4 text-blue-600" />
-                                        <span className="font-medium text-blue-800">GIF Placeholder</span>
-                                    </div>
-                                    <p className="text-blue-700 text-sm">
-                                        [Add animated GIF: Showing point selection process for both Point and LineString geometries]
+                                    <Image src="/assets/closures/point_selection.png" alt="Point Selection" width={1000} height={1000} />
+                                    <p className="text-blue-700 text-sm text-center">
+                                        Showing point selection process for both Point and LineString geometries
                                     </p>
                                 </div>
 
@@ -313,12 +299,9 @@ const Usage: React.FC = () => {
                         </div>
 
                         <div className="bg-gray-50 rounded-lg p-4">
-                            <div className="flex items-center space-x-2 mb-2">
-                                <Info className="w-4 h-4 text-blue-600" />
-                                <span className="font-medium text-blue-800">Screenshot Placeholder</span>
-                            </div>
-                            <p className="text-blue-700 text-sm">
-                                [Add screenshot: Sidebar showing closures with edit/delete buttons visible on hover]
+                            <Image src="/assets/closures/edit_closure.png" alt="Sidebar" width={1000} height={1000} />
+                            <p className="text-blue-700 text-sm text-center">
+                                Sidebar showing closures with edit/delete buttons visible on hover
                             </p>
                         </div>
 
