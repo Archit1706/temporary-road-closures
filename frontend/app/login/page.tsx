@@ -148,7 +148,7 @@ function LoginContent() {
                             )}
                         </div>
 
-                        {/* Demo Credentials */}
+                        {/* Demo Credentials
                         <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
                             <div className="flex items-start space-x-2">
                                 <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -170,7 +170,7 @@ function LoginContent() {
                                     </button>
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Submit Button */}
                         <div>
