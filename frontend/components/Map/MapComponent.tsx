@@ -9,6 +9,9 @@ import { Closure, BoundingBox, getDirectionArrowFromCoords } from '@/services/ap
 import { valhallaAPI } from '@/services/valhallaApi';
 import toast from 'react-hot-toast';
 
+// Import the hook (you'll need to create this file in your hooks directory)
+import { useChicagoMapCenter } from '@/hooks/useMapCenter';
+
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -169,6 +172,29 @@ function createDirectionArrows(points: [number, number][], isBidirectional: bool
     return arrows;
 }
 
+// Component to handle map view updates based on dynamic center
+const MapViewController: React.FC<{
+    mapCenter: {
+        center: [number, number];
+        zoom: number;
+        loading: boolean;
+        usingGeolocation: boolean;
+    };
+}> = ({ mapCenter }) => {
+    const map = useMap();
+    const hasSetInitialView = useRef(false);
+
+    useEffect(() => {
+        if (!mapCenter.loading && !hasSetInitialView.current) {
+            console.log(`🗺️ Setting map view to: ${mapCenter.center[0].toFixed(6)}, ${mapCenter.center[1].toFixed(6)} (zoom: ${mapCenter.zoom})`);
+            map.setView(mapCenter.center, mapCenter.zoom);
+            hasSetInitialView.current = true;
+        }
+    }, [map, mapCenter.loading, mapCenter.center, mapCenter.zoom]);
+
+    return null;
+};
+
 // Component to handle map events and render closures
 const MapEventHandler: React.FC<{
     onMapClick?: (latlng: L.LatLng) => void;
@@ -176,7 +202,13 @@ const MapEventHandler: React.FC<{
     selectedPoints?: L.LatLng[];
     onRouteCalculated?: (coordinates: [number, number][], stats: any) => void;
     geometryType?: 'Point' | 'LineString';
-}> = ({ onMapClick, isSelecting, selectedPoints = [], onRouteCalculated, geometryType = 'LineString' }) => {
+    mapCenter: {
+        center: [number, number];
+        zoom: number;
+        loading: boolean;
+        usingGeolocation: boolean;
+    };
+}> = ({ onMapClick, isSelecting, selectedPoints = [], onRouteCalculated, geometryType = 'LineString', mapCenter }) => {
     const map = useMap();
     const { state, fetchClosures, selectClosure } = useClosures();
     const { closures, selectedClosure } = state;
@@ -304,15 +336,18 @@ const MapEventHandler: React.FC<{
             }
         },
         moveend: () => {
-            // Fetch closures when map bounds change
-            const bounds = map.getBounds();
-            const bbox: BoundingBox = {
-                north: bounds.getNorth(),
-                south: bounds.getSouth(),
-                east: bounds.getEast(),
-                west: bounds.getWest(),
-            };
-            fetchClosures(bbox);
+            // Only fetch closures on moveend if we're not still loading the initial center
+            if (!mapCenter.loading) {
+                // Fetch closures when map bounds change
+                const bounds = map.getBounds();
+                const bbox: BoundingBox = {
+                    north: bounds.getNorth(),
+                    south: bounds.getSouth(),
+                    east: bounds.getEast(),
+                    west: bounds.getWest(),
+                };
+                fetchClosures(bbox);
+            }
         },
     });
 
@@ -627,16 +662,40 @@ const MapComponent: React.FC<MapComponentProps> = ({
 }) => {
     const { fetchClosures } = useClosures();
 
-    // Initial map load
+    // Use the dynamic map center hook with Chicago fallback
+    const mapCenter = useChicagoMapCenter(true); // true = try to use geolocation
+
+    // Initial map load - wait for center to be determined
     useEffect(() => {
-        const chicagoBounds: BoundingBox = {
-            north: 42.0,
-            south: 41.6,
-            east: -87.3,
-            west: -87.9,
-        };
-        fetchClosures(chicagoBounds);
-    }, [fetchClosures]);
+        if (!mapCenter.loading) {
+            // Use a larger initial bounding box that makes sense for the determined center
+            let initialBounds: BoundingBox;
+
+            if (mapCenter.usingGeolocation) {
+                // If using geolocation, create a reasonable area around user's location
+                const [lat, lng] = mapCenter.center;
+                const buffer = 0.05; // Roughly 5-6 km buffer
+                initialBounds = {
+                    north: lat + buffer,
+                    south: lat - buffer,
+                    east: lng + buffer,
+                    west: lng - buffer,
+                };
+                console.log('🌍 Using geolocation-based initial bounds:', initialBounds);
+            } else {
+                // Use Chicago bounds as fallback (or adjust based on your fallback center)
+                initialBounds = {
+                    north: 42.0,
+                    south: 41.6,
+                    east: -87.3,
+                    west: -87.9,
+                };
+                console.log('🏙️ Using default Chicago bounds:', initialBounds);
+            }
+
+            fetchClosures(initialBounds);
+        }
+    }, [fetchClosures, mapCenter.loading, mapCenter.usingGeolocation, mapCenter.center]);
 
     const getMaxPoints = () => geometryType === 'Point' ? 1 : Infinity;
     const getSelectionText = () => {
@@ -781,9 +840,20 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 }
             `}</style>
 
+            {/* Loading indicator while getting location */}
+            {mapCenter.loading && (
+                <div className="absolute inset-0 z-20 bg-white bg-opacity-90 flex items-center justify-center">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                        <p className="text-gray-600 font-medium">Getting your location...</p>
+                        <p className="text-sm text-gray-500 mt-1">This helps us center the map near you</p>
+                    </div>
+                </div>
+            )}
+
             <MapContainer
-                center={[41.8781, -87.6298]} // Chicago coordinates
-                zoom={11}
+                center={mapCenter.center}
+                zoom={mapCenter.zoom}
                 className="h-full w-full"
                 zoomControl={true}
             >
@@ -792,14 +862,44 @@ const MapComponent: React.FC<MapComponentProps> = ({
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
 
+                <MapViewController mapCenter={mapCenter} />
+
                 <MapEventHandler
                     onMapClick={onMapClick}
                     isSelecting={isSelecting}
                     selectedPoints={selectedPoints}
                     onRouteCalculated={onRouteCalculated}
                     geometryType={geometryType}
+                    mapCenter={mapCenter}
                 />
             </MapContainer>
+
+            {/* Location Status Indicator */}
+            <div className="absolute top-20 left-4 z-10">
+                <div className={`px-3 py-2 rounded-lg shadow-lg border text-sm ${mapCenter.usingGeolocation
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : mapCenter.error
+                        ? 'bg-orange-50 border-orange-200 text-orange-800'
+                        : 'bg-blue-50 border-blue-200 text-blue-800'
+                    }`}>
+                    {mapCenter.usingGeolocation ? (
+                        <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span>📍 Using your location</span>
+                        </div>
+                    ) : mapCenter.error ? (
+                        <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                            <span>🌍 Using default location</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                            <span>🗺️ Map centered</span>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Selection Controls */}
             {isSelecting && (
