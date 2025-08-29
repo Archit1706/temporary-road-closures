@@ -603,6 +603,8 @@ function getClosureColor(closure: Closure): string {
             return '#6b7280'; // gray
         case 'expired':
             return '#9ca3af'; // light gray
+        case 'planned':
+            return '#f59e0b'; // orange
         default:
             return '#6b7280';
     }

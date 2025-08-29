@@ -60,7 +60,7 @@ export interface Closure {
     end_time: string;
     description: string;
     closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
-    status: 'active' | 'inactive' | 'expired';
+    status: 'active' | 'inactive' | 'expired' | 'planned';
     source: string;
     confidence_level: number;
     submitter_id: number;
@@ -95,7 +95,7 @@ export interface UpdateClosureData {
     end_time?: string;
     description?: string;
     closure_type?: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
-    status?: 'active' | 'inactive' | 'expired';
+    status?: 'active' | 'inactive' | 'expired' | 'planned';
     source?: string;
     confidence_level?: number;
     is_bidirectional?: boolean;

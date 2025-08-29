@@ -18,7 +18,7 @@ interface FormData {
     start_time: string;
     end_time: string;
     confidence_level: number;
-    status: 'active' | 'inactive' | 'expired';
+    status: 'active' | 'inactive' | 'expired' | 'planned';
     is_bidirectional: boolean;
 }
 
@@ -49,6 +49,7 @@ const STATUS_OPTIONS = [
     { value: 'active', label: 'Active', description: 'Currently in effect' },
     { value: 'cancelled', label: 'Cancelled', description: 'Not currently active' },
     { value: 'expired', label: 'Expired', description: 'No longer valid' },
+    { value: 'planned', label: 'Planned', description: 'Scheduled for future' },
 ];
 
 const EditClosureForm: React.FC<EditClosureFormProps> = ({
