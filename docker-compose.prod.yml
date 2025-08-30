@@ -37,6 +37,47 @@ services:
             timeout: 10s
             retries: 5
 
+    # Automated Database Backup Service
+    backup:
+        image: postgres:15-alpine
+        container_name: osm_closures_backup_prod
+        env_file:
+            - .env.prod
+        environment:
+            PGPASSWORD: ${DB_PASSWORD}
+            POSTGRES_HOST: db
+            POSTGRES_PORT: 5432
+            POSTGRES_DB: osm_closures_prod
+            POSTGRES_USER: postgres
+            TZ: America/Chicago
+            MAX_BACKUP_DAYS: 7
+        volumes:
+            - ./backups:/backups
+            - ./scripts/backup.sh:/backup.sh:ro
+        depends_on:
+            db:
+                condition: service_healthy
+        networks:
+            - osm_network
+        restart: unless-stopped
+        command: >
+            sh -c "
+              apk add --no-cache dcron tzdata &&
+              ln -snf /usr/share/zoneinfo/$TZ /etc/localtime &&
+              echo '0 2 * * * /backup.sh >> /var/log/backup.log 2>&1' > /etc/crontabs/root &&
+              mkdir -p /backups &&
+              chmod +x /backup.sh &&
+              touch /var/log/backup.log &&
+              echo 'Backup service started at' $(date) | tee -a /var/log/backup.log &&
+              crond -f -l 2 -L /var/log/backup.log
+            "
+        healthcheck:
+            test: ["CMD", "pgrep", "crond"]
+            interval: 60s
+            timeout: 10s
+            retries: 3
+            start_period: 30s
+
     # FastAPI backend application
     api:
         build:
@@ -51,14 +92,10 @@ services:
             SECRET_KEY: ${SECRET_KEY}
             DEBUG: ${DEBUG}
             ENVIRONMENT: ${ENVIRONMENT}
-            # ALLOWED_ORIGINS: '["https://closures.osm.ch", "http://closures.osm.ch"]'
-            # ALLOWED_HOSTS: '["api.closures.osm.ch", "closures.osm.ch", "localhost", "127.0.0.1"]'
             OPENLR_ENABLED: ${OPENLR_ENABLED}
             OPENLR_FORMAT: ${OPENLR_FORMAT}
             OPENLR_ACCURACY_TOLERANCE: ${OPENLR_ACCURACY_TOLERANCE}
             LOG_LEVEL: ${LOG_LEVEL}
-            # ALLOWED_HOSTS: '["*"]'
-            # ALLOWED_ORIGINS: '["*"]'
         ports:
             - "8000:8000"
         depends_on:
@@ -75,7 +112,6 @@ services:
             timeout: 10s
             retries: 5
             start_period: 60s
-        # Add init container for database setup
         command: >
             sh -c "
               echo 'Waiting for database to be ready...' &&
