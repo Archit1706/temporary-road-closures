@@ -128,6 +128,24 @@ const closuresReducer = (state: ClosuresState, action: ClosuresAction): Closures
     }
 };
 
+// Helper function to parse error messages
+const parseErrorMessage = (error: any): string => {
+    if (error?.response?.data?.detail) {
+        if (typeof error.response.data.detail === 'string') {
+            return error.response.data.detail;
+        }
+        if (Array.isArray(error.response.data.detail)) {
+            return error.response.data.detail.map((e: any) => e.msg).join(', ');
+        }
+    }
+
+    if (error?.message) {
+        return error.message;
+    }
+
+    return 'An unexpected error occurred';
+};
+
 // Create context
 const ClosuresContext = createContext<ClosuresContextType | undefined>(undefined);
 
@@ -146,6 +164,10 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             const userData = authApi.getUserData();
             dispatch({ type: 'SET_AUTHENTICATED', payload: hasValidToken });
             dispatch({ type: 'SET_USER', payload: hasValidToken ? userData : null });
+
+            if (hasValidToken && userData) {
+                console.log('✅ User authenticated:', userData.username);
+            }
         };
 
         // Initial check
@@ -157,7 +179,10 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             dispatch({ type: 'SET_AUTHENTICATED', payload: false });
             dispatch({ type: 'SET_USER', payload: null });
             dispatch({ type: 'SET_CLOSURES', payload: [] });
-            toast.error('Your session has expired. Please log in again.');
+            toast.error('Your session has expired. Please log in again.', {
+                icon: '🔐',
+                duration: 5000
+            });
         };
 
         window.addEventListener('auth:token-expired', handleTokenExpired);
@@ -180,21 +205,27 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         dispatch({ type: 'SET_ERROR', payload: null });
 
         try {
+            console.log('🔐 Attempting login for user:', username);
             const response = await authApi.login(username, password);
             authApi.setToken(response.access_token);
             authApi.setUserData(response.user);
             dispatch({ type: 'SET_AUTHENTICATED', payload: true });
             dispatch({ type: 'SET_USER', payload: response.user });
             dispatch({ type: 'SET_LOADING', payload: false });
-            toast.success(`Welcome back, ${response.user.full_name}!`);
-            console.log('✅ Login successful, user authenticated');
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Login failed';
+
+            toast.success(`Welcome back, ${response.user.full_name}! 👋`, {
+                duration: 3000,
+                icon: '🎉'
+            });
+            console.log('✅ Login successful, user authenticated:', response.user.username);
+        } catch (error: any) {
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
             dispatch({ type: 'SET_AUTHENTICATED', payload: false });
             dispatch({ type: 'SET_USER', payload: null });
-            toast.error(errorMessage);
+
             console.error('❌ Login failed:', errorMessage);
+            throw error; // Re-throw to let the component handle specific errors
         }
     }, []);
 
@@ -203,23 +234,18 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         dispatch({ type: 'SET_ERROR', payload: null });
 
         try {
+            console.log('📝 Attempting registration for user:', userData.username);
             const response = await authApi.register(userData);
             dispatch({ type: 'SET_LOADING', payload: false });
-            toast.success(`Account created successfully! Welcome, ${response.full_name}!`);
+
             console.log('✅ Registration successful:', response.username);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Registration failed';
+        } catch (error: any) {
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
             dispatch({ type: 'SET_LOADING', payload: false });
 
-            if (error instanceof Error && error.message.includes('409')) {
-                toast.error('Username or email already exists');
-            } else if (error instanceof Error && error.message.includes('validation')) {
-                toast.error('Please check your input data');
-            } else {
-                toast.error(errorMessage);
-            }
-            throw error;
+            console.error('❌ Registration failed:', errorMessage);
+            throw error; // Re-throw to let the component handle specific errors
         }
     }, []);
 
@@ -230,7 +256,11 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         dispatch({ type: 'SET_CLOSURES', payload: [] });
         dispatch({ type: 'SET_SELECTED_CLOSURE', payload: null });
         dispatch({ type: 'SET_EDITING_CLOSURE', payload: null });
-        toast.success('Logged out successfully');
+
+        toast.success('Logged out successfully. See you next time! 👋', {
+            icon: '✅',
+            duration: 3000
+        });
         console.log('👋 User logged out');
     }, []);
 
@@ -243,14 +273,20 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             dispatch({ type: 'SET_CLOSURES', payload: closures });
             console.log(`📍 Fetched ${closures.length} closures`);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch closures';
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
 
             if (!authApi.isTokenValid()) {
-                toast.error('Authentication required. Using demo data.');
+                toast.error('Authentication required. Using demo data.', {
+                    icon: '🔐',
+                    duration: 4000
+                });
                 console.log('📍 Using demo data due to auth issue');
             } else {
-                toast.error(errorMessage);
+                toast.error(`Failed to load closures: ${errorMessage}`, {
+                    icon: '❌',
+                    duration: 4000
+                });
                 console.error('❌ Error fetching closures:', errorMessage);
             }
         }
@@ -274,22 +310,36 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
 
             const newClosure = await closuresApi.createClosure(data);
             dispatch({ type: 'ADD_CLOSURE', payload: newClosure });
-            toast.success('Road closure reported successfully!');
+
+            toast.success('Road closure reported successfully! ✅', {
+                icon: '🛣️',
+                duration: 4000
+            });
             console.log('✅ Closure created successfully:', newClosure.id);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to create closure';
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
 
             if (error instanceof Error && (error.message.includes('401') || error.message.includes('Authentication'))) {
-                toast.error('Authentication required. Please log in to create closures.');
+                toast.error('Please log in to create closures.', {
+                    icon: '🔐',
+                    duration: 5000
+                });
                 logout();
             } else if (error instanceof Error && error.message.includes('validation')) {
-                toast.error('Please check your input data');
+                toast.error('Please check your input data and try again.', {
+                    icon: '⚠️',
+                    duration: 4000
+                });
             } else {
-                toast.error(errorMessage);
+                toast.error(`Failed to create closure: ${errorMessage}`, {
+                    icon: '❌',
+                    duration: 4000
+                });
             }
 
             console.error('❌ Error creating closure:', errorMessage);
+            throw error;
         }
     }, [logout]);
 
@@ -311,25 +361,42 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             const updatedClosure = await closuresApi.updateClosure(id, data);
             dispatch({ type: 'UPDATE_CLOSURE', payload: updatedClosure });
             dispatch({ type: 'SET_EDIT_LOADING', payload: false });
-            toast.success('Closure updated successfully!');
+
+            toast.success('Closure updated successfully! ✅', {
+                icon: '📝',
+                duration: 3000
+            });
             console.log('✅ Closure updated successfully:', id);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to update closure';
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
             dispatch({ type: 'SET_EDIT_LOADING', payload: false });
 
             if (error instanceof Error && (error.message.includes('401') || error.message.includes('Authentication'))) {
-                toast.error('Authentication required. Please log in to update closures.');
+                toast.error('Please log in to update closures.', {
+                    icon: '🔐',
+                    duration: 5000
+                });
                 logout();
             } else if (error instanceof Error && error.message.includes('403')) {
-                toast.error('You do not have permission to edit this closure.');
+                toast.error('You do not have permission to edit this closure.', {
+                    icon: '🚫',
+                    duration: 4000
+                });
             } else if (error instanceof Error && error.message.includes('404')) {
-                toast.error('Closure not found. It may have been deleted.');
+                toast.error('Closure not found. It may have been deleted.', {
+                    icon: '❓',
+                    duration: 4000
+                });
             } else {
-                toast.error(errorMessage);
+                toast.error(`Failed to update closure: ${errorMessage}`, {
+                    icon: '❌',
+                    duration: 4000
+                });
             }
 
             console.error('❌ Error updating closure:', errorMessage);
+            throw error;
         }
     }, [logout]);
 
@@ -344,20 +411,31 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
 
             await closuresApi.deleteClosure(id);
             dispatch({ type: 'DELETE_CLOSURE', payload: id });
-            toast.success('Closure deleted successfully!');
+
+            toast.success('Closure deleted successfully! 🗑️', {
+                icon: '✅',
+                duration: 3000
+            });
             console.log('✅ Closure deleted successfully:', id);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to delete closure';
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
 
             if (error instanceof Error && (error.message.includes('401') || error.message.includes('Authentication'))) {
-                toast.error('Authentication required. Please log in to delete closures.');
+                toast.error('Please log in to delete closures.', {
+                    icon: '🔐',
+                    duration: 5000
+                });
                 logout();
             } else {
-                toast.error(errorMessage);
+                toast.error(`Failed to delete closure: ${errorMessage}`, {
+                    icon: '❌',
+                    duration: 4000
+                });
             }
 
             console.error('❌ Error deleting closure:', errorMessage);
+            throw error;
         }
     }, [logout]);
 
@@ -376,10 +454,14 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             dispatch({ type: 'SET_EDIT_LOADING', payload: false });
             console.log('✅ Closure loaded for editing:', closure.id);
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to load closure for editing';
+            const errorMessage = parseErrorMessage(error);
             dispatch({ type: 'SET_ERROR', payload: errorMessage });
             dispatch({ type: 'SET_EDIT_LOADING', payload: false });
-            toast.error(errorMessage);
+
+            toast.error(`Failed to load closure: ${errorMessage}`, {
+                icon: '❌',
+                duration: 4000
+            });
             console.error('❌ Error loading closure for editing:', errorMessage);
         }
     }, []);
