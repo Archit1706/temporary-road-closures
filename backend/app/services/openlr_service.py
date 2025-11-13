@@ -508,10 +508,29 @@ class OpenLRService:
 
         total_distance = 0.0
         for orig, dec in zip(orig_coords, dec_coords):
-            distance = self._calculate_distance(orig, dec)
+            distance = self._calculate_haversine_distance(orig, dec)
             total_distance += distance
 
         return total_distance / len(orig_coords) if orig_coords else float("inf")
+
+
+    def _calculate_haversine_distance(self, point1: List[float], point2: List[float]) -> float:
+    """Calculate distance between two points in meters using Haversine formula."""
+        R = 6371000  # Earth radius in meters
+
+        lat1, lon1 = math.radians(point1[1]), math.radians(point1[0])
+        lat2, lon2 = math.radians(point2[1]), math.radians(point2[0])
+
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+
+        a = (
+            math.sin(dlat / 2) ** 2
+            + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2) ** 2
+        )
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+        return R * c
 
     def _calculate_distance(self, point1: List[float], point2: List[float]) -> float:
         """Calculate distance between two points in meters."""
