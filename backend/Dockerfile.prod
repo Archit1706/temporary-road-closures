@@ -2,11 +2,6 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    POETRY_NO_INTERACTION=1 \
-    POETRY_VENV_IN_PROJECT=1 \
-    POETRY_CACHE_DIR=/opt/poetry \
-    POETRY_HOME="/opt/poetry" \
-    POETRY_VERSION=1.6.1 \
     ENVIRONMENT=production 
 
 # Install system dependencies
@@ -16,18 +11,15 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Poetry
-RUN pip install poetry==$POETRY_VERSION
-
 # Set work directory
 WORKDIR /app
 
-# Copy poetry configuration files
-COPY pyproject.toml poetry.lock* ./
+# Copy requirements file
+COPY requirements.txt .
 
-# Configure poetry and install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-dev --no-interaction --no-ansi
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy project files
 COPY . .
