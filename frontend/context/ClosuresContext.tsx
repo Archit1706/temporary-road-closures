@@ -130,6 +130,7 @@ const closuresReducer = (state: ClosuresState, action: ClosuresAction): Closures
 
 // Helper function to parse error messages
 const parseErrorMessage = (error: any): string => {
+    // Check for response data with detail field (FastAPI standard)
     if (error?.response?.data?.detail) {
         if (typeof error.response.data.detail === 'string') {
             return error.response.data.detail;
@@ -139,6 +140,12 @@ const parseErrorMessage = (error: any): string => {
         }
     }
 
+    // Check for response data with message field (custom format)
+    if (error?.response?.data?.message) {
+        return error.response.data.message;
+    }
+
+    // Check for error object with message
     if (error?.message) {
         return error.message;
     }
@@ -245,7 +252,13 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             dispatch({ type: 'SET_LOADING', payload: false });
 
             console.error('❌ Registration failed:', errorMessage);
-            throw error; // Re-throw to let the component handle specific errors
+            console.error('Full error:', error);
+
+            // Re-throw error with properly formatted message
+            const formattedError = new Error(errorMessage);
+            (formattedError as any).response = error.response;
+            (formattedError as any).status = error.response?.status || error.status_code;
+            throw formattedError;
         }
     }, []);
 

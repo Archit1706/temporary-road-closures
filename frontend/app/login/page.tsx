@@ -52,56 +52,60 @@ function LoginContent() {
         try {
             // Clear any previous errors
             clearErrors();
-            
+
             // Show loading toast
             const loadingToast = toast.loading('Signing you in...');
 
             await login(data.username, data.password);
-            
+
             // Dismiss loading toast
             toast.dismiss(loadingToast);
-            
+
             // Success is handled in the context, redirect happens via useEffect
             setLoginAttempts(0); // Reset attempts on success
-            
+
         } catch (error: any) {
             setLoginAttempts(prev => prev + 1);
-            
+
+            // Get error message
+            const errorMessage = error?.message || 'Login failed';
+            const statusCode = error?.response?.status || error?.status || 0;
+
             // Handle specific error types
-            if (error?.message?.includes('401') || error?.message?.includes('Incorrect')) {
-                setError('username', { 
-                    type: 'manual', 
-                    message: 'Invalid username or password' 
+            if (statusCode === 401 || errorMessage.toLowerCase().includes('incorrect') || errorMessage.toLowerCase().includes('invalid')) {
+                setError('username', {
+                    type: 'manual',
+                    message: 'Invalid username or password'
                 });
-                setError('password', { 
-                    type: 'manual', 
-                    message: 'Invalid username or password' 
+                setError('password', {
+                    type: 'manual',
+                    message: 'Invalid username or password'
                 });
                 toast.error('Invalid username or password. Please try again.', {
                     icon: '🔒',
                     duration: 4000
                 });
-            } else if (error?.message?.includes('404')) {
-                setError('username', { 
-                    type: 'manual', 
-                    message: 'User not found' 
+            } else if (statusCode === 404 || errorMessage.toLowerCase().includes('not found')) {
+                setError('username', {
+                    type: 'manual',
+                    message: 'User not found'
                 });
                 toast.error('User not found. Please check your username or create an account.', {
                     icon: '👤',
                     duration: 4000
                 });
-            } else if (error?.message?.includes('inactive') || error?.message?.includes('disabled')) {
+            } else if (errorMessage.toLowerCase().includes('inactive') || errorMessage.toLowerCase().includes('disabled')) {
                 toast.error('This account has been disabled. Please contact support.', {
                     icon: '⛔',
                     duration: 5000
                 });
-            } else if (error?.message?.includes('network') || error?.message?.includes('timeout')) {
+            } else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
                 toast.error('Network error. Please check your connection and try again.', {
                     icon: '🌐',
                     duration: 4000
                 });
             } else {
-                toast.error(error?.message || 'Login failed. Please try again.', {
+                toast.error(errorMessage || 'Login failed. Please try again.', {
                     icon: '❌',
                     duration: 4000
                 });
@@ -175,9 +179,9 @@ function LoginContent() {
                                 autoComplete="username"
                                 {...register('username', {
                                     required: 'Username is required',
-                                    minLength: { 
-                                        value: 3, 
-                                        message: 'Username must be at least 3 characters' 
+                                    minLength: {
+                                        value: 3,
+                                        message: 'Username must be at least 3 characters'
                                     },
                                     onChange: () => {
                                         // Clear errors when user starts typing
@@ -185,9 +189,8 @@ function LoginContent() {
                                         clearErrors('password');
                                     }
                                 })}
-                                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                                    errors.username ? 'border-red-300' : 'border-gray-300'
-                                } rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${errors.username ? 'border-red-300' : 'border-gray-300'
+                                    } rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                                 placeholder="Enter your username"
                             />
                             {errors.username && (
@@ -210,9 +213,9 @@ function LoginContent() {
                                     autoComplete="current-password"
                                     {...register('password', {
                                         required: 'Password is required',
-                                        minLength: { 
-                                            value: 6, 
-                                            message: 'Password must be at least 6 characters' 
+                                        minLength: {
+                                            value: 6,
+                                            message: 'Password must be at least 6 characters'
                                         },
                                         onChange: () => {
                                             // Clear errors when user starts typing
@@ -220,9 +223,8 @@ function LoginContent() {
                                             clearErrors('username');
                                         }
                                     })}
-                                    className={`appearance-none relative block w-full px-3 py-2 pr-10 border ${
-                                        errors.password ? 'border-red-300' : 'border-gray-300'
-                                    } rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                                    className={`appearance-none relative block w-full px-3 py-2 pr-10 border ${errors.password ? 'border-red-300' : 'border-gray-300'
+                                        } rounded-md placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
                                     placeholder="Enter your password"
                                 />
                                 <button

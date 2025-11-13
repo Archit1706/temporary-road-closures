@@ -125,9 +125,14 @@ function RegisterContent() {
             console.error('Registration error:', error);
 
             // Handle specific error types
-            if (error?.response?.status === 409 || error?.message?.includes('409')) {
+            const errorMessage = error?.message || 'Registration failed';
+            const statusCode = error?.response?.status || error?.status || 0;
+
+            if (statusCode === 409 || errorMessage.includes('already exists') || errorMessage.includes('already registered')) {
                 // Username or email already exists
-                if (error?.response?.data?.detail?.includes('username') || error?.message?.toLowerCase().includes('username')) {
+                const lowerMessage = errorMessage.toLowerCase();
+
+                if (lowerMessage.includes('username')) {
                     setError('username', {
                         type: 'manual',
                         message: 'This username is already taken'
@@ -136,7 +141,7 @@ function RegisterContent() {
                         icon: '👤',
                         duration: 5000
                     });
-                } else if (error?.response?.data?.detail?.includes('email') || error?.message?.toLowerCase().includes('email')) {
+                } else if (lowerMessage.includes('email')) {
                     setError('email', {
                         type: 'manual',
                         message: 'This email is already registered'
@@ -146,23 +151,24 @@ function RegisterContent() {
                         duration: 5000
                     });
                 } else {
-                    toast.error('Username or email already exists. Please try different credentials.', {
+                    // Generic conflict error
+                    toast.error(errorMessage || 'Username or email already exists. Please try different credentials.', {
                         icon: '⚠️',
                         duration: 5000
                     });
                 }
-            } else if (error?.response?.status === 422 || error?.message?.includes('validation')) {
+            } else if (statusCode === 422 || errorMessage.includes('validation')) {
                 toast.error('Please check your input data and try again.', {
                     icon: '❌',
                     duration: 4000
                 });
-            } else if (error?.message?.includes('network') || error?.message?.includes('timeout')) {
+            } else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
                 toast.error('Network error. Please check your connection and try again.', {
                     icon: '🌐',
                     duration: 4000
                 });
             } else {
-                toast.error(error?.message || 'Registration failed. Please try again.', {
+                toast.error(errorMessage || 'Registration failed. Please try again.', {
                     icon: '❌',
                     duration: 4000
                 });
