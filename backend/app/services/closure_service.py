@@ -334,13 +334,14 @@ class ClosureService:
         return closure_dict
 
     def get_closures_with_geometry(
-        self, closures: List[Closure]
+        self, closures: List[Closure], validate_openlr: bool = False
     ) -> List[Dict[str, Any]]:
         """
         Get multiple closures with GeoJSON geometry and OpenLR info.
 
         Args:
             closures: List of closures
+            validate_openlr: Whether to validate OpenLR codes (default: False for performance)
 
         Returns:
             list: Closure data with GeoJSON geometry and OpenLR info
@@ -375,7 +376,8 @@ class ClosureService:
             closure_dict["geometry"] = geometry
 
             # Add OpenLR validation info if enabled and code exists
-            if closure.openlr_code and self.openlr_enabled and geometry:
+            # Only validate if explicitly requested (expensive operation for bulk queries)
+            if validate_openlr and closure.openlr_code and self.openlr_enabled and geometry:
                 try:
                     openlr_info = self._validate_openlr_code(
                         closure.openlr_code, geometry

@@ -97,6 +97,10 @@ async def query_closures(
     ),
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(50, ge=1, le=1000, description="Page size"),
+    validate_openlr: bool = Query(
+        False,
+        description="Validate OpenLR codes (expensive, disabled by default for performance)",
+    ),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -170,7 +174,7 @@ async def query_closures(
     closures, total = service.query_closures(query_params, current_user)
 
     # Convert closures to response format with geometry
-    closure_dicts = service.get_closures_with_geometry(closures)
+    closure_dicts = service.get_closures_with_geometry(closures, validate_openlr=validate_openlr)
     closure_responses = [
         ClosureResponse(**closure_dict) for closure_dict in closure_dicts
     ]
@@ -340,6 +344,10 @@ async def get_user_closures(
         None,
         description="Filter by direction: true for bidirectional, false for unidirectional",
     ),
+    validate_openlr: bool = Query(
+        False,
+        description="Validate OpenLR codes (expensive, disabled by default for performance)",
+    ),
     db: Session = Depends(get_db),
     current_user: Optional[User] = Depends(get_current_user_optional),
 ):
@@ -367,7 +375,7 @@ async def get_user_closures(
     closures, total = service.query_closures(query_params, current_user)
 
     # Convert to response format
-    closure_dicts = service.get_closures_with_geometry(closures)
+    closure_dicts = service.get_closures_with_geometry(closures, validate_openlr=validate_openlr)
     closure_responses = [
         ClosureResponse(**closure_dict) for closure_dict in closure_dicts
     ]
