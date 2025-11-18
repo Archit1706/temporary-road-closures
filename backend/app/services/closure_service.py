@@ -75,6 +75,9 @@ class ClosureService:
                 source=closure_data.source,
                 confidence_level=closure_data.confidence_level,
                 is_bidirectional=closure_data.is_bidirectional,
+                transport_mode=closure_data.transport_mode.value,
+                attribution=closure_data.attribution,
+                data_license=closure_data.data_license,
                 submitter_id=user_id,
                 status=ClosureStatus.ACTIVE.value,
             )
@@ -267,6 +270,12 @@ class ClosureService:
 
         if params.closure_type:
             query = query.filter(Closure.closure_type == params.closure_type)
+
+        if params.transport_mode:
+            query = query.filter(Closure.transport_mode == params.transport_mode)
+
+        if params.is_bidirectional is not None:
+            query = query.filter(Closure.is_bidirectional == params.is_bidirectional)
 
         if params.start_time:
             query = query.filter(Closure.start_time >= params.start_time)

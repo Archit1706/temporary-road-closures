@@ -7,14 +7,14 @@ from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 from enum import Enum
 
-from app.models.closure import ClosureType, ClosureStatus
+from app.models.closure import ClosureType, ClosureStatus, TransportMode
 
 
 class GeoJSONGeometry(BaseModel):
-    """GeoJSON geometry schema supporting Point and LineString."""
+    """GeoJSON geometry schema supporting Point, LineString, and Polygon."""
 
     type: str = Field(..., description="Geometry type")
-    coordinates: Union[List[float], List[List[float]]] = Field(
+    coordinates: Union[List[float], List[List[float]], List[List[List[float]]]] = Field(
         ..., description="Coordinate array"
     )
 
@@ -22,7 +22,7 @@ class GeoJSONGeometry(BaseModel):
     @classmethod
     def validate_geometry_type(cls, v):
         """Validate geometry type."""
-        allowed_types = ["LineString", "Point"]  # Removed Polygon for now
+        allowed_types = ["LineString", "Point", "Polygon", "MultiPolygon"]
         if v not in allowed_types:
             raise ValueError(f"Geometry type must be one of {allowed_types}")
         return v
@@ -35,46 +35,62 @@ class GeoJSONGeometry(BaseModel):
         data = info.data if hasattr(info, "data") else {}
         geometry_type = data.get("type")
 
-        if geometry_type == "Point":
-            # Point coordinates: [longitude, latitude]
-            if not isinstance(v, list) or len(v) != 2:
-                raise ValueError("Point coordinates must be [longitude, latitude]")
-
-            lon, lat = v
+        def validate_coord_pair(coord):
+            """Validate a single [lon, lat] coordinate pair."""
+            if len(coord) != 2:
+                raise ValueError("Each coordinate must have exactly 2 values [lon, lat]")
+            lon, lat = coord
             if not isinstance(lon, (int, float)) or not isinstance(lat, (int, float)):
                 raise ValueError("Coordinates must be numeric")
-
-            # Validate longitude and latitude ranges
             if not (-180 <= lon <= 180):
                 raise ValueError(f"Longitude {lon} is out of range [-180, 180]")
             if not (-90 <= lat <= 90):
                 raise ValueError(f"Latitude {lat} is out of range [-90, 90]")
-
-            # Round to 5 decimal places
             return [round(lon, 5), round(lat, 5)]
+
+        if geometry_type == "Point":
+            # Point coordinates: [longitude, latitude]
+            if not isinstance(v, list) or len(v) != 2:
+                raise ValueError("Point coordinates must be [longitude, latitude]")
+            return validate_coord_pair(v)
 
         elif geometry_type == "LineString":
             if len(v) < 2:
                 raise ValueError("LineString must have at least 2 coordinates")
+            return [validate_coord_pair(coord) for coord in v]
 
-            # Round coordinates to 5 decimal places and validate ranges
-            rounded_coords = []
-            for coord in v:
-                if len(coord) != 2:
-                    raise ValueError(
-                        "Each coordinate must have exactly 2 values [lon, lat]"
-                    )
-                # Validate longitude and latitude ranges
-                lon, lat = coord
-                if not (-180 <= lon <= 180):
-                    raise ValueError(f"Longitude {lon} is out of range [-180, 180]")
-                if not (-90 <= lat <= 90):
-                    raise ValueError(f"Latitude {lat} is out of range [-90, 90]")
+        elif geometry_type == "Polygon":
+            if len(v) < 1:
+                raise ValueError("Polygon must have at least 1 ring")
+            # Validate each ring (outer ring + optional holes)
+            rounded_rings = []
+            for ring_idx, ring in enumerate(v):
+                if len(ring) < 4:
+                    raise ValueError(f"Polygon ring {ring_idx} must have at least 4 coordinates (closed)")
+                rounded_ring = [validate_coord_pair(coord) for coord in ring]
+                # Check if ring is closed (first == last)
+                if rounded_ring[0] != rounded_ring[-1]:
+                    raise ValueError(f"Polygon ring {ring_idx} must be closed (first coord == last coord)")
+                rounded_rings.append(rounded_ring)
+            return rounded_rings
 
-                # Round to 5 decimal places
-                rounded_coords.append([round(lon, 5), round(lat, 5)])
-
-            return rounded_coords
+        elif geometry_type == "MultiPolygon":
+            if len(v) < 1:
+                raise ValueError("MultiPolygon must have at least 1 polygon")
+            rounded_polygons = []
+            for poly_idx, polygon in enumerate(v):
+                if len(polygon) < 1:
+                    raise ValueError(f"MultiPolygon polygon {poly_idx} must have at least 1 ring")
+                rounded_rings = []
+                for ring_idx, ring in enumerate(polygon):
+                    if len(ring) < 4:
+                        raise ValueError(f"Polygon {poly_idx} ring {ring_idx} must have at least 4 coordinates")
+                    rounded_ring = [validate_coord_pair(coord) for coord in ring]
+                    if rounded_ring[0] != rounded_ring[-1]:
+                        raise ValueError(f"Polygon {poly_idx} ring {ring_idx} must be closed")
+                    rounded_rings.append(rounded_ring)
+                rounded_polygons.append(rounded_rings)
+            return rounded_polygons
 
         return v
 
@@ -96,6 +112,15 @@ class ClosureBase(BaseModel):
     )
     is_bidirectional: bool = Field(
         False, description="Whether the closure affects both directions"
+    )
+    transport_mode: TransportMode = Field(
+        TransportMode.ALL, description="Mode of transport affected by this closure"
+    )
+    attribution: Optional[str] = Field(
+        None, max_length=500, description="Attribution for third-party data sources"
+    )
+    data_license: Optional[str] = Field(
+        None, max_length=100, description="License for the closure data"
     )
 
     @field_validator("end_time")
@@ -186,6 +211,15 @@ class ClosureUpdate(BaseModel):
     is_bidirectional: Optional[bool] = Field(
         None, description="Updated bidirectional flag"
     )
+    transport_mode: Optional[TransportMode] = Field(
+        None, description="Updated transport mode"
+    )
+    attribution: Optional[str] = Field(
+        None, max_length=500, description="Updated attribution"
+    )
+    data_license: Optional[str] = Field(
+        None, max_length=100, description="Updated data license"
+    )
 
     @model_validator(mode="after")
     def validate_time_consistency(self):
@@ -258,6 +292,9 @@ class ClosureQueryParams(BaseModel):
     valid_only: bool = Field(True, description="Return only valid closures")
     closure_type: Optional[ClosureType] = Field(
         None, description="Filter by closure type"
+    )
+    transport_mode: Optional[TransportMode] = Field(
+        None, description="Filter by transport mode affected"
     )
     start_time: Optional[datetime] = Field(
         None, description="Filter closures starting after this time"
