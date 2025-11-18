@@ -23,6 +23,7 @@ class OAuthService:
         self.providers = {
             "google": GoogleOAuthProvider(),
             "github": GitHubOAuthProvider(),
+            "osm": OSMOAuthProvider(),
         }
 
     def get_authorization_url(
@@ -359,4 +360,61 @@ class GitHubOAuthProvider(BaseOAuthProvider):
         except httpx.HTTPError as e:
             raise ExternalServiceException(
                 "GitHub", f"Email retrieval failed: {str(e)}"
+            )
+
+
+class OSMOAuthProvider(BaseOAuthProvider):
+    """
+    OpenStreetMap OAuth provider implementation.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.client_id = settings.OSM_CLIENT_ID
+        self.client_secret = settings.OSM_CLIENT_SECRET
+        self.redirect_uri = settings.OSM_REDIRECT_URI
+        self.scope = ["read_prefs"]
+        self.auth_url = settings.OSM_OAUTH_URL
+        self.token_url = settings.OSM_TOKEN_URL
+        self.user_info_url = settings.OSM_USER_INFO_URL
+
+    async def get_user_info(self, access_token: str) -> Dict[str, Any]:
+        """
+        Get user information from OpenStreetMap.
+
+        Args:
+            access_token: OSM access token
+
+        Returns:
+            dict: Normalized user information
+        """
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json",
+        }
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    self.user_info_url, headers=headers, timeout=10.0
+                )
+                response.raise_for_status()
+
+                data = response.json()
+
+                # OSM returns data in a nested structure
+                user_data = data.get("user", {})
+
+                # Normalize OSM user data
+                return {
+                    "id": str(user_data.get("id")),
+                    "email": user_data.get("email"),  # May be None if user hasn't shared it
+                    "name": user_data.get("display_name"),
+                    "username": user_data.get("display_name"),
+                    "avatar_url": user_data.get("img", {}).get("href"),  # OSM avatar
+                }
+
+        except httpx.HTTPError as e:
+            raise ExternalServiceException(
+                "OpenStreetMap", f"User info retrieval failed: {str(e)}"
             )

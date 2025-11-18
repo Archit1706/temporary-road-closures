@@ -56,9 +56,23 @@ class ClosureStatus(str, enum.Enum):
     PLANNED = "planned"
 
 
+class TransportMode(str, enum.Enum):
+    """Enumeration of transport modes affected by closures."""
+
+    ALL = "all"  # Affects all modes of transport
+    CAR = "car"  # Motor vehicles only
+    HGV = "hgv"  # Heavy goods vehicles (trucks)
+    BICYCLE = "bicycle"  # Bicycle lanes/paths
+    FOOT = "foot"  # Pedestrian walkways/sidewalks
+    MOTORCYCLE = "motorcycle"  # Motorcycles
+    BUS = "bus"  # Public bus routes
+    EMERGENCY = "emergency"  # Emergency vehicles
+
+
 # Create PostgreSQL enum types
 closure_type_enum = ENUM(ClosureType, name="closure_type_enum", create_type=False)
 closure_status_enum = ENUM(ClosureStatus, name="closure_status_enum", create_type=False)
+transport_mode_enum = ENUM(TransportMode, name="transport_mode_enum", create_type=False)
 
 
 class Closure(BaseModel):
@@ -74,7 +88,7 @@ class Closure(BaseModel):
     geometry = Column(
         Geometry("GEOMETRY", srid=4326),
         nullable=False,
-        doc="Road segment geometry as Point or LineString in WGS84",
+        doc="Road segment geometry as Point, LineString, or Polygon in WGS84",
     )
 
     # Temporal data
@@ -136,6 +150,28 @@ class Closure(BaseModel):
         default=True,
         index=True,
         doc="Whether the closure affects traffic in both directions",
+    )
+
+    # Transport mode affected
+    transport_mode = Column(
+        String(50),
+        nullable=False,
+        default="all",
+        index=True,
+        doc="Mode of transport affected by this closure",
+    )
+
+    # Attribution for third-party data
+    attribution = Column(
+        Text,
+        nullable=True,
+        doc="Attribution string for third-party data sources",
+    )
+
+    data_license = Column(
+        String(100),
+        nullable=True,
+        doc="License under which the closure data is provided",
     )
 
     # Relationships

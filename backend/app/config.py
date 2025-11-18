@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_SECRET: Optional[str] = None
     GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/github/callback"
 
+    # OpenStreetMap OAuth
+    OSM_CLIENT_ID: Optional[str] = None
+    OSM_CLIENT_SECRET: Optional[str] = None
+    OSM_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/osm/callback"
+
     # OAuth URLs
     GOOGLE_OAUTH_URL: str = "https://accounts.google.com/o/oauth2/auth"
     GOOGLE_TOKEN_URL: str = "https://oauth2.googleapis.com/token"
@@ -108,6 +113,10 @@ class Settings(BaseSettings):
     GITHUB_OAUTH_URL: str = "https://github.com/login/oauth/authorize"
     GITHUB_TOKEN_URL: str = "https://github.com/login/oauth/access_token"
     GITHUB_USER_INFO_URL: str = "https://api.github.com/user"
+
+    OSM_OAUTH_URL: str = "https://www.openstreetmap.org/oauth2/authorize"
+    OSM_TOKEN_URL: str = "https://www.openstreetmap.org/oauth2/token"
+    OSM_USER_INFO_URL: str = "https://api.openstreetmap.org/api/0.6/user/details.json"
 
     # Frontend URLs for OAuth redirect
     FRONTEND_URL: str = "http://localhost:3000"

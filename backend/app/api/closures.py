@@ -15,7 +15,7 @@ from app.api.deps import (
     get_pagination_params,
 )
 from app.models.user import User
-from app.models.closure import ClosureType, ClosureStatus
+from app.models.closure import ClosureType, ClosureStatus, TransportMode
 from app.schemas.closure import (
     ClosureCreate,
     ClosureUpdate,
@@ -81,6 +81,9 @@ async def query_closures(
     valid_only: bool = Query(True, description="Return only currently valid closures"),
     closure_type: Optional[ClosureType] = Query(
         None, description="Filter by closure type"
+    ),
+    transport_mode: Optional[TransportMode] = Query(
+        None, description="Filter by transport mode affected"
     ),
     start_time: Optional[str] = Query(
         None, description="Filter closures starting after this time (ISO 8601)"
@@ -162,6 +165,7 @@ async def query_closures(
         bbox=bbox,
         valid_only=valid_only,
         closure_type=closure_type,
+        transport_mode=transport_mode,
         start_time=start_datetime,
         end_time=end_datetime,
         submitter_id=submitter_id,

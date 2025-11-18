@@ -18,6 +18,7 @@ from app.core.database import init_database, close_database
 from app.core.exceptions import APIException, ValidationException
 from app.api import closures, users, auth
 from app.api import openlr  # Import OpenLR endpoints
+from app.api import import_data  # Import data import endpoints
 
 
 # Configure logging
@@ -330,6 +331,7 @@ async def root():
             "users": f"{settings.API_V1_STR}/users",
             "auth": f"{settings.API_V1_STR}/auth",
             "openlr": f"{settings.API_V1_STR}/openlr",
+            "import": f"{settings.API_V1_STR}/import",
         },
         "quick_start": {
             "step_1": "View API docs at /api/v1/docs",
@@ -381,6 +383,17 @@ try:
     logger.info("OpenLR router included successfully")
 except ImportError:
     logger.warning("OpenLR router not found, skipping...")
+
+# Add Import router
+try:
+    from app.api import import_data
+
+    app.include_router(
+        import_data.router, prefix=f"{settings.API_V1_STR}/import", tags=["import"]
+    )
+    logger.info("Import router included successfully")
+except ImportError:
+    logger.warning("Import router not found, skipping...")
 
 
 # Custom OpenAPI schema with proper authentication
