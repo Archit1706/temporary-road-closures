@@ -150,16 +150,26 @@ class UserService:
         Returns:
             User: Created or existing user
         """
-        # Try to find existing user by email
-        user = User.get_by_email(self.db, oauth_user.email)
+        # First, try to find existing user by provider and provider_id
+        from sqlalchemy import and_
+        user = self.db.query(User).filter(
+            and_(
+                User.provider == oauth_user.provider,
+                User.provider_id == oauth_user.provider_id
+            )
+        ).first()
 
         if user:
             # Update user info from OAuth if needed
             if oauth_user.name and not user.full_name:
                 user.full_name = oauth_user.name
 
-            # Mark email as verified if from OAuth
-            if not user.is_verified:
+            # Update email if provided and not set
+            if oauth_user.email and not user.email:
+                user.email = oauth_user.email
+
+            # Mark email as verified if from OAuth and email exists
+            if oauth_user.email and not user.is_verified:
                 user.is_verified = True
 
             # Update last login
@@ -168,18 +178,39 @@ class UserService:
             self.db.commit()
             return user
 
+        # If email is provided, check if user exists with that email
+        if oauth_user.email:
+            user = User.get_by_email(self.db, oauth_user.email)
+            if user:
+                # Link OAuth provider to existing account
+                user.provider = oauth_user.provider
+                user.provider_id = oauth_user.provider_id
+
+                if oauth_user.name and not user.full_name:
+                    user.full_name = oauth_user.name
+
+                if not user.is_verified:
+                    user.is_verified = True
+
+                user.update_last_login(self.db)
+                self.db.commit()
+                return user
+
         # Create new user from OAuth data
         username = self._generate_unique_username(oauth_user)
 
         try:
             user = User(
                 username=username,
-                email=oauth_user.email,
+                email=oauth_user.email,  # Can be None for some OAuth providers
                 full_name=oauth_user.name,
                 hashed_password=None,  # OAuth users don't have passwords
+                provider=oauth_user.provider,
+                provider_id=oauth_user.provider_id,
+                avatar_url=oauth_user.avatar_url,
                 is_active=True,
                 is_moderator=False,
-                is_verified=True,  # OAuth emails are considered verified
+                is_verified=True if oauth_user.email else False,  # Only verify if email provided
             )
 
             self.db.add(user)
@@ -438,7 +469,13 @@ class UserService:
             str: Unique username
         """
         # Start with preferred username
-        base_username = oauth_user.username or oauth_user.email.split("@")[0]
+        if oauth_user.username:
+            base_username = oauth_user.username
+        elif oauth_user.email:
+            base_username = oauth_user.email.split("@")[0]
+        else:
+            # Use provider and part of provider_id if no username or email
+            base_username = f"{oauth_user.provider}_{oauth_user.provider_id[:8]}"
 
         # Clean username (remove special characters)
         import re

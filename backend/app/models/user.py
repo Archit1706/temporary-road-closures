@@ -30,7 +30,11 @@ class User(BaseModel):
     )
 
     email = Column(
-        String(255), unique=True, nullable=False, index=True, doc="User email address"
+        String(255),
+        unique=True,
+        nullable=True,  # Allow OAuth users without email (e.g., OSM)
+        index=True,
+        doc="User email address"
     )
 
     hashed_password = Column(
