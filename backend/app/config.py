@@ -93,17 +93,17 @@ class Settings(BaseSettings):
     # Google OAuth
     GOOGLE_CLIENT_ID: Optional[str] = None
     GOOGLE_CLIENT_SECRET: Optional[str] = None
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/google/callback"
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/oauth/google/callback"
 
     # GitHub OAuth
     GITHUB_CLIENT_ID: Optional[str] = None
     GITHUB_CLIENT_SECRET: Optional[str] = None
-    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/github/callback"
+    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/oauth/github/callback"
 
     # OpenStreetMap OAuth
     OSM_CLIENT_ID: Optional[str] = None
     OSM_CLIENT_SECRET: Optional[str] = None
-    OSM_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/osm/callback"
+    OSM_REDIRECT_URI: str = "http://localhost:8000/api/v1/auth/oauth/osm/callback"
 
     # OAuth URLs
     GOOGLE_OAUTH_URL: str = "https://accounts.google.com/o/oauth2/auth"
