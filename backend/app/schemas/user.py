@@ -12,7 +12,7 @@ class UserBase(BaseModel):
     """Base user schema with common fields."""
 
     username: str = Field(..., min_length=3, max_length=50, description="Username")
-    email: EmailStr = Field(..., description="Email address")
+    email: Optional[EmailStr] = Field(None, description="Email address (may be None for some OAuth users)")
     full_name: Optional[str] = Field(None, max_length=255, description="Full name")
 
     @field_validator("username")
@@ -26,10 +26,23 @@ class UserBase(BaseModel):
         return v.lower()
 
 
-class UserCreate(UserBase):
+class UserCreate(BaseModel):
     """Schema for user registration."""
 
+    username: str = Field(..., min_length=3, max_length=50, description="Username")
+    email: EmailStr = Field(..., description="Email address")
+    full_name: Optional[str] = Field(None, max_length=255, description="Full name")
     password: str = Field(..., min_length=8, description="Password")
+
+    @field_validator("username")
+    @classmethod
+    def validate_username(cls, v):
+        """Validate username format."""
+        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
+            raise ValueError(
+                "Username can only contain letters, numbers, hyphens, and underscores"
+            )
+        return v.lower()
 
     @field_validator("password")
     @classmethod
@@ -116,7 +129,7 @@ class OAuthUser(BaseModel):
 
     provider: str = Field(..., description="OAuth provider (google, github, etc.)")
     provider_id: str = Field(..., description="User ID from OAuth provider")
-    email: EmailStr = Field(..., description="Email from OAuth provider")
+    email: Optional[EmailStr] = Field(None, description="Email from OAuth provider (may be None for some providers like OSM)")
     name: Optional[str] = Field(None, description="Full name from OAuth provider")
     username: Optional[str] = Field(None, description="Username from OAuth provider")
     avatar_url: Optional[str] = Field(

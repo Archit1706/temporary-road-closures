@@ -28,6 +28,20 @@ docker exec -i osm-closures-db psql -U postgres -d osm_closures < migrations/001
 
 ## Migration History
 
+### 002_make_email_nullable_for_oauth.sql (2025-11-19)
+
+**Purpose**: Allow OAuth users without email addresses (e.g., OpenStreetMap)
+
+**Changes:**
+- Made `email` column nullable to support OAuth providers that don't provide email
+- Added check constraint to ensure either email OR OAuth provider info is present
+- Added unique index on (provider, provider_id) to prevent duplicate OAuth accounts
+- Updated column comment to clarify email is optional for OAuth users
+
+**Rollback**: `002_make_email_nullable_for_oauth_rollback.sql`
+
+**Note**: This migration is required for OSM OAuth support, as OSM users may not share their email.
+
 ### 001_add_transport_and_attribution_fields.sql (2025-01-18)
 
 **Purpose**: Add support for transport mode filtering, data attribution, and polygon geometries
