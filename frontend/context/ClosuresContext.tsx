@@ -177,8 +177,58 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             }
         };
 
-        // Initial check
-        checkAuth();
+        // Check for OAuth callback token in URL
+        const handleOAuthCallback = async () => {
+            if (typeof window === 'undefined') return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const expiresIn = urlParams.get('expires_in');
+
+            if (token) {
+                console.log('🔐 OAuth token detected in URL, processing...');
+
+                try {
+                    // Store the token
+                    authApi.setToken(token);
+
+                    // Fetch user data
+                    const userData = await authApi.getCurrentUser();
+                    authApi.setUserData(userData);
+
+                    // Update state
+                    dispatch({ type: 'SET_AUTHENTICATED', payload: true });
+                    dispatch({ type: 'SET_USER', payload: userData });
+
+                    // Show success message
+                    toast.success(`Welcome, ${userData.full_name || userData.username}! 🎉`, {
+                        duration: 4000,
+                        icon: '👋'
+                    });
+
+                    console.log('✅ OAuth login successful:', userData.username);
+
+                    // Clean up URL by removing token parameters
+                    const newUrl = window.location.pathname;
+                    window.history.replaceState({}, document.title, newUrl);
+                } catch (error) {
+                    console.error('❌ Failed to process OAuth token:', error);
+                    authApi.clearToken();
+                    toast.error('Failed to complete OAuth login. Please try again.', {
+                        icon: '❌',
+                        duration: 4000
+                    });
+                }
+
+                return; // Don't run normal auth check if we're processing OAuth
+            }
+
+            // Normal authentication check
+            checkAuth();
+        };
+
+        // Handle OAuth callback or normal auth check
+        handleOAuthCallback();
 
         // Listen for token expiration events
         const handleTokenExpired = () => {
