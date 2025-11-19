@@ -49,17 +49,19 @@ api.interceptors.response.use(
     }
 );
 
-// Updated types to match backend API with bidirectional support
+// Updated types to match backend API with new features
+export type TransportMode = 'all' | 'car' | 'hgv' | 'bicycle' | 'foot' | 'motorcycle' | 'bus' | 'emergency';
+
 export interface Closure {
     id: number;
     geometry: {
-        type: 'LineString' | 'Point';
-        coordinates: number[][] | number[];
+        type: 'LineString' | 'Point' | 'Polygon' | 'MultiPolygon';
+        coordinates: number[][] | number[] | number[][][] | number[][][][];
     };
     start_time: string;
     end_time: string;
     description: string;
-    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
+    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other' | 'sidewalk_repair' | 'bike_lane_closure' | 'bridge_closure' | 'tunnel_closure';
     status: 'active' | 'inactive' | 'expired' | 'planned';
     source: string;
     confidence_level: number;
@@ -70,35 +72,44 @@ export interface Closure {
     is_valid: boolean;
     duration_hours: number;
     is_bidirectional?: boolean;
+    transport_mode: TransportMode;
+    attribution?: string;
+    data_license?: string;
 }
 
 export interface CreateClosureData {
     geometry: {
-        type: 'LineString' | 'Point';
-        coordinates: number[][] | number[];
+        type: 'LineString' | 'Point' | 'Polygon' | 'MultiPolygon';
+        coordinates: number[][] | number[] | number[][][] | number[][][][];
     };
     start_time: string;
     end_time: string;
     description: string;
-    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
+    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other' | 'sidewalk_repair' | 'bike_lane_closure' | 'bridge_closure' | 'tunnel_closure';
     source: string;
     confidence_level: number;
     is_bidirectional?: boolean;
+    transport_mode?: TransportMode;
+    attribution?: string;
+    data_license?: string;
 }
 
 export interface UpdateClosureData {
     geometry?: {
-        type: 'LineString' | 'Point';
-        coordinates: number[][];
+        type: 'LineString' | 'Point' | 'Polygon' | 'MultiPolygon';
+        coordinates: number[][] | number[] | number[][][] | number[][][][];
     };
     start_time?: string;
     end_time?: string;
     description?: string;
-    closure_type?: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
+    closure_type?: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other' | 'sidewalk_repair' | 'bike_lane_closure' | 'bridge_closure' | 'tunnel_closure';
     status?: 'active' | 'inactive' | 'expired' | 'planned';
     source?: string;
     confidence_level?: number;
     is_bidirectional?: boolean;
+    transport_mode?: TransportMode;
+    attribution?: string;
+    data_license?: string;
 }
 
 export interface BoundingBox {
@@ -429,12 +440,13 @@ export const authApi = {
 // Real API functions
 const realApi = {
     // get all the closures with pagination
-    getClosuresWithPagination: async (bbox?: BoundingBox, page: number = 1, size: number = 50): Promise<PaginatedResponse<Closure>> => {
+    getClosuresWithPagination: async (bbox?: BoundingBox, page: number = 1, size: number = 50, transportMode?: TransportMode): Promise<PaginatedResponse<Closure>> => {
         try {
             const params: any = {
                 valid_only: false,
                 page,
-                size
+                size,
+                transport_mode: transportMode
             };
 
             const response = await api.get('/api/v1/closures/', { params });
@@ -446,11 +458,12 @@ const realApi = {
     },
 
     // get all the closures
-    getClosures: async (bbox?: BoundingBox): Promise<PaginatedResponse<Closure>> => {
+    getClosures: async (bbox?: BoundingBox, transportMode?: TransportMode): Promise<PaginatedResponse<Closure>> => {
         try {
             const params: any = {
                 valid_only: false,
                 bbox: bbox ? `${bbox.west},${bbox.south},${bbox.east},${bbox.north}` : undefined,
+                transport_mode: transportMode,
                 page: 1,
                 size: 1000 // get all the closures
             };

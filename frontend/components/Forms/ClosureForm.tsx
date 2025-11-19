@@ -18,13 +18,16 @@ interface ClosureFormProps {
 
 interface FormData {
     description: string;
-    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
+    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other' | 'sidewalk_repair' | 'bike_lane_closure' | 'bridge_closure' | 'tunnel_closure';
     source: string;
     start_time: string;
     end_time: string;
     geometry_type: 'Point' | 'LineString';
     confidence_level: number;
     is_bidirectional: boolean;
+    transport_mode: 'all' | 'car' | 'hgv' | 'bicycle' | 'foot' | 'motorcycle' | 'bus' | 'emergency';
+    attribution?: string;
+    data_license?: string;
     status?: 'active' | 'inactive' | 'expired';
 }
 
@@ -84,6 +87,17 @@ const CONFIDENCE_LEVELS = [
     { value: 10, label: 'Certain (10)', description: 'Direct observation or official announcement' },
 ];
 
+const TRANSPORT_MODES = [
+    { value: 'all', label: 'All Vehicles', icon: '🚗', description: 'Affects all modes of transport' },
+    { value: 'car', label: 'Cars Only', icon: '🚙', description: 'Motor vehicles only' },
+    { value: 'hgv', label: 'Heavy Vehicles', icon: '🚛', description: 'Trucks and HGVs' },
+    { value: 'bicycle', label: 'Bicycles', icon: '🚴', description: 'Bicycle lanes/paths' },
+    { value: 'foot', label: 'Pedestrians', icon: '🚶', description: 'Sidewalks/walkways' },
+    { value: 'motorcycle', label: 'Motorcycles', icon: '🏍️', description: 'Motorcycles only' },
+    { value: 'bus', label: 'Buses', icon: '🚌', description: 'Public bus routes' },
+    { value: 'emergency', label: 'Emergency Vehicles', icon: '🚑', description: 'Emergency access only' },
+];
+
 const ClosureForm: React.FC<ClosureFormProps> = ({
     isOpen,
     onClose,
@@ -135,6 +149,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             end_time: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16),
             confidence_level: 7,
             is_bidirectional: false,
+            transport_mode: 'all',
             status: 'active'
         },
     });
@@ -144,6 +159,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     const watchedConfidenceLevel = watch('confidence_level');
     const watchedIsBidirectional = watch('is_bidirectional');
     const watchedStatus = watch('status');
+    const watchedTransportMode = watch('transport_mode');
 
     // Initialize form with editing data
     useEffect(() => {
@@ -160,6 +176,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             setValue('end_time', new Date(editingClosure.end_time).toISOString().slice(0, 16));
             setValue('confidence_level', editingClosure.confidence_level || 7);
             setValue('is_bidirectional', editingClosure.is_bidirectional || false);
+            setValue('transport_mode', editingClosure.transport_mode || 'all');
+            setValue('attribution', editingClosure.attribution || '');
+            setValue('data_license', editingClosure.data_license || '');
             setValue('status', editingClosure.status);
             setValue('geometry_type', editingClosure.geometry.type);
         }
@@ -312,6 +331,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     end_time: endTime,
                     confidence_level: data.confidence_level,
                     status: data.status,
+                    transport_mode: data.transport_mode,
+                    attribution: data.attribution,
+                    data_license: data.data_license,
                 };
 
                 if (finalCoordinates && finalCoordinates.length > 0) {
@@ -342,6 +364,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     end_time: endTime,
                     confidence_level: data.confidence_level,
                     is_bidirectional: data.geometry_type === 'LineString' ? data.is_bidirectional : undefined,
+                    transport_mode: data.transport_mode,
+                    attribution: data.attribution,
+                    data_license: data.data_license,
                     geometry: {
                         type: data.geometry_type,
                         coordinates: data.geometry_type === 'Point'
@@ -545,6 +570,50 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             </div>
                             {errors.confidence_level && (
                                 <p className="text-sm text-red-600">{errors.confidence_level.message}</p>
+                            )}
+                        </div>
+
+                        {/* Transport Mode */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Transport Mode Affected *
+                            </label>
+                            <div className="space-y-2">
+                                {TRANSPORT_MODES.map((mode) => (
+                                    <label
+                                        key={mode.value}
+                                        className={`
+                                            flex items-start space-x-2 p-2 border rounded-lg cursor-pointer transition-colors
+                                            ${watchedTransportMode === mode.value
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-300 hover:border-gray-400'
+                                            }
+                                        `}
+                                    >
+                                        <input
+                                            type="radio"
+                                            value={mode.value}
+                                            className="mt-0.5 text-blue-600"
+                                            {...register('transport_mode', {
+                                                required: 'Please select a transport mode'
+                                            })}
+                                        />
+                                        <div className="flex-1">
+                                            <div className="flex items-center space-x-2">
+                                                <span className="text-base">{mode.icon}</span>
+                                                <span className="font-medium text-gray-900 text-sm">
+                                                    {mode.label}
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-600 mt-0.5">
+                                                {mode.description}
+                                            </div>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                            {errors.transport_mode && (
+                                <p className="text-sm text-red-600">{errors.transport_mode.message}</p>
                             )}
                         </div>
                     </div>
@@ -761,6 +830,40 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             {errors.source && (
                                 <p className="text-sm text-red-600">{errors.source.message}</p>
                             )}
+                        </div>
+
+                        {/* Attribution (Optional) */}
+                        <div className="space-y-2">
+                            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                                <Info className="w-4 h-4" />
+                                <span>Attribution <span className="text-gray-500 font-normal">(Optional)</span></span>
+                            </label>
+                            <input
+                                type="text"
+                                {...register('attribution')}
+                                placeholder="e.g., © City Transportation Department"
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            />
+                            <p className="text-xs text-gray-500">
+                                Credit for third-party data sources. This will be displayed with the closure information.
+                            </p>
+                        </div>
+
+                        {/* Data License (Optional) */}
+                        <div className="space-y-2">
+                            <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
+                                <Shield className="w-4 h-4" />
+                                <span>Data License <span className="text-gray-500 font-normal">(Optional)</span></span>
+                            </label>
+                            <input
+                                type="text"
+                                {...register('data_license')}
+                                placeholder="e.g., CC BY 4.0, ODbL"
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            />
+                            <p className="text-xs text-gray-500">
+                                License under which this data is provided (e.g., Creative Commons, Open Database License).
+                            </p>
                         </div>
                     </div>
                 );
