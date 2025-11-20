@@ -434,6 +434,19 @@ export const authApi = {
             authApi.clearToken();
             return false;
         }
+    },
+
+    // Get current user from the backend
+    getCurrentUser: async (): Promise<LoginResponse['user']> => {
+        try {
+            console.log('🔍 Fetching current user from backend...');
+            const response = await api.get('/api/v1/auth/me');
+            console.log('✅ Current user fetched:', response.data.username);
+            return response.data;
+        } catch (error) {
+            console.error('❌ Error fetching current user:', error);
+            throw error;
+        }
     }
 };
 
