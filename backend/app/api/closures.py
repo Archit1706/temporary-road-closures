@@ -75,7 +75,7 @@ async def create_closure(
 async def query_closures(
     bbox: Optional[str] = Query(
         None,
-        description="Bounding box filter: 'min_lon,min_lat,max_lon,max_lat'",
+        description="Bounding box filter: 'min_lon,min_lat,max_lon,max_lat'. Maximum area: 25 sq degrees (e.g., 5° × 5°)",
         example="-87.7,41.8,-87.6,41.9",
     ),
     valid_only: bool = Query(True, description="Return only currently valid closures"),
@@ -113,6 +113,8 @@ async def query_closures(
     **Spatial Filtering:**
     - Use `bbox` parameter to get closures within a geographic area
     - Format: "min_longitude,min_latitude,max_longitude,max_latitude"
+    - Maximum bbox area: 25 square degrees (e.g., 5° × 5°, approximately 555km × 555km at equator)
+    - For larger areas, split into multiple smaller queries
 
     **Temporal Filtering:**
     - `valid_only=true` (default): Only return currently valid closures
@@ -175,7 +177,25 @@ async def query_closures(
     )
 
     service = ClosureService(db)
-    closures, total = service.query_closures(query_params, current_user)
+
+    try:
+        closures, total = service.query_closures(query_params, current_user)
+    except ValidationException as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        # Log the error for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error querying closures: {e}")
+
+        # Return a more user-friendly error
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while querying closures. Please try a smaller bounding box or contact support."
+        )
 
     # Convert closures to response format with geometry
     closure_dicts = service.get_closures_with_geometry(closures, validate_openlr=validate_openlr)
