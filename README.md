@@ -168,6 +168,83 @@ open http://localhost:3000/closure-aware-routing
 👉 **[Backend Setup Guide](./backend/README.md)**
 👉 **[Frontend Setup Guide](./frontend/README.md)**
 
+## 🚀 Production Deployment
+
+### Prerequisites for Production
+
+-   **Server**: Ubuntu 20.04+ or similar Linux distribution
+-   **Docker & Docker Compose**: Latest stable versions
+-   **Domain Names**: DNS configured for your domains (e.g., closures.osm.ch)
+-   **SSL Certificates**: Let's Encrypt (automated setup included)
+
+### SSL Certificate Setup
+
+The application includes automated SSL certificate management using Let's Encrypt:
+
+1. **Initial Certificate Setup**:
+
+   ```bash
+   # Install certbot on the host system
+   sudo apt-get update
+   sudo apt-get install certbot
+
+   # Obtain certificates for your domains
+   sudo certbot certonly --standalone \
+     -d closures.osm.ch \
+     -d api.closures.osm.ch \
+     --email your-email@example.com \
+     --agree-tos
+   ```
+
+2. **Automated Renewal**:
+
+   The `docker-compose.prod.yml` includes a certbot service that automatically renews certificates twice daily.
+
+   Alternatively, use the provided renewal script:
+
+   ```bash
+   sudo ./scripts/renew_ssl.sh
+   ```
+
+3. **Troubleshooting Expired Certificates**:
+
+   If you see `ERR_CERT_DATE_INVALID` or similar SSL errors:
+
+   ```bash
+   # Renew certificates immediately
+   sudo ./scripts/renew_ssl.sh
+
+   # Or manually with certbot
+   sudo certbot renew
+   docker exec osm_closures_nginx_prod nginx -s reload
+   ```
+
+📖 **[Complete SSL Certificate Setup Guide](./docs/SSL_CERTIFICATE_SETUP.md)**
+
+### Production Deployment Steps
+
+1. **Clone and Configure**:
+
+   ```bash
+   git clone https://github.com/Archit1706/temporary-road-closures
+   cd temporary-road-closures
+   cp .env.prod.example .env.prod
+   # Edit .env.prod with your production settings
+   ```
+
+2. **Deploy Application**:
+
+   ```bash
+   ./scripts/deploy_prod.sh
+   ```
+
+3. **Verify Services**:
+   ```bash
+   docker-compose -f docker-compose.prod.yml ps
+   curl https://closures.osm.ch
+   curl https://api.closures.osm.ch/health
+   ```
+
 ## 🏗️ Architecture
 
 ```

@@ -178,6 +178,21 @@ services:
             timeout: 10s
             retries: 3
 
+    # Certbot for SSL certificate management
+    certbot:
+        image: certbot/certbot:latest
+        container_name: osm_closures_certbot_prod
+        volumes:
+            - /etc/letsencrypt:/etc/letsencrypt
+            - /var/lib/letsencrypt:/var/lib/letsencrypt
+            - /var/log/letsencrypt:/var/log/letsencrypt
+        depends_on:
+            - nginx
+        networks:
+            - osm_network
+        # Automatically renew certificates twice daily
+        entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot --webroot-path=/var/lib/letsencrypt --quiet --deploy-hook 'docker exec osm_closures_nginx_prod nginx -s reload' ; sleep 12h & wait $${!}; done;"
+
 volumes:
     postgres_data_prod:
         driver: local
