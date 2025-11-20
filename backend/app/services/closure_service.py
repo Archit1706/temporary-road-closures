@@ -833,15 +833,44 @@ class ClosureService:
             tuple: Parsed coordinates rounded to 5 decimal places
 
         Raises:
-            ValidationException: If bbox format is invalid
+            ValidationException: If bbox format is invalid or too large
         """
         try:
             coords = [round(float(x.strip()), 5) for x in bbox.split(",")]
             if len(coords) != 4:
                 raise ValueError("Must have exactly 4 coordinates")
+
+            min_lon, min_lat, max_lon, max_lat = coords
+
+            # Validate coordinate ranges
+            if not (-180 <= min_lon <= 180) or not (-180 <= max_lon <= 180):
+                raise ValueError(f"Longitude must be between -180 and 180, got: {min_lon}, {max_lon}")
+            if not (-90 <= min_lat <= 90) or not (-90 <= max_lat <= 90):
+                raise ValueError(f"Latitude must be between -90 and 90, got: {min_lat}, {max_lat}")
+
+            # Validate min < max
+            if min_lon >= max_lon:
+                raise ValueError(f"min_lon ({min_lon}) must be less than max_lon ({max_lon})")
+            if min_lat >= max_lat:
+                raise ValueError(f"min_lat ({min_lat}) must be less than max_lat ({max_lat})")
+
+            # Calculate bbox area
+            bbox_width = max_lon - min_lon
+            bbox_height = max_lat - min_lat
+            bbox_area = bbox_width * bbox_height
+
+            # Check if bbox area exceeds maximum allowed
+            max_area = settings.MAX_BBOX_AREA
+            if bbox_area > max_area:
+                raise ValueError(
+                    f"Bounding box area ({bbox_area:.2f} sq degrees) exceeds maximum allowed "
+                    f"({max_area} sq degrees). Please use a smaller area or fetch data in smaller chunks. "
+                    f"Current bbox dimensions: {bbox_width:.2f}° × {bbox_height:.2f}°"
+                )
+
             return tuple(coords)
         except (ValueError, IndexError) as e:
-            raise ValidationException(f"Invalid bounding box format: {e}")
+            raise ValidationException(f"Invalid bounding box: {e}")
 
     def _can_edit_closure(self, closure: Closure, user: User) -> bool:
         """

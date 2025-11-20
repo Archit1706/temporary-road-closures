@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     MAX_PAGE_SIZE: int = 1000
 
     # Spatial query limits
-    MAX_BBOX_AREA: float = 1.0  # Maximum bounding box area in square degrees
+    MAX_BBOX_AREA: float = 25.0  # Maximum bounding box area in square degrees (e.g., ~5° × 5° = ~555km × 555km at equator)
 
     # OpenLR Configuration
     OPENLR_ENABLED: bool = True
