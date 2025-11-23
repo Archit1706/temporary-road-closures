@@ -252,6 +252,7 @@ async def oauth_login(
     provider: str,
     request: Request,
     redirect_uri: Optional[str] = Query(None, description="Custom redirect URI"),
+    redirect: Optional[str] = Query(None, description="Frontend redirect path after successful auth"),
 ):
     """
     Initiate OAuth login flow.
@@ -259,10 +260,12 @@ async def oauth_login(
     **Supported providers:**
     - `google`: Google OAuth
     - `github`: GitHub OAuth
+    - `osm`: OpenStreetMap OAuth
 
     **Parameters:**
     - **provider**: OAuth provider name
     - **redirect_uri**: Optional custom redirect URI (defaults to configured URI)
+    - **redirect**: Optional frontend path to redirect to after successful authentication
 
     Returns a redirect to the OAuth provider's authorization page.
     After user authorization, they'll be redirected back to the callback endpoint.
@@ -282,13 +285,31 @@ async def oauth_login(
         # In production, use secure session storage
 
         response = RedirectResponse(url=auth_url)
+
+        # Determine if we should use secure cookies based on the environment
+        # Use secure cookies in production, but allow non-secure in development
+        use_secure = not settings.DEBUG and settings.ENVIRONMENT == "production"
+
+        # Set state cookie with appropriate security settings
         response.set_cookie(
             key=f"oauth_state_{provider}",
             value=state,
             max_age=600,  # 10 minutes
             httponly=True,
-            secure=not settings.DEBUG,
+            secure=use_secure,
+            samesite="lax",  # Allow cross-site for OAuth callback
         )
+
+        # Store the frontend redirect path if provided
+        if redirect:
+            response.set_cookie(
+                key=f"oauth_redirect_{provider}",
+                value=redirect,
+                max_age=600,  # 10 minutes
+                httponly=True,
+                secure=use_secure,
+                samesite="lax",
+            )
 
         return response
 
@@ -331,6 +352,9 @@ async def oauth_callback(
             detail="OAuth authentication is disabled",
         )
 
+    # Get the stored redirect path (defaults to /closures if not specified)
+    frontend_redirect = request.cookies.get(f"oauth_redirect_{provider}") or "/closures"
+
     # Check for OAuth errors
     if error:
         error_url = (
@@ -345,39 +369,60 @@ async def oauth_callback(
     try:
         # Validate state parameter
         stored_state = request.cookies.get(f"oauth_state_{provider}")
-        if not stored_state or stored_state != state:
+        if not stored_state:
+            print(f"❌ OAuth callback error: No stored state found for provider {provider}")
+            error_url = f"{settings.FRONTEND_URL}{settings.OAUTH_ERROR_REDIRECT}&reason=missing_state"
+            return RedirectResponse(url=error_url)
+
+        if stored_state != state:
+            print(f"❌ OAuth callback error: State mismatch for provider {provider}")
             error_url = f"{settings.FRONTEND_URL}{settings.OAUTH_ERROR_REDIRECT}&reason=invalid_state"
             return RedirectResponse(url=error_url)
+
+        print(f"✅ OAuth state validation successful for provider {provider}")
 
         # Exchange code for token and get user info
         oauth_service = OAuthService()
         access_token = await oauth_service.exchange_code_for_token(
             provider, code, state
         )
+        print(f"✅ OAuth access token obtained for provider {provider}")
+
         oauth_user = await oauth_service.get_user_info(provider, access_token)
+        print(f"✅ OAuth user info retrieved: {oauth_user.username or oauth_user.name} ({oauth_user.provider_id})")
 
         # Create or get user
         user_service = UserService(db)
         user = user_service.create_or_get_oauth_user(oauth_user)
+        print(f"✅ User created/updated in database: {user.username} (ID: {user.id})")
 
         # Create JWT token for our application
         token_data = user_service.create_access_token_for_user(user)
 
-        # Redirect to frontend with token
-        success_url = f"{settings.FRONTEND_URL}{settings.OAUTH_SUCCESS_REDIRECT}"
-        success_url += (
-            f"?token={token_data['access_token']}&expires_in={token_data['expires_in']}"
-        )
+        # Redirect to frontend with token (use stored redirect path)
+        success_url = f"{settings.FRONTEND_URL}{frontend_redirect}"
+        # Use hash parameter if redirect already has query params
+        if "?" in frontend_redirect:
+            success_url += f"&token={token_data['access_token']}&expires_in={token_data['expires_in']}"
+        else:
+            success_url += f"?token={token_data['access_token']}&expires_in={token_data['expires_in']}"
+
+        print(f"✅ OAuth login successful, redirecting to: {frontend_redirect}")
 
         response = RedirectResponse(url=success_url)
 
-        # Clear OAuth state cookie
+        # Clear OAuth cookies
         response.delete_cookie(f"oauth_state_{provider}")
+        response.delete_cookie(f"oauth_redirect_{provider}")
 
         return response
 
     except Exception as e:
-        error_url = f"{settings.FRONTEND_URL}{settings.OAUTH_ERROR_REDIRECT}&reason=authentication_failed"
+        print(f"❌ OAuth callback error for provider {provider}: {str(e)}")
+        print(f"   Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
+        error_url = f"{settings.FRONTEND_URL}{settings.OAUTH_ERROR_REDIRECT}&reason=authentication_failed&details={str(e)[:100]}"
         return RedirectResponse(url=error_url)
 
 

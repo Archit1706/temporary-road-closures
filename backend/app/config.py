@@ -120,7 +120,7 @@ class Settings(BaseSettings):
 
     # Frontend URLs for OAuth redirect
     FRONTEND_URL: str = "http://localhost:3000"
-    OAUTH_SUCCESS_REDIRECT: str = "/dashboard"
+    OAUTH_SUCCESS_REDIRECT: str = "/closures"
     OAUTH_ERROR_REDIRECT: str = "/login?error=oauth_failed"
 
     # OAuth session configuration
