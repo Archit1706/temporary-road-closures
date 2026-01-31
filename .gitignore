@@ -336,3 +336,6 @@ dist
 .pnp.*
 
 .env.prod
+
+*/tests/*
+*/scripts/*
