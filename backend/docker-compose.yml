@@ -2,6 +2,7 @@ services:
     # PostgreSQL database with PostGIS
     db:
         image: postgis/postgis:15-3.5
+        platform: linux/amd64
         container_name: osm_closures_db
         environment:
             POSTGRES_DB: osm_closures_dev
