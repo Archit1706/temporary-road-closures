@@ -339,3 +339,6 @@ dist
 
 */tests/*
 */scripts/*
+
+# MacOS specific files
+.DS_Store
