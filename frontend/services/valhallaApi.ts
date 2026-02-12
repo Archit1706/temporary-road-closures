@@ -14,6 +14,7 @@ export interface ValhallaLocation {
     search_cutoff?: number;
     node_snap_tolerance?: number;
     way_id?: number;
+    original_index?: number;
 }
 
 export interface ValhallaRequest {
