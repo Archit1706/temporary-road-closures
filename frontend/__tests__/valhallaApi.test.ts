@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ValhallaAPI, ValhallaResponse } from '../services/valhallaApi';
+import { ValhallaAPI, ValhallaResponse, decodePolyline } from '../services/valhallaApi';
 
 describe('routeToGeoJSON', () => {
   it('swaps latitude and longitude for GeoJSON', () => {
@@ -122,5 +122,19 @@ describe('getRouteStats', () => {
       has_ferry: false,
       maneuvers_count: 4
     });
+  });
+});
+
+describe('decodePolyLine', () => {
+  it('decodes an encoded polyline string into a list of geographic coordinates', () => {
+    const mockPolyString = "_p~iF~ps|U_ulLnnqC_mqNvxq`@"
+
+    const result = decodePolyline(mockPolyString, 5);
+
+    expect(result).toEqual([
+      [38.5,  -120.2],
+      [40.7,  -120.95],
+      [43.252, -126.453]
+    ]);
   });
 });
