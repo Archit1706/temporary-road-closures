@@ -18,109 +18,109 @@ describe('routeToGeoJSON', () => {
 });
 
 describe('getRouteStats', () => {
-    it('should extract correct summary statistics', () => {
-        const api = new ValhallaAPI();
+  it('should extract correct summary statistics', () => {
+    const api = new ValhallaAPI();
 
-        const mockValhallaResponse = {
-            trip: {
-              status: 0,
-              status_message: 'Found route between points',
-              summary: {
-                has_time_restrictions: false,
-                has_toll: true,
-                has_highway: true,
-                has_ferry: false,
-                min_lat: 52.51,
-                min_lon: 13.39,
-                max_lat: 52.54,
-                max_lon: 13.45,
-                time: 915,
-                length: 18.6,
-                cost: 915
+    const mockValhallaResponse = {
+      trip: {
+        status: 0,
+        status_message: 'Found route between points',
+        summary: {
+          has_time_restrictions: false,
+          has_toll: true,
+          has_highway: true,
+          has_ferry: false,
+          min_lat: 52.51,
+          min_lon: 13.39,
+          max_lat: 52.54,
+          max_lon: 13.45,
+          time: 915,
+          length: 18.6,
+          cost: 915
+        },
+        legs: [
+          {
+            summary: {
+              has_time_restrictions: false,
+              has_toll: true,
+              has_highway: true,
+              has_ferry: false,
+              min_lat: 52.51,
+              min_lon: 13.39,
+              max_lat: 52.54,
+              max_lon: 13.45,
+              time: 915,
+              length: 18.6,
+              cost: 915
+            },
+            maneuvers: [
+              {
+                type: 1,
+                instruction: 'Start out going east on First Street.',
+                time: 30,
+                length: 0.3,
+                begin_shape_index: 0,
+                end_shape_index: 2,
+                street_names: ['First Street']
               },
-              legs: [
-                {
-                    summary: {
-                        has_time_restrictions: false,
-                        has_toll: true,
-                        has_highway: true,
-                        has_ferry: false,
-                        min_lat: 52.51,
-                        min_lon: 13.39,
-                        max_lat: 52.54,
-                        max_lon: 13.45,
-                        time: 915,
-                        length: 18.6,
-                        cost: 915
-                    },
-                  maneuvers: [
-                    {
-                      type: 1,
-                      instruction: 'Start out going east on First Street.',
-                      time: 30,
-                      length: 0.3,
-                      begin_shape_index: 0,
-                      end_shape_index: 2,
-                      street_names: ['First Street']
-                    },
-                    {
-                      type: 10,
-                      instruction: 'Turn right onto Highway A10.',
-                      time: 300,
-                      length: 8.5,
-                      begin_shape_index: 2,
-                      end_shape_index: 20,
-                      street_names: ['A10']
-                    },
-                    {
-                      type: 10,
-                      instruction: 'Take the toll exit toward City Center.',
-                      time: 420,
-                      length: 9.5,
-                      begin_shape_index: 20,
-                      end_shape_index: 45,
-                      street_names: ['Toll Road']
-                    },
-                    {
-                      type: 4,
-                      instruction: 'You have arrived at your destination.',
-                      time: 0,
-                      length: 0,
-                      begin_shape_index: 45,
-                      end_shape_index: 45
-                    }
-                  ],
-                  shape: '}_ilFz~vpM??a@c@_@c@',
-                }
-              ],
-              locations: [
-                {
-                  lat: 52.510008,
-                  lon: 13.399954,
-                  type: 'break',
-                  original_index: 0
-                },
-                {
-                  lat: 52.540876,
-                  lon: 13.449321,
-                  type: 'break',
-                  original_index: 1
-                }
-              ],
-              units: 'kilometers',
-              language: 'en-US'
-            }
-          } as ValhallaResponse;
-          
-        const result = api.getRouteStats(mockValhallaResponse);
+              {
+                type: 10,
+                instruction: 'Turn right onto Highway A10.',
+                time: 300,
+                length: 8.5,
+                begin_shape_index: 2,
+                end_shape_index: 20,
+                street_names: ['A10']
+              },
+              {
+                type: 10,
+                instruction: 'Take the toll exit toward City Center.',
+                time: 420,
+                length: 9.5,
+                begin_shape_index: 20,
+                end_shape_index: 45,
+                street_names: ['Toll Road']
+              },
+              {
+                type: 4,
+                instruction: 'You have arrived at your destination.',
+                time: 0,
+                length: 0,
+                begin_shape_index: 45,
+                end_shape_index: 45
+              }
+            ],
+            shape: '}_ilFz~vpM??a@c@_@c@',
+          }
+        ],
+        locations: [
+          {
+            lat: 52.510008,
+            lon: 13.399954,
+            type: 'break',
+            original_index: 0
+          },
+          {
+            lat: 52.540876,
+            lon: 13.449321,
+            type: 'break',
+            original_index: 1
+          }
+        ],
+        units: 'kilometers',
+        language: 'en-US'
+      }
+    } as ValhallaResponse;
 
-        expect(result).toEqual({
-            distance_km: 18.6,
-            time_minutes: 15.3,
-            has_toll: true,
-            has_highway: true,
-            has_ferry: false,
-            maneuvers_count: 4
-        });
+    const result = api.getRouteStats(mockValhallaResponse);
+
+    expect(result).toEqual({
+      distance_km: 18.6,
+      time_minutes: 15.3,
+      has_toll: true,
+      has_highway: true,
+      has_ferry: false,
+      maneuvers_count: 4
     });
+  });
 });
