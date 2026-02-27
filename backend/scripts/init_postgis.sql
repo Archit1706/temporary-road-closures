@@ -41,8 +41,10 @@ END $$;
 -- Set default timezone
 SET timezone = 'UTC';
 
--- Grant permissions
-GRANT ALL PRIVILEGES ON DATABASE osm_closures_dev TO postgres;
+-- Grant permissions (uses current database so this script works in both dev and prod)
+DO $$ BEGIN
+    EXECUTE 'GRANT ALL PRIVILEGES ON DATABASE ' || current_database() || ' TO postgres';
+END $$;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 
