@@ -339,3 +339,4 @@ dist
 
 */tests/*
 */scripts/*
+*.claude/
