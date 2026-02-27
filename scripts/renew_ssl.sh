@@ -42,11 +42,10 @@ certbot renew \
 
 step "Reloading nginx to apply any new certificates..."
 if docker ps --format '{{.Names}}' | grep -q "^${NGINX_CONTAINER}$"; then
-    if docker exec "$NGINX_CONTAINER" nginx -t 2>&1; then
-        docker exec "$NGINX_CONTAINER" nginx -s reload
+    if docker exec "$NGINX_CONTAINER" nginx -s reload; then
         green "  Nginx reloaded"
     else
-        yellow "  WARNING: nginx config test failed – NOT reloading. Check: docker logs $NGINX_CONTAINER"
+        yellow "  WARNING: nginx reload failed. Check: docker logs $NGINX_CONTAINER"
     fi
 else
     yellow "  WARNING: container '$NGINX_CONTAINER' is not running"

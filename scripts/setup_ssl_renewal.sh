@@ -62,11 +62,12 @@ CONTAINER="osm_closures_nginx_prod"
 LOG_TAG="certbot-deploy-hook"
 
 if docker ps --format '{{.Names}}' | grep -q "^${CONTAINER}$"; then
-    if docker exec "$CONTAINER" nginx -t 2>&1 | logger -t "$LOG_TAG"; then
-        docker exec "$CONTAINER" nginx -s reload
+    # nginx -s reload already tests the config before reloading; no separate -t needed.
+    # Running -t separately produces warnings on stderr that certbot misreports as hook errors.
+    if docker exec "$CONTAINER" nginx -s reload 2>&1 | logger -t "$LOG_TAG"; then
         echo "[$(date -Iseconds)] nginx reloaded OK after cert renewal" | logger -t "$LOG_TAG"
     else
-        echo "[$(date -Iseconds)] nginx config test FAILED – not reloading" | logger -t "$LOG_TAG" >&2
+        echo "[$(date -Iseconds)] nginx reload FAILED" | logger -t "$LOG_TAG" >&2
         exit 1
     fi
 else
@@ -79,23 +80,38 @@ green "  Deploy hook installed"
 # --- 5. Ensure webroot directory exists (nginx serves challenges from here) ---
 mkdir -p "$WEBROOT"
 
-# --- 6. Force-renew all configured certs ---
-# --force-renewal bypasses the "30 days before expiry" guard, renewing immediately.
-# This fixes any currently expired cert.
-step "Force-renewing all certificates..."
-certbot renew \
+# --- 6. Issue/renew certs with certonly + webroot ---
+# Using 'certonly' (not 'renew') is critical: it saves the renewal config with
+# installer=None, so certbot will never try to restart the host's nginx after renewal.
+# Previously using 'renew' with installer=nginx caused "bind() Address already in use"
+# errors because Docker already owns ports 80/443 on the host.
+step "Issuing/renewing certificates with certonly --webroot..."
+
+FRONTEND_DOMAIN="closures.osm.ch"
+API_DOMAIN="api.closures.osm.ch"
+
+certbot certonly \
     --webroot \
     --webroot-path="$WEBROOT" \
+    --cert-name "$FRONTEND_DOMAIN" \
+    -d "$FRONTEND_DOMAIN" \
+    --force-renewal \
+    --non-interactive
+
+certbot certonly \
+    --webroot \
+    --webroot-path="$WEBROOT" \
+    --cert-name "$API_DOMAIN" \
+    -d "$API_DOMAIN" \
     --force-renewal \
     --non-interactive
 
 # --- 7. Reload nginx to pick up the fresh certs ---
 step "Reloading nginx..."
-if docker exec "$NGINX_CONTAINER" nginx -t 2>&1; then
-    docker exec "$NGINX_CONTAINER" nginx -s reload
+if docker exec "$NGINX_CONTAINER" nginx -s reload; then
     green "  Nginx reloaded – new certificates are now active"
 else
-    yellow "  WARNING: nginx config test failed. Check nginx logs:"
+    yellow "  WARNING: nginx reload failed. Check nginx logs:"
     yellow "    docker logs $NGINX_CONTAINER"
 fi
 
