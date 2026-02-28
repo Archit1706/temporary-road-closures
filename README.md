@@ -573,3 +573,5 @@ This Google Summer of Code 2025 project has successfully delivered:
 _Building the future of open navigation data, one closure at a time. 🗺️✨_
 
 **"Temporary closures, permanent solutions"** - Making OSM navigation smarter for everyone.
+
+[somesh-ma](https://github.com/somesh-max/temporary-road-closures)
