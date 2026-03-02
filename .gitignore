@@ -342,3 +342,5 @@ dist
 
 # MacOS specific files
 .DS_Store
+
+*.claude/

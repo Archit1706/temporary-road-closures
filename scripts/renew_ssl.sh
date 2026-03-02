@@ -1,96 +1,58 @@
 #!/bin/bash
+# Manual SSL certificate renewal for OSM Road Closures.
+#
+# Normally you do NOT need to run this — the systemd timer (or cron job) installed
+# by setup_ssl_renewal.sh handles it automatically.
+#
+# Usage:
+#   sudo bash scripts/renew_ssl.sh           # renew only if near expiry (<30 days)
+#   sudo bash scripts/renew_ssl.sh --force   # renew immediately regardless of expiry
 
-# SSL Certificate Renewal Script for OSM Road Closures
-# This script renews Let's Encrypt SSL certificates for closures.osm.ch
-set -e
+set -euo pipefail
 
-echo "🔐 SSL Certificate Renewal for OSM Road Closures"
+NGINX_CONTAINER="osm_closures_nginx_prod"
+WEBROOT="/var/lib/letsencrypt"
+FORCE_FLAG=""
+[[ ${1:-} == "--force" ]] && FORCE_FLAG="--force-renewal"
+
+# --- helpers ---
+green()  { printf '\e[0;32m%s\e[0m\n' "$*"; }
+yellow() { printf '\e[1;33m%s\e[0m\n' "$*"; }
+red()    { printf '\e[0;31mERROR: %s\e[0m\n' "$*" >&2; exit 1; }
+step()   { echo ""; printf '\e[0;32m==> %s\e[0m\n' "$*"; }
+
 echo "================================================"
+echo " SSL Certificate Renewal – OSM Road Closures"
+echo "================================================"
+[[ -n "$FORCE_FLAG" ]] && echo " Mode: FORCE (renewing regardless of expiry)"
 
-# Check if running as root
-if [ "$EUID" -ne 0 ]; then
-    echo "❌ Error: This script must be run as root (use sudo)"
-    exit 1
+[[ $EUID -eq 0 ]] || red "Run as root:  sudo bash $0 ${1:-}"
+command -v certbot &>/dev/null \
+    || red "certbot is not installed. Run: sudo bash scripts/setup_ssl_renewal.sh"
+
+step "Current certificate status"
+certbot certificates
+
+step "Renewing certificates..."
+certbot renew \
+    --webroot \
+    --webroot-path="$WEBROOT" \
+    --non-interactive \
+    $FORCE_FLAG
+
+step "Reloading nginx to apply any new certificates..."
+if docker ps --format '{{.Names}}' | grep -q "^${NGINX_CONTAINER}$"; then
+    if docker exec "$NGINX_CONTAINER" nginx -s reload; then
+        green "  Nginx reloaded"
+    else
+        yellow "  WARNING: nginx reload failed. Check: docker logs $NGINX_CONTAINER"
+    fi
+else
+    yellow "  WARNING: container '$NGINX_CONTAINER' is not running"
 fi
 
-# Check if certbot is installed
-if ! command -v certbot &> /dev/null; then
-    echo "❌ Error: certbot is not installed"
-    echo "💡 Install certbot with: sudo apt-get update && sudo apt-get install certbot python3-certbot-nginx"
-    exit 1
-fi
-
-# Domain names
-FRONTEND_DOMAIN="closures.osm.ch"
-API_DOMAIN="api.closures.osm.ch"
-
-echo ""
-echo "📋 Checking current certificate status..."
-echo ""
-
-# Check current certificates
+step "Updated certificate status"
 certbot certificates
 
 echo ""
-echo "🔄 Renewing SSL certificates..."
-echo ""
-
-# Renew certificates (dry-run first to test)
-echo "Running dry-run to test renewal..."
-certbot renew --dry-run
-
-if [ $? -eq 0 ]; then
-    echo "✅ Dry-run successful! Proceeding with actual renewal..."
-    echo ""
-
-    # Actual renewal
-    certbot renew --quiet
-
-    if [ $? -eq 0 ]; then
-        echo "✅ SSL certificates renewed successfully!"
-        echo ""
-
-        # Reload nginx to use new certificates
-        echo "🔄 Reloading nginx to apply new certificates..."
-
-        # Check if nginx is running in Docker
-        if docker ps | grep -q osm_closures_nginx_prod; then
-            echo "Detected Docker nginx container..."
-            docker exec osm_closures_nginx_prod nginx -t
-            docker exec osm_closures_nginx_prod nginx -s reload
-            echo "✅ Nginx reloaded successfully!"
-        else
-            # Reload system nginx
-            nginx -t && systemctl reload nginx
-            echo "✅ System nginx reloaded successfully!"
-        fi
-
-        echo ""
-        echo "📊 New certificate details:"
-        certbot certificates
-
-        echo ""
-        echo "✨ Certificate renewal complete!"
-        echo ""
-        echo "🔗 Your domains are now secured with renewed SSL certificates:"
-        echo "   - https://$FRONTEND_DOMAIN"
-        echo "   - https://$API_DOMAIN"
-
-    else
-        echo "❌ Error: Certificate renewal failed"
-        exit 1
-    fi
-else
-    echo "❌ Error: Dry-run failed. Please check certbot configuration"
-    exit 1
-fi
-
-# Show expiration dates
-echo ""
-echo "📅 Certificate expiration dates:"
-certbot certificates | grep "Expiry Date"
-
-echo ""
-echo "💡 Tip: Set up automatic renewal with a cron job:"
-echo "   sudo crontab -e"
-echo "   Add: 0 0 * * * /path/to/renew_ssl.sh >> /var/log/certbot-renewal.log 2>&1"
+green "Done."

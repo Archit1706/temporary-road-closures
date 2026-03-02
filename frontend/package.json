@@ -35,6 +35,6 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "critters": "^0.0.24"
+    "beasties": "^0.1.0"
   }
 }
