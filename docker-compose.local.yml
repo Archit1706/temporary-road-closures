@@ -1,0 +1,142 @@
+# Local production-parity compose file.
+# Uses the same Dockerfile.prod images and settings as docker-compose.prod.yml
+# but exposes ports directly (no nginx/certbot needed locally).
+#
+# Usage:
+#   docker compose -f docker-compose.local.yml up --build
+#
+# Requires .env.prod to exist (copy .env.prod.example and fill in values).
+
+services:
+    # PostgreSQL database with PostGIS
+    db:
+        image: postgis/postgis:15-3.5
+        container_name: osm_closures_db_local
+        env_file:
+            - .env.prod
+        environment:
+            POSTGRES_DB: osm_closures_prod
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: ${DB_PASSWORD}
+            POSTGRES_HOST_AUTH_METHOD: md5
+        volumes:
+            - postgres_data_local:/var/lib/postgresql/data
+            - ./backend/scripts/init_postgis.sql:/docker-entrypoint-initdb.d/init_postgis.sql
+        ports:
+            - "5432:5432"
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U postgres"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # Redis for caching and rate limiting
+    redis:
+        image: redis:7-alpine
+        container_name: osm_closures_redis_local
+        volumes:
+            - redis_data_local:/data
+        ports:
+            - "6379:6379"
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+
+    # FastAPI backend application (production image)
+    api:
+        build:
+            context: ./backend
+            dockerfile: Dockerfile.prod
+        container_name: osm_closures_api_local
+        env_file:
+            - .env.prod
+        environment:
+            DATABASE_URL: postgresql://postgres:${DB_PASSWORD}@db:5432/osm_closures_prod
+            REDIS_URL: redis://redis:6379/0
+            SECRET_KEY: ${SECRET_KEY}
+            DEBUG: ${DEBUG}
+            ENVIRONMENT: ${ENVIRONMENT}
+            OPENLR_ENABLED: ${OPENLR_ENABLED}
+            OPENLR_FORMAT: ${OPENLR_FORMAT}
+            OPENLR_ACCURACY_TOLERANCE: ${OPENLR_ACCURACY_TOLERANCE}
+            LOG_LEVEL: ${LOG_LEVEL}
+            # Allow localhost origins for local testing
+            ALLOWED_ORIGINS: '["http://localhost:3000", "http://127.0.0.1:3000"]'
+            ALLOWED_HOSTS: '["localhost", "127.0.0.1"]'
+        ports:
+            - "8000:8000"
+        depends_on:
+            db:
+                condition: service_healthy
+            redis:
+                condition: service_healthy
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+            interval: 10s
+            timeout: 10s
+            retries: 10
+            start_period: 30s
+        command: >
+            sh -c "
+              echo 'Waiting for database to be ready...' &&
+              until python -c \"import psycopg2; psycopg2.connect('${DATABASE_URL}')\" 2>/dev/null; do
+                echo 'Database not ready, waiting...'
+                sleep 2
+              done &&
+              echo 'Database is ready!' &&
+              echo 'Initializing database...' &&
+              python scripts/init_db.py &&
+              echo 'Starting application...' &&
+              gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --access-logfile - --error-logfile - --timeout 120
+            "
+
+    # Next.js frontend application (production image)
+    frontend:
+        build:
+            context: ./frontend
+            dockerfile: Dockerfile.prod
+            args:
+                # Point to localhost API for local testing
+                NEXT_PUBLIC_API_URL: http://localhost:8000
+        container_name: osm_closures_frontend_local
+        environment:
+            NODE_ENV: production
+            NEXT_PUBLIC_API_URL: http://localhost:8000
+            NEXT_PUBLIC_VALHALLA_URL: https://valhalla1.openstreetmap.de/route
+            NEXT_PUBLIC_USE_MOCK_API: "false"
+            NEXT_PUBLIC_DEBUG_ROUTING: "false"
+        ports:
+            - "3000:3000"
+        depends_on:
+            api:
+                condition: service_healthy
+        networks:
+            - osm_network
+        restart: unless-stopped
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3000"]
+            interval: 10s
+            timeout: 10s
+            retries: 10
+            start_period: 15s
+
+volumes:
+    postgres_data_local:
+        driver: local
+    redis_data_local:
+        driver: local
+
+networks:
+    osm_network:
+        driver: bridge

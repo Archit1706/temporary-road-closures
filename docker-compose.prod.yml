@@ -178,20 +178,15 @@ services:
             timeout: 10s
             retries: 3
 
-    # Certbot for SSL certificate management
-    certbot:
-        image: certbot/certbot:latest
-        container_name: osm_closures_certbot_prod
-        volumes:
-            - /etc/letsencrypt:/etc/letsencrypt
-            - /var/lib/letsencrypt:/var/lib/letsencrypt
-            - /var/log/letsencrypt:/var/log/letsencrypt
-        depends_on:
-            - nginx
-        networks:
-            - osm_network
-        # Automatically renew certificates twice daily
-        entrypoint: /bin/sh -c "trap exit TERM; while :; do certbot renew --webroot --webroot-path=/var/lib/letsencrypt --quiet --deploy-hook 'docker exec osm_closures_nginx_prod nginx -s reload' ; sleep 12h & wait $${!}; done;"
+    # NOTE: SSL certificate renewal is handled by the HOST's certbot, not a Docker container.
+    # The certbot/certbot Docker image has no Docker CLI, so --deploy-hook 'docker exec nginx ...'
+    # silently fails inside the container — nginx never reloads and certs go stale.
+
+    # Run the one-time setup on the production server:
+    #   sudo bash scripts/setup_ssl_renewal.sh
+
+    # That installs host certbot, a deploy hook that reloads this nginx container,
+    # and enables the systemd timer for twice-daily automatic renewal.
 
 volumes:
     postgres_data_prod:

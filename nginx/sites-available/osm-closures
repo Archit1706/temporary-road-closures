@@ -40,8 +40,9 @@ server {
 
 # HTTPS API Server Configuration
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
     server_name api.closures.osm.ch;
     
     # SSL Configuration (will be added by certbot)
@@ -144,8 +145,9 @@ server {
 
 # HTTPS Frontend Server Configuration
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
     server_name closures.osm.ch;
     
     # SSL Configuration (will be added by certbot)
@@ -206,8 +208,8 @@ server {
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
-    listen 443 ssl default_server;
-    listen [::]:443 ssl default_server;
+    listen 443 default_server ssl;
+    listen [::]:443 default_server ssl;
     server_name _;
     
     # SSL Configuration (placeholder certificates)
