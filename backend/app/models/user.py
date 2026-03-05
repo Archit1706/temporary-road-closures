@@ -2,7 +2,7 @@
 User model for authentication and authorization with OAuth support.
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, func, CheckConstraint
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, func, CheckConstraint
 from sqlalchemy.orm import relationship, Session
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone, timedelta
@@ -54,7 +54,7 @@ class User(BaseModel):
     provider_id = Column(String(255), nullable=True, doc="User ID from OAuth provider")
 
     avatar_url = Column(
-        String(255), nullable=True, doc="Avatar URL from OAuth provider"
+        Text, nullable=True, doc="Avatar URL from OAuth provider"
     )
 
     # User profile

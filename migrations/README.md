@@ -28,6 +28,19 @@ docker exec -i osm-closures-db psql -U postgres -d osm_closures < migrations/001
 
 ## Migration History
 
+### 003_widen_avatar_url_to_text.sql (2026-03-05)
+
+**Purpose**: Fix OAuth login failure caused by long avatar URLs (GitHub Issue #18)
+
+**Changes:**
+
+- Changed `avatar_url` column type from `VARCHAR(255)` to `TEXT`
+- Prevents `psycopg2.errors.StringDataRightTruncation` errors when OSM/Google return avatar URLs longer than 255 characters
+
+**Rollback**: `003_widen_avatar_url_to_text_rollback.sql`
+
+**Note**: This migration is required for OSM OAuth to work reliably. Run it against production to resolve the issue.
+
 ### 002_make_email_nullable_for_oauth.sql (2025-11-19)
 
 **Purpose**: Allow OAuth users without email addresses (e.g., OpenStreetMap)
