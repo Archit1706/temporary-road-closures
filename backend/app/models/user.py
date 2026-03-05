@@ -2,11 +2,21 @@
 User model for authentication and authorization with OAuth support.
 """
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, func, CheckConstraint
-from sqlalchemy.orm import relationship, Session
-from typing import Optional, List, Dict, Any
-from datetime import datetime, timezone, timedelta
 import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Column,
+    DateTime,
+    Integer,
+    String,
+    Text,
+    func,
+)
+from sqlalchemy.orm import Session, relationship
 
 from app.models.base import BaseModel
 
@@ -34,7 +44,7 @@ class User(BaseModel):
         unique=True,
         nullable=True,  # Allow OAuth users without email (e.g., OSM)
         index=True,
-        doc="User email address"
+        doc="User email address",
     )
 
     hashed_password = Column(
@@ -53,9 +63,7 @@ class User(BaseModel):
 
     provider_id = Column(String(255), nullable=True, doc="User ID from OAuth provider")
 
-    avatar_url = Column(
-        Text, nullable=True, doc="Avatar URL from OAuth provider"
-    )
+    avatar_url = Column(Text, nullable=True, doc="Avatar URL from OAuth provider")
 
     # User profile
     full_name = Column(String(255), nullable=True, doc="User's full name")

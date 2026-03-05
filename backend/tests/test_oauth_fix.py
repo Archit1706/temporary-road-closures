@@ -6,16 +6,16 @@ Verifies that:
 2. OAuth errors redirect to the login page with error query parameters
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
-from httpx import AsyncClient, ASGITransport
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+from httpx import ASGITransport, AsyncClient
+
+from app.core.database import get_db
+from app.main import app
+from app.models.user import User
 from app.schemas.user import OAuthUser
 from app.services.user_service import UserService
-from app.models.user import User
-from app.main import app
-from app.core.database import get_db
-
 
 LONG_AVATAR_URL = "https://www.openstreetmap.org/" + "a" * 570  # 600+ chars total
 
@@ -62,7 +62,9 @@ class TestAvatarUrlLongString:
         service = UserService(mock_db)
 
         # Mock _generate_unique_username to avoid extra DB queries
-        with patch.object(service, "_generate_unique_username", return_value="testuser_osm"):
+        with patch.object(
+            service, "_generate_unique_username", return_value="testuser_osm"
+        ):
             user = service.create_or_get_oauth_user(oauth_user)
 
         assert user is not None
@@ -83,6 +85,7 @@ class TestAvatarUrlLongString:
     def test_user_model_avatar_url_is_text_type(self):
         """Verify the User model avatar_url column is Text, not String(255)."""
         from sqlalchemy import Text
+
         column = User.__table__.columns["avatar_url"]
         assert isinstance(column.type, Text)
 
@@ -102,14 +105,14 @@ class TestOAuthErrorRedirect:
 
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 # Set the oauth_state cookie so state validation passes
                 client.cookies.set("oauth_state_osm", "test_state")
 
                 # Mock OAuthService.exchange_code_for_token to raise
-                with patch(
-                    "app.api.auth.OAuthService"
-                ) as MockOAuthService:
+                with patch("app.api.auth.OAuthService") as MockOAuthService:
                     mock_instance = MockOAuthService.return_value
                     mock_instance.exchange_code_for_token = AsyncMock(
                         side_effect=Exception("Token exchange failed")
@@ -144,7 +147,9 @@ class TestOAuthErrorRedirect:
 
         try:
             transport = ASGITransport(app=app)
-            async with AsyncClient(transport=transport, base_url="http://test") as client:
+            async with AsyncClient(
+                transport=transport, base_url="http://test"
+            ) as client:
                 with patch("app.api.auth.settings") as mock_settings:
                     mock_settings.OAUTH_ENABLED = True
                     mock_settings.FRONTEND_URL = "http://localhost:3000"
