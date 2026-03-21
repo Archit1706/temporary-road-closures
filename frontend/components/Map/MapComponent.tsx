@@ -858,6 +858,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 zoom={mapCenter.zoom}
                 className="h-full w-full"
                 zoomControl={true}
+                worldCopyJump={true}
             >
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
