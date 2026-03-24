@@ -343,7 +343,7 @@ export const authApi = {
         try {
             // Create form data for OAuth2 login
             const formData = new URLSearchParams();
-            formData.append('grant_type', '');
+            formData.append('grant_type', 'password');
             formData.append('username', username);
             formData.append('password', password);
             formData.append('scope', '');
