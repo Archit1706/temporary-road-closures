@@ -2,6 +2,9 @@
   "name": "frontend",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -41,7 +44,6 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^4.0.18",
-    "beasties": "^0.1.0"
+    "vitest": "^4.0.18"
   }
 }
