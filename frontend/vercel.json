@@ -1,0 +1,3 @@
+{
+  "installCommand": "npm install --omit=dev && npm install -D tailwindcss @tailwindcss/postcss typescript @types/react @types/react-dom @types/node @types/leaflet @types/react-syntax-highlighter eslint eslint-config-next @eslint/eslintrc beasties"
+}
