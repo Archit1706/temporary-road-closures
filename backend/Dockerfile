@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     gdal-bin \
     libgdal-dev \
-    libspatialite7 \
+    libspatialite-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
