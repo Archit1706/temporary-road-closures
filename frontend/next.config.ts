@@ -92,9 +92,7 @@ const nextConfig = {
     ];
   },
 
-  experimental: {
-    optimizeCss: true,
-  },
+  experimental: {},
 
   compiler: {
     removeConsole:
