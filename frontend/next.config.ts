@@ -101,7 +101,7 @@ const nextConfig = {
         : false,
   },
 
-  output: 'standalone',
+  output: process.env.VERCEL ? undefined : 'standalone',
 
   compress: true,
   poweredByHeader: false,
