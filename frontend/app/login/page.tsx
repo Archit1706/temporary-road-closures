@@ -22,6 +22,8 @@ function LoginContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const redirectTo = searchParams.get('redirect') || '/';
+    const oauthError = searchParams.get('error');
+    const oauthReason = searchParams.get('reason');
 
     const {
         register,
@@ -39,6 +41,22 @@ function LoginContent() {
             router.push(redirectTo);
         }
     }, [isAuthenticated, router, redirectTo]);
+
+    // Show OAuth error from redirect
+    useEffect(() => {
+        if (oauthError) {
+            const reasonMessages: Record<string, string> = {
+                'authentication_failed': 'Authentication failed. Please try again.',
+                'missing_parameters': 'OAuth callback was missing required parameters.',
+                'missing_state': 'OAuth session expired. Please try again.',
+                'invalid_state': 'OAuth security validation failed. Please try again.',
+            };
+            const message = oauthReason
+                ? reasonMessages[oauthReason] || `OAuth login failed: ${oauthReason}`
+                : 'OAuth login failed. Please try again.';
+            toast.error(message, { duration: 6000 });
+        }
+    }, [oauthError, oauthReason]);
 
     // Show warning after multiple failed attempts
     useEffect(() => {
@@ -156,6 +174,22 @@ function LoginContent() {
             {/* Form */}
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
                 <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+                    {/* OAuth error banner */}
+                    {oauthError && (
+                        <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-3">
+                            <div className="flex items-start space-x-2">
+                                <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                                <div className="text-sm text-red-700">
+                                    <p className="font-medium">OAuth login failed</p>
+                                    {oauthReason && (
+                                        <p className="text-xs mt-1">Reason: {oauthReason.replace(/_/g, ' ')}</p>
+                                    )}
+                                    <p className="text-xs mt-1">Please try again or use username and password.</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Login attempts warning */}
                     {loginAttempts > 0 && loginAttempts < 3 && (
                         <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-md p-3">

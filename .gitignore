@@ -338,5 +338,6 @@ dist
 .env.prod
 
 */tests/*
+!backend/tests/*
 */scripts/*
 *.claude/
