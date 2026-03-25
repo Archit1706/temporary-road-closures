@@ -341,3 +341,6 @@ dist
 !backend/tests/*
 */scripts/*
 *.claude/
+
+# MacOS specific files
+.DS_Store
