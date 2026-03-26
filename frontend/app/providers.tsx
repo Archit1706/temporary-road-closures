@@ -22,7 +22,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           </SidebarProvider>
         </TooltipProvider>
       </LocationProvider>
-      <Toaster position="top-right" />
+      <Toaster position="top-center" />
     </ClosuresProvider>
   );
 }

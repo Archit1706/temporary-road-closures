@@ -59,7 +59,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                     </div>
 
                     {/* Navigation and Actions */}
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-4 ml-auto">
                         {/* Server Status & Location */}
                         <div className="hidden md:flex items-center space-x-3">
                             <DemoControlPanel />

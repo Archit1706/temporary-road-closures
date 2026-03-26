@@ -327,7 +327,6 @@ const MapEventHandler: React.FC<{
                 // For Point geometry, only allow one point
                 if (geometryType === 'Point' && selectedPoints.length >= 1) {
                     toast('Point closure can only have one location. Clear existing point first.', {
-                        icon: '⚠️',
                         style: { background: '#fbbf24', color: '#92400e' }
                     });
                     return;
@@ -568,7 +567,7 @@ const MapEventHandler: React.FC<{
                     {routingState.error && (
                         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
                             <div className="flex items-center space-x-2">
-                                <span className="text-sm">⚠️ {routingState.error}</span>
+                                <span className="text-sm">Error: {routingState.error}</span>
                             </div>
                         </div>
                     )}
@@ -576,7 +575,7 @@ const MapEventHandler: React.FC<{
                     {routingState.hasRoute && selectedPoints.length >= 2 && (
                         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
                             <div className="flex items-center space-x-2">
-                                <span className="text-sm">✅ Route calculated ({routingState.routeCoordinates.length} points)</span>
+                                <span className="text-sm">Route calculated ({routingState.routeCoordinates.length} points)</span>
                             </div>
                         </div>
                     )}
@@ -587,7 +586,7 @@ const MapEventHandler: React.FC<{
             {geometryType === 'Point' && selectedPoints.length === 1 && (
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm">📍 Point location selected</span>
+                        <span className="text-sm">Point location selected</span>
                     </div>
                 </div>
             )}

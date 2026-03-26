@@ -591,7 +591,7 @@ function ClosuresPageContent() {
           <div className="flex items-center space-x-2">
             <Route className="w-4 h-4" />
             <span className="text-sm font-medium">
-              ✅ Valhalla route ready: {routeState.routeInfo.distance_km.toFixed(2)}km ({routeState.routeInfo.points_count} points)
+              Valhalla route ready: {routeState.routeInfo.distance_km.toFixed(2)}km ({routeState.routeInfo.points_count} points)
             </span>
           </div>
         </div>
@@ -603,7 +603,7 @@ function ClosuresPageContent() {
           <div className="flex items-center space-x-2">
             <Target className="w-4 h-4" />
             <span className="text-sm font-medium">
-              📍 Point location selected
+              Point location selected
             </span>
           </div>
         </div>

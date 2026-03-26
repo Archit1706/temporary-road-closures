@@ -303,11 +303,11 @@ const ClosureAwareRoutingPage: React.FC = () => {
         <div className="h-screen flex flex-col bg-gray-50">
             {/* Header */}
             <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-4 md:hidden">
                     <SidebarTrigger className="-ml-1" />
                 </div>
 
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-4 ml-auto">
                         {/* Route Statistics */}
                         {route && (
                             <div className="hidden md:flex items-center space-x-4 text-sm">
@@ -460,7 +460,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
             </div>
 
             {/* Notifications */}
-            <Toaster position="top-right" />
+            <Toaster position="top-center" />
         </div>
     );
 };
