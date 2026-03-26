@@ -7,6 +7,8 @@ import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User
 import RoutingForm from '@/components/Demo/RoutingForm';
 import ClosuresList from '@/components/Demo/ClosuresList';
 import { Closure } from '@/services/api';
+import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useLocationStatus } from '@/context/LocationContext';
 
 // Dynamically import map to avoid SSR issues
 const RoutingMapComponent = dynamic(
@@ -72,6 +74,22 @@ const ClosureAwareRoutingPage: React.FC = () => {
     const [closuresInPath, setClosuresInPath] = useState<any[]>([]);
     const [relevantClosures, setRelevantClosures] = useState<any[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+    const { status: locationStatus } = useLocationStatus();
+
+    const getLocationLabel = () => {
+        if (locationStatus.loading) return 'Locating...';
+        if (locationStatus.usingGeolocation) return 'Your Location';
+        if (locationStatus.error) return 'Default Location';
+        return 'Map Centered';
+    };
+
+    const getLocationDotColor = () => {
+        if (locationStatus.loading) return 'bg-blue-400 animate-pulse';
+        if (locationStatus.usingGeolocation) return 'bg-green-500';
+        if (locationStatus.error) return 'bg-orange-500';
+        return 'bg-blue-500';
+    };
 
     // Calculate bounding box with 1-mile buffer
     const calculateBoundingBox = useCallback((source: RoutePoint, destination: RoutePoint) => {
@@ -284,23 +302,10 @@ const ClosureAwareRoutingPage: React.FC = () => {
     return (
         <div className="h-screen flex flex-col bg-gray-50">
             {/* Header */}
-            <header className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                            <TransportationIcon className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900">
-                                Closure-Aware Routing
-                            </h1>
-                            <p className="text-sm text-gray-500">
-                                {transportationMode === 'auto' && 'Car routing that avoids road closures'}
-                                {transportationMode === 'bicycle' && 'Bicycle routing that avoids relevant closures'}
-                                {transportationMode === 'pedestrian' && 'Walking routing that avoids pedestrian closures'}
-                            </p>
-                        </div>
-                    </div>
+            <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
+                <div className="flex items-center space-x-4">
+                    <SidebarTrigger className="-ml-1" />
+                </div>
 
                     <div className="flex items-center space-x-4">
                         {/* Route Statistics */}
@@ -333,8 +338,14 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         >
                             <MapPin className="w-5 h-5" />
                         </button>
+                        {/* Location Status */}
+                    <div className="hidden md:flex items-center space-x-3 ml-2">
+                        <div className="flex items-center space-x-1.5 text-sm">
+                            <div className={`w-2 h-2 rounded-full ${getLocationDotColor()}`}></div>
+                            <span className="text-gray-600 font-medium">{getLocationLabel()}</span>
+                        </div>
                     </div>
-                </div>
+                    </div>
             </header>
 
             {/* Main Content */}

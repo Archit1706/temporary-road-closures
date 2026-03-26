@@ -68,7 +68,7 @@ export default function DashboardPage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50/50">
       {/* Header */}
-      <header className="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-white px-6 w-full shrink-0">
+      <header className="flex h-16 items-center gap-4 border-b bg-white px-6 w-full shrink-0">
         <SidebarTrigger className="-ml-1" />
         <div className="flex-1">
           <h1 className="text-lg font-semibold md:text-xl">Dashboard</h1>

@@ -1,5 +1,4 @@
 "use client"
-import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -13,7 +12,8 @@ import {
   Info,
   ShieldCheck,
   Bell,
-  TriangleAlert
+  TriangleAlert,
+  Construction
 } from 'lucide-react';
 
 import {
@@ -44,7 +44,7 @@ const navItems = [
     icon: MapIcon,
   },
   {
-    title: 'Routing',
+    title: 'Closure-Aware Routing',
     url: '/closure-aware-routing',
     icon: Route,
   },
@@ -64,8 +64,8 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="bg-white border-b border-gray-100 p-4">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <MapIcon className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
+            <Construction className="w-6 h-6 text-white" />
           </div>
           <span className="font-bold text-lg text-gray-900 tracking-tight">OSM Road Closures</span>
         </div>

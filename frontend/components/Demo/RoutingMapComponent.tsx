@@ -14,6 +14,7 @@ L.Icon.Default.mergeOptions({
 
 // Import the hook (you'll need to create this file)
 import { useChicagoMapCenter } from '@/hooks/useMapCenter';
+import { useLocationStatus } from '@/context/LocationContext';
 
 interface RoutePoint {
   lat: number;
@@ -442,6 +443,16 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
 }) => {
   // Use the dynamic map center hook - defaults to Chicago if geolocation fails
   const mapCenter = useChicagoMapCenter(true); // true = try to use geolocation
+  const { setStatus } = useLocationStatus();
+
+  // Update global location status when our local hook updates
+  useEffect(() => {
+    setStatus({
+      usingGeolocation: mapCenter.usingGeolocation,
+      error: mapCenter.error,
+      loading: mapCenter.loading,
+    });
+  }, [mapCenter.usingGeolocation, mapCenter.error, mapCenter.loading, setStatus]);
 
   const getTransportationModeInfo = (mode: TransportationMode) => {
     switch (mode) {
