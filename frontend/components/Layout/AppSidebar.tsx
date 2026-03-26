@@ -198,7 +198,7 @@ export function AppSidebar() {
                     <p className="text-xs font-bold text-gray-900 truncate">{user?.full_name}</p>
                     <p className="text-[10px] text-gray-500 truncate lowercase">@{user?.username}</p>
                   </div>
-                  <DropdownMenuItem className="rounded-md">
+                  <DropdownMenuItem disabled className="rounded-md opacity-50 cursor-not-allowed">
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -212,7 +212,7 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 render={<Link href="/login" />}
                 size="lg" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center rounded-full group-data-[collapsible=icon]:rounded-full"
+                className="w-full bg-blue-600 hover:!bg-blue-700 text-white justify-center rounded-full group-data-[collapsible=icon]:rounded-full"
                 tooltip="Login to Report"
               >
                 <LogIn className="group-data-[state=expanded]:mr-2 h-4 w-4 shrink-0 font-bold" />
