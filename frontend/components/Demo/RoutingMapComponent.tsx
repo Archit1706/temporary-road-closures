@@ -3,6 +3,8 @@ import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Info, RotateCcw } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -12,7 +14,7 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Import the hook (you'll need to create this file)
+// Import the hook
 import { useChicagoMapCenter } from '@/hooks/useMapCenter';
 import { useLocationStatus } from '@/context/LocationContext';
 
@@ -133,7 +135,6 @@ const MapEventHandler: React.FC<{
     // Handle map click events
     useMapEvents({
       click: (e) => {
-        // Determine what to set based on current state
         if (!sourcePoint) {
           onSourceSelect({
             lat: e.latlng.lat,
@@ -150,35 +151,29 @@ const MapEventHandler: React.FC<{
       },
     });
 
-    // Check if closure affects the selected transportation mode
     const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
       const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
       return affectedModes.includes(mode);
     };
 
-    // Helper function to create closure markers/lines
     const createClosureLayer = (closure: Closure): L.Layer[] => {
       const layers: L.Layer[] = [];
       const isActive = closure.status === 'active';
       const affectsCurrentMode = doesClosureAffectMode(closure, transportationMode);
 
-      // Color coding based on relevance to transportation mode
       let color: string;
       let opacity: number;
       let className: string;
 
       if (isActive && affectsCurrentMode) {
-        // Red for closures that affect current transportation mode
         color = '#ef4444';
         opacity = 0.9;
         className = 'relevant-active-closure';
       } else if (isActive && !affectsCurrentMode) {
-        // Green for closures that don't affect current transportation mode
         color = '#10b981';
         opacity = 0.6;
         className = 'irrelevant-active-closure';
       } else {
-        // Gray for inactive closures
         color = '#9ca3af';
         opacity = 0.4;
         className = 'inactive-closure';
@@ -186,7 +181,6 @@ const MapEventHandler: React.FC<{
 
       if (closure.geometry.type === 'Point') {
         const [lng, lat] = closure.geometry.coordinates as number[];
-
         const icon = L.divIcon({
           className: 'custom-closure-icon',
           html: `
@@ -208,34 +202,11 @@ const MapEventHandler: React.FC<{
               ${isActive && affectsCurrentMode ? '<span class="text-red-600 font-bold">🚫 BLOCKS</span>' : ''}
               ${isActive && !affectsCurrentMode ? '<span class="text-green-600 font-bold">✓ SAFE</span>' : ''}
             </div>
-            <div class="text-sm space-y-1">
-              <div><strong>Type:</strong> ${closure.closure_type.replace('_', ' ')}</div>
-              <div><strong>Status:</strong> <span class="capitalize ${isActive ? 'text-red-600' : 'text-gray-600'}">${closure.status}</span></div>
-              <div><strong>Transportation Impact:</strong></div>
-              <div class="ml-4">
-                ${['auto', 'bicycle', 'pedestrian'].map(mode => {
-            const affects = (closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian']).includes(mode as TransportationMode);
-            const isCurrent = mode === transportationMode;
-            const icon = mode === 'auto' ? '🚗' : mode === 'bicycle' ? '🚲' : '🚶';
-            return `
-                      <div class="flex items-center space-x-1 ${isCurrent ? 'font-bold' : ''}">
-                        <span>${icon}</span>
-                        <span class="${affects ? 'text-red-600' : 'text-green-600'}">${affects ? '✗' : '✓'}</span>
-                        <span class="${isCurrent ? 'text-blue-600' : ''}">${mode}${isCurrent ? ' (current)' : ''}</span>
-                      </div>
-                    `;
-          }).join('')}
-              </div>
-              <div><strong>Source:</strong> ${closure.source}</div>
-            </div>
           </div>
         `);
-
         layers.push(marker);
-
       } else if (closure.geometry.type === 'LineString') {
         const coordinates = (closure.geometry.coordinates as number[][]).map(([lng, lat]) => [lat, lng] as [number, number]);
-
         const polyline = L.polyline(coordinates, {
           color,
           weight: isActive ? (affectsCurrentMode ? 6 : 4) : 3,
@@ -246,159 +217,46 @@ const MapEventHandler: React.FC<{
         <div class="closure-popup">
           <div class="flex items-center space-x-2 mb-2">
             <h3 class="font-semibold text-gray-900">${closure.description}</h3>
-            ${isActive && affectsCurrentMode ? '<span class="text-red-600 font-bold">🚫 BLOCKS</span>' : ''}
-            ${isActive && !affectsCurrentMode ? '<span class="text-green-600 font-bold">✓ SAFE</span>' : ''}
-          </div>
-          <div class="text-sm space-y-1">
-            <div><strong>Type:</strong> ${closure.closure_type.replace('_', ' ')}</div>
-            <div><strong>Status:</strong> <span class="capitalize ${isActive ? 'text-red-600' : 'text-gray-600'}">${closure.status}</span></div>
-            <div><strong>Direction:</strong> ${closure.is_bidirectional ? 'Bidirectional ↔' : 'Unidirectional →'}</div>
-            <div><strong>Transportation Impact:</strong></div>
-            <div class="ml-4">
-              ${['auto', 'bicycle', 'pedestrian'].map(mode => {
-          const affects = (closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian']).includes(mode as TransportationMode);
-          const isCurrent = mode === transportationMode;
-          const icon = mode === 'auto' ? '🚗' : mode === 'bicycle' ? '🚲' : '🚶';
-          return `
-                  <div class="flex items-center space-x-1 ${isCurrent ? 'font-bold' : ''}">
-                    <span>${icon}</span>
-                    <span class="${affects ? 'text-red-600' : 'text-green-600'}">${affects ? '✗' : '✓'}</span>
-                    <span class="${isCurrent ? 'text-blue-600' : ''}">${mode}${isCurrent ? ' (current)' : ''}</span>
-                  </div>
-                `;
-        }).join('')}
-            </div>
-            <div><strong>Source:</strong> ${closure.source}</div>
           </div>
         </div>
       `);
-
         layers.push(polyline);
-
-        // Add direction arrows for active closures
-        if (isActive && coordinates.length > 1) {
-          const midIndex = Math.floor(coordinates.length / 2);
-          const [midLat, midLng] = coordinates[midIndex];
-
-          const arrowIcon = L.divIcon({
-            className: 'direction-arrow',
-            html: `
-            <div class="arrow-symbol" style="color: ${color}; background: rgba(255,255,255,0.95); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid ${color}; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
-              ${closure.is_bidirectional ? '↔' : '→'}
-            </div>
-          `,
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
-          });
-
-          const arrowMarker = L.marker([midLat, midLng], { icon: arrowIcon });
-          layers.push(arrowMarker);
-        }
       }
-
       return layers;
     };
 
-    // Update map layers
     useEffect(() => {
       const layerGroup = layersRef.current;
       layerGroup.clearLayers();
 
-      // Add source marker
       if (sourcePoint) {
         const sourceIcon = L.divIcon({
           className: 'custom-marker source-marker',
-          html: `
-          <div style="background-color: #22c55e; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);">
-            S
-          </div>
-        `,
+          html: '<div style="background-color: #22c55e; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);">S</div>',
           iconSize: [32, 32],
           iconAnchor: [16, 16],
         });
-
-        const sourceMarker = L.marker([sourcePoint.lat, sourcePoint.lng], { icon: sourceIcon })
-          .bindPopup(`
-          <div class="text-center">
-            <h3 class="font-semibold text-green-700 mb-1">Start Location</h3>
-            <p class="text-sm text-gray-600">${sourcePoint.address || 'Selected Point'}</p>
-            <p class="text-xs text-gray-500 font-mono">${sourcePoint.lat.toFixed(6)}, ${sourcePoint.lng.toFixed(6)}</p>
-            <div class="mt-2 text-xs text-blue-600">
-              Route mode: ${transportationMode === 'auto' ? '🚗 Driving' : transportationMode === 'bicycle' ? '🚲 Cycling' : '🚶 Walking'}
-            </div>
-          </div>
-        `);
-
-        layerGroup.addLayer(sourceMarker);
+        layerGroup.addLayer(L.marker([sourcePoint.lat, sourcePoint.lng], { icon: sourceIcon }));
       }
 
-      // Add destination marker
       if (destinationPoint) {
         const destIcon = L.divIcon({
           className: 'custom-marker dest-marker',
-          html: `
-          <div style="background-color: #ef4444; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);">
-            D
-          </div>
-        `,
+          html: '<div style="background-color: #ef4444; color: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 3px solid white; box-shadow: 0 3px 10px rgba(0,0,0,0.3);">D</div>',
           iconSize: [32, 32],
           iconAnchor: [16, 16],
         });
-
-        const destMarker = L.marker([destinationPoint.lat, destinationPoint.lng], { icon: destIcon })
-          .bindPopup(`
-          <div class="text-center">
-            <h3 class="font-semibold text-red-700 mb-1">Destination</h3>
-            <p class="text-sm text-gray-600">${destinationPoint.address || 'Selected Point'}</p>
-            <p class="text-xs text-gray-500 font-mono">${destinationPoint.lat.toFixed(6)}, ${destinationPoint.lng.toFixed(6)}</p>
-            <div class="mt-2 text-xs text-blue-600">
-              Route mode: ${transportationMode === 'auto' ? '🚗 Driving' : transportationMode === 'bicycle' ? '🚲 Cycling' : '🚶 Walking'}
-            </div>
-          </div>
-        `);
-
-        layerGroup.addLayer(destMarker);
+        layerGroup.addLayer(L.marker([destinationPoint.lat, destinationPoint.lng], { icon: destIcon }));
       }
 
-      // Add direct route (if available) - always show in background
       if (directRoute && directRoute.coordinates.length > 1) {
-        const directPolyline = L.polyline(directRoute.coordinates, {
-          color: '#6b7280',
-          weight: 3,
-          opacity: 0.5,
-          dashArray: '10, 10',
-        }).bindPopup(`
-        <div>
-          <h3 class="font-semibold text-gray-700 mb-1">Direct Route (${transportationMode})</h3>
-          <p class="text-sm">Distance: ${directRoute.distance.toFixed(2)} km</p>
-          <p class="text-sm">Duration: ${Math.round(directRoute.duration)} min</p>
-          <p class="text-xs text-gray-500 mt-1">This route ignores all road closures</p>
-        </div>
-      `);
-
-        layerGroup.addLayer(directPolyline);
+        layerGroup.addLayer(L.polyline(directRoute.coordinates, { color: '#6b7280', weight: 3, opacity: 0.5, dashArray: '10, 10' }));
       }
 
-      // Add closure-aware route (if available) - prominent display
       if (route && route.coordinates.length > 1) {
-        const routePolyline = L.polyline(route.coordinates, {
-          color: '#2563eb',
-          weight: 6,
-          opacity: 1.0,
-        }).bindPopup(`
-        <div>
-          <h3 class="font-semibold text-blue-700 mb-1">Closure-Aware Route (${transportationMode})</h3>
-          <p class="text-sm">Distance: ${route.distance.toFixed(2)} km</p>
-          <p class="text-sm">Duration: ${Math.round(route.duration)} min</p>
-          <p class="text-sm">Relevant closures avoided: ${route.avoidedClosures}</p>
-          <p class="text-xs text-blue-600 mt-1">✓ Optimized to avoid ${transportationMode}-relevant closures</p>
-        </div>
-      `);
-
-        layerGroup.addLayer(routePolyline);
+        layerGroup.addLayer(L.polyline(route.coordinates, { color: '#2563eb', weight: 6, opacity: 1.0 }));
       }
 
-      // Add closure markers/lines with transportation mode awareness
       closures.forEach(closure => {
         const closureLayers = createClosureLayer(closure);
         closureLayers.forEach(layer => layerGroup.addLayer(layer));
@@ -406,25 +264,15 @@ const MapEventHandler: React.FC<{
 
       layerGroup.addTo(map);
 
-      // Auto-fit bounds if we have points or routes
       if ((sourcePoint && destinationPoint) || route) {
         const bounds = L.latLngBounds([]);
-
         if (sourcePoint) bounds.extend([sourcePoint.lat, sourcePoint.lng]);
         if (destinationPoint) bounds.extend([destinationPoint.lat, destinationPoint.lng]);
-
-        if (route && route.coordinates.length > 0) {
-          route.coordinates.forEach(coord => bounds.extend(coord));
-        }
-
-        if (bounds.isValid()) {
-          map.fitBounds(bounds, { padding: [30, 30] });
-        }
+        if (route && route.coordinates.length > 0) route.coordinates.forEach(coord => bounds.extend(coord));
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
       }
 
-      return () => {
-        layerGroup.clearLayers();
-      };
+      return () => { layerGroup.clearLayers(); };
     }, [sourcePoint, destinationPoint, transportationMode, route, directRoute, closures, relevantClosures, map]);
 
     return null;
@@ -441,11 +289,9 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
   onSourceSelect,
   onDestinationSelect
 }) => {
-  // Use the dynamic map center hook - defaults to Chicago if geolocation fails
-  const mapCenter = useChicagoMapCenter(true); // true = try to use geolocation
+  const mapCenter = useChicagoMapCenter(true);
   const { setStatus } = useLocationStatus();
 
-  // Update global location status when our local hook updates
   useEffect(() => {
     setStatus({
       usingGeolocation: mapCenter.usingGeolocation,
@@ -456,19 +302,16 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
 
   const getTransportationModeInfo = (mode: TransportationMode) => {
     switch (mode) {
-      case 'auto':
-        return { icon: null, label: 'Driving' };
-      case 'bicycle':
-        return { icon: null, label: 'Cycling' };
-      case 'pedestrian':
-        return { icon: null, label: 'Walking' };
+      case 'auto': return { icon: '🚗', label: 'Driving' };
+      case 'bicycle': return { icon: '🚲', label: 'Cycling' };
+      case 'pedestrian': return { icon: '🚶', label: 'Walking' };
     }
   };
 
   const modeInfo = getTransportationModeInfo(transportationMode);
 
   return (
-    <>
+    <div className="relative w-full h-full">
       <style jsx global>{`
         .closure-marker {
           width: 28px;
@@ -483,101 +326,30 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
           border: 3px solid white;
           position: relative;
         }
-        
-        .closure-marker.relevant-active-closure {
-          background-color: #ef4444;
-          color: white;
-        }
-        
-        .closure-marker.irrelevant-active-closure {
-          background-color: #10b981;
-          color: white;
-        }
-        
-        .closure-marker.inactive-closure {
-          background-color: #9ca3af;
-          color: white;
-        }
-        
-        .closure-marker-inner {
-          animation: pulse 2s infinite;
-        }
-        
-        .blocking-indicator, .safe-indicator {
-          position: absolute;
-          top: -8px;
-          right: -8px;
-          width: 18px;
-          height: 18px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 10px;
-          font-weight: bold;
-          border: 2px solid white;
-        }
-        
-        .blocking-indicator {
-          background-color: #dc2626;
-        }
-        
-        .safe-indicator {
-          background-color: #059669;
-        }
-        
+        .closure-marker.relevant-active-closure { background-color: #ef4444; color: white; }
+        .closure-marker.irrelevant-active-closure { background-color: #10b981; color: white; }
+        .closure-marker.inactive-closure { background-color: #9ca3af; color: white; }
+        .closure-marker-inner { animation: pulse 2s infinite; }
         @keyframes pulse {
           0% { transform: scale(1); }
           50% { transform: scale(1.1); }
           100% { transform: scale(1); }
         }
-        
-        .closure-popup {
-          min-width: 280px;
-          max-width: 350px;
-        }
-        
-        .leaflet-popup-content-wrapper {
-          border-radius: 8px;
-        }
-
-        .direction-arrow {
-          background: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-        }
-
-        .custom-marker {
-          background: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-        }
+        .custom-marker { background: transparent !important; border: none !important; box-shadow: none !important; }
       `}</style>
 
-      {/* Loading indicator while getting location */}
       {mapCenter.loading && (
-        <div className="absolute inset-0 z-20 bg-white bg-opacity-90 flex items-center justify-center">
+        <div className="absolute inset-0 z-20 bg-white/90 flex items-center justify-center">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600 font-medium">Getting your location...</p>
-            <p className="text-sm text-gray-500 mt-1">This helps us center the map near you</p>
           </div>
         </div>
       )}
 
-      <MapContainer
-        center={mapCenter.center}
-        zoom={mapCenter.zoom}
-        className="h-full w-full"
-        zoomControl={true}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-
+      <MapContainer center={mapCenter.center} zoom={mapCenter.zoom} className="h-full w-full" zoomControl={true}>
+        <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
         <MapViewController mapCenter={mapCenter} />
-
         <MapEventHandler
           sourcePoint={sourcePoint}
           destinationPoint={destinationPoint}
@@ -592,97 +364,95 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
         />
       </MapContainer>
 
+      {/* Map Legend: Ultra-Compact Circular Icon Button */}
+      <div className="absolute bottom-6 left-6 z-[1000]">
+        <Popover>
+          <PopoverTrigger className="flex items-center justify-center bg-[#E5484D] hover:bg-[#D64045] active:scale-90 text-white w-9 h-9 rounded-full shadow-2xl border border-black/10 transition-all duration-200 group">
+            <Info className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
+          </PopoverTrigger>
+          <PopoverContent side="top" align="start" sideOffset={12} className="w-64 p-0 bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl border border-white/40 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-100/50">
+                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Map Legend</h3>
+                <Info className="w-3 h-3 text-gray-300" />
+              </div>
 
+              <div className="grid gap-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-[9px] font-black shadow-sm">S</div>
+                    <span className="text-[11px] font-medium text-gray-600">Start Location</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[9px] font-black shadow-sm">D</div>
+                    <span className="text-[11px] font-medium text-gray-600">Destination</span>
+                  </div>
+                </div>
 
-      {/* Enhanced Map Legend */}
-      <div className="absolute bottom-4 left-4 z-10 bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs">
-        <div className="flex items-center space-x-2 mb-3">
-          <h3 className="text-sm font-semibold text-gray-900">Map Legend</h3>
-          <div className="flex items-center space-x-1 px-2 py-1 bg-blue-50 rounded text-xs">
-            <span>{modeInfo.icon}</span>
-            <span className="font-medium text-blue-700">{modeInfo.label}</span>
-          </div>
-        </div>
-        <div className="space-y-2 text-xs">
-          {/* Route markers */}
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold">S</div>
-            <span>Start location</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs font-bold">D</div>
-            <span>Destination</span>
-          </div>
+                <div className="h-px bg-gray-50"></div>
 
-          {/* Route lines */}
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-1 bg-blue-600"></div>
-            <span>Closure-aware route</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-4 h-1 bg-gray-500" style={{ backgroundImage: 'repeating-linear-gradient(to right, #6b7280 0, #6b7280 3px, transparent 3px, transparent 6px)' }}></div>
-            <span>Direct route</span>
-          </div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-1 bg-blue-600 rounded-full"></div>
+                    <span className="text-[11px] font-medium text-gray-600">Optimal Route</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-1 bg-gray-200 rounded-full overflow-hidden relative">
+                      <div className="absolute inset-0 bg-white/50" style={{ width: '50%' }}></div>
+                    </div>
+                    <span className="text-[11px] font-medium text-gray-600">Direct Route</span>
+                  </div>
+                </div>
 
-          <hr className="border-gray-200" />
+                <div className="h-px bg-gray-50"></div>
 
-          {/* Closure indicators with transportation mode awareness */}
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs">⚠</div>
-            <span>Blocks {modeInfo.label.toLowerCase()}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs">⚠</div>
-            <span>Safe for {modeInfo.label.toLowerCase()}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div className="w-5 h-5 bg-gray-400 rounded-full border-2 border-white flex items-center justify-center text-white text-xs">⚠</div>
-            <span>Inactive closures</span>
-          </div>
+                <div className="space-y-2.5">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center text-white text-[8px] shadow-sm animate-pulse-slow">⚠</div>
+                    <span className="text-[11px] font-bold text-red-600">Blocks Path</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-[8px] shadow-sm">⚠</div>
+                    <span className="text-[11px] font-bold text-green-600">Safe Path</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-5 h-5 bg-gray-400 rounded-full flex items-center justify-center text-white text-[8px] shadow-sm">⚠</div>
+                    <span className="text-[11px] font-medium text-gray-500">Inactive</span>
+                  </div>
+                </div>
+              </div>
 
-          <hr className="border-gray-200" />
-
-          {/* Transportation mode explanation */}
-          <div className="bg-blue-50 p-2 rounded text-xs">
-            <p className="font-medium text-blue-900 mb-1">Smart Filtering</p>
-            <p className="text-blue-700">
-              Only closures affecting {modeInfo.label.toLowerCase()} are avoided in routing.
-            </p>
-            <div className="mt-1 text-blue-600">
-              Example: Road construction affects vehicles and cycles but not pedestrians
+              <div className="mt-2 pt-3 border-t border-gray-100/50 space-y-2">
+                <div className="flex items-center space-x-2 px-2 py-1.5 bg-blue-50/50 rounded-lg">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+                  <span className="text-[9px] font-black text-blue-700 uppercase tracking-widest">Smart Filtering</span>
+                </div>
+                <div className="px-2 space-y-1.5">
+                  <p className="text-[10px] text-gray-600 leading-tight">
+                    Only closures affecting <span className="font-bold text-gray-900 underline decoration-blue-200">{modeInfo.label.toLowerCase()}</span> are avoided in routing.
+                  </p>
+                  <p className="text-[9px] text-gray-400 italic">
+                    Example: Road construction affects auto/bicycle but not pedestrian
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-
-          {/* Location info */}
-          <hr className="border-gray-200" />
-          <div className={`p-2 rounded text-xs ${mapCenter.usingGeolocation
-            ? 'bg-green-50 text-green-700'
-            : 'bg-gray-50 text-gray-600'
-            }`}>
-            {mapCenter.usingGeolocation ? (
-              <p>Map centered on your location</p>
-            ) : mapCenter.error ? (
-              <p>Location access denied - using default view</p>
-            ) : (
-              <p>Using default map center</p>
-            )}
-          </div>
-        </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
-
-
-      {/* Transportation mode indicator */}
+      {/* Mode Indicator */}
       {(sourcePoint || destinationPoint) && (
-        <div className="absolute top-4 right-4 z-10 bg-white shadow-lg rounded-lg px-3 py-2 border border-gray-200">
-          <div className="flex items-center space-x-2 text-sm">
-            <span className="text-gray-600">Mode:</span>
-            <span>{modeInfo.icon}</span>
-            <span className="font-medium text-gray-900">{modeInfo.label}</span>
+        <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl px-4 py-2.5 border border-white/20">
+          <div className="flex items-center space-x-3 text-xs">
+            <span className="text-gray-500 font-black uppercase tracking-widest opacity-60">Mode:</span>
+            <div className="flex items-center space-x-2 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+              <span className="font-black text-blue-700 uppercase tracking-tighter">{modeInfo.icon} {modeInfo.label}</span>
+            </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 

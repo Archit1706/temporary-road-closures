@@ -16,6 +16,9 @@ import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import LocationIndicator from '@/components/Layout/LocationIndicator';
 import DemoControlPanel from '@/components/Demo/DemoControlPanel';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { ListFilter } from 'lucide-react';
 
 // Dynamically import map to avoid SSR issues
 const RoutingMapComponent = dynamic(
@@ -81,6 +84,8 @@ const ClosureAwareRoutingPage: React.FC = () => {
     const [closuresInPath, setClosuresInPath] = useState<any[]>([]);
     const [relevantClosures, setRelevantClosures] = useState<any[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const isMobile = useIsMobile();
 
     const { status: locationStatus } = useLocationStatus();
 
@@ -292,17 +297,62 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
     const TransportationIcon = getTransportationIcon(transportationMode);
 
+    const renderSidebarContent = () => (
+        <>
+            {/* Routing Form */}
+            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain pb-6">
+                <RoutingForm
+                    sourcePoint={sourcePoint}
+                    destinationPoint={destinationPoint}
+                    transportationMode={transportationMode}
+                    onSourceChange={setSourcePoint}
+                    onDestinationChange={setDestinationPoint}
+                    onTransportationModeChange={handleTransportationModeChange}
+                    onCalculateRoute={handleCalculateRoute}
+                    onClearRoute={handleClearRoute}
+                    isCalculating={isCalculating}
+                    route={route}
+                    directRoute={directRoute}
+                    error={error}
+                />
+
+                {/* Closures List */}
+                {closuresInPath.length > 0 && (
+                    <ClosuresList
+                        closures={closuresInPath}
+                        transportationMode={transportationMode}
+                        relevantClosures={relevantClosures}
+                    />
+                )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 shrink-0">
+                <div className="text-xs text-gray-500 space-y-1">
+                    <div className="flex items-center space-x-2">
+                        <Info className="w-3 h-3" />
+                        <span>Powered by Valhalla routing engine</span>
+                    </div>
+                    <div>Uses OpenStreetMap data and transportation-aware closure filtering</div>
+                    <div className="font-bold text-gray-600">
+                        {relevantClosures.length} of {closuresInPath.length} closures affect {transportationMode}
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+
     return (
         <div className="h-screen flex flex-col bg-gray-50">
             <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-2 pr-6 w-full shrink-0">
                 <div className="flex items-center gap-2">
-                    {/* Placeholder for left-side content if needed */}
+                    {/* Back to Closures / Home link could go here */}
                 </div>
 
                 <div className="flex items-center gap-3 ml-auto">
                     {/* Route Statistics */}
                     {route && (
-                        <div className="hidden lg:flex items-center gap-2 mr-2">
+                        <div className="flex items-center gap-2 mr-2">
                             <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-green-100 uppercase tracking-tight">
                                 {route.distance.toFixed(1)} km
                             </div>
@@ -322,65 +372,38 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         <Separator orientation="vertical" className="h-4 bg-gray-200 mx-0.5" />
 
                         {/* Location Status */}
-                            <LocationIndicator className="hidden md:flex" />
+                            <LocationIndicator className="hidden sm:flex" />
                     </div>
                 </div>
             </header>
 
             {/* Main Content */}
             <div className="flex-1 flex overflow-hidden">
-                {/* Sidebar */}
-                <div className={`
-          w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:relative md:translate-x-0
-          ${!isSidebarOpen ? 'md:w-0 md:border-r-0' : ''}
-        `}>
-                    {isSidebarOpen && (
-                        <>
-                            {/* Routing Form */}
-                            <div className="flex-1 overflow-y-auto">
-                                <RoutingForm
-                                    sourcePoint={sourcePoint}
-                                    destinationPoint={destinationPoint}
-                                    transportationMode={transportationMode}
-                                    onSourceChange={setSourcePoint}
-                                    onDestinationChange={setDestinationPoint}
-                                    onTransportationModeChange={handleTransportationModeChange}
-                                    onCalculateRoute={handleCalculateRoute}
-                                    onClearRoute={handleClearRoute}
-                                    isCalculating={isCalculating}
-                                    route={route}
-                                    directRoute={directRoute}
-                                    error={error}
-                                />
+                {/* Desktop Sidebar */}
+                {!isMobile && (
+                    <div className={`
+                        w-96 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 shrink-0
+                        ${!isSidebarOpen ? 'w-0 border-r-0' : ''}
+                    `}>
+                        {isSidebarOpen && renderSidebarContent()}
+                    </div>
+                )}
 
-                                {/* Closures List */}
-                                {closuresInPath.length > 0 && (
-                                    <ClosuresList
-                                        closures={closuresInPath}
-                                        transportationMode={transportationMode}
-                                        relevantClosures={relevantClosures}
-                                    />
-                                )}
+                {/* Mobile Bottom Sheet */}
+                {isMobile && (
+                    <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                        <SheetContent side="bottom" className="!h-[85vh] flex flex-col p-0 gap-0 rounded-t-2xl overflow-hidden" showCloseButton={true}>
+                            {/* Drag handle */}
+                            <div className="flex justify-center pt-3 pb-1 shrink-0">
+                                <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
                             </div>
-
-                            {/* Footer */}
-                            <div className="p-4 border-t border-gray-200 bg-gray-50">
-                                <div className="text-xs text-gray-500 space-y-1">
-                                    <div className="flex items-center space-x-2">
-                                        <Info className="w-3 h-3" />
-                                        <span>Powered by Valhalla routing engine</span>
-                                    </div>
-                                    <div>Uses OpenStreetMap data and transportation-aware closure filtering</div>
-                                    <div className="font-medium text-gray-600">
-                                        {relevantClosures.length} of {closuresInPath.length} closures affect {transportationMode}
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    )}
-                </div>
+                            <SheetTitle className="sr-only">Routing Form</SheetTitle>
+                            <SheetDescription className="sr-only">Define source and destination for closure-aware routing</SheetDescription>
+                            
+                            {renderSidebarContent()}
+                        </SheetContent>
+                    </Sheet>
+                )}
 
                 {/* Map */}
                 <div className="flex-1 relative">
@@ -396,9 +419,17 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         onDestinationSelect={setDestinationPoint}
                     />
 
-                    {/* Sidebar toggle for mobile removed */}
-
-                    {/* Close sidebar button removed */}
+                    {/* Mobile Sheet Toggle Button */}
+                    {isMobile && !isSheetOpen && (
+                        <Button
+                            onClick={() => setIsSheetOpen(true)}
+                            className="fixed bottom-6 left-4 z-30 bg-background shadow-lg rounded-full p-3 border border-border hover:bg-accent transition-colors"
+                            size="icon"
+                            variant="outline"
+                        >
+                            <ListFilter className="w-5 h-5 text-foreground" />
+                        </Button>
+                    )}
 
                     {/* Routing Status */}
                     {isCalculating && (

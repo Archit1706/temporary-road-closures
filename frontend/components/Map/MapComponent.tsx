@@ -12,6 +12,8 @@ import { toast } from 'sonner';
 // Import the hook (you'll need to create this file in your hooks directory)
 import { useChicagoMapCenter } from '@/hooks/useMapCenter';
 import { useLocationStatus } from '@/context/LocationContext';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -890,32 +892,41 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
             {/* Selection Controls */}
             {isSelecting && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white rounded-lg shadow-lg border border-gray-200 p-3">
-                    <div className="flex items-center space-x-4">
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">{getSelectionText()}</span>
-                            {geometryType === 'Point' && selectedPoints.length === 0 && (
-                                <div className="text-xs text-orange-600 mt-1">📍 Point closure - select one location</div>
-                            )}
-                            {geometryType === 'LineString' && selectedPoints.length >= 2 && (
-                                <div className="text-xs text-green-600 mt-1">✅ Route will be calculated automatically</div>
-                            )}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-primary/20 p-4 min-w-[320px] animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex flex-col space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                                <span className="text-xs font-black uppercase tracking-wider text-gray-900">{getSelectionText()}</span>
+                            </div>
+                            <Badge variant="outline" className="font-mono text-[10px] border-primary/20 bg-primary/5">
+                                {selectedPoints.length} PTS
+                            </Badge>
                         </div>
-                        <div className="flex space-x-2">
-                            {selectedPoints.length > 0 && (
-                                <button
-                                    onClick={onClearPoints}
-                                    className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                                >
-                                    Clear ({selectedPoints.length})
-                                </button>
-                            )}
-                            <button
+                        
+                        <div className="text-[11px] font-medium text-gray-500 leading-tight">
+                            {geometryType === 'Point' 
+                                ? 'Click once on the map to pinpoint the exact closure location.' 
+                                : 'Select multiple points along the road to define the closed segment.'}
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onClearPoints}
+                                disabled={selectedPoints.length === 0}
+                                className="flex-1 h-8 text-[11px] font-bold rounded-lg border-gray-200"
+                            >
+                                Reset
+                            </Button>
+                            <Button
+                                size="sm"
                                 onClick={onFinishSelection}
-                                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                                className="flex-1 h-8 text-[11px] font-bold rounded-lg bg-primary hover:bg-primary/90 shadow-sm"
                             >
                                 Done
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
