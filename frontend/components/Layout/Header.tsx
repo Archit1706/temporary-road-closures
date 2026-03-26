@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Construction, TriangleAlert, Menu, X, LogIn, LogOut, User } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { Button } from '@/components/ui/button';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 
 interface HeaderProps {
     onToggleForm: () => void;
@@ -30,22 +31,12 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
 
     return (
         <header className="bg-white shadow-lg border-b border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    {/* Logo and Title */}
-                    <Link href="/" className="flex items-center space-x-3">
-                        <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                            <Construction className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                            <h1 className="text-xl font-bold text-gray-900">
-                                OSM Road Closures
-                            </h1>
-                            <p className="text-sm text-gray-500">
-                                Community-driven road closure reporting
-                            </p>
-                        </div>
-                    </Link>
+                    {/* Sidebar Trigger (replaces redundant logo) */}
+                    <div className="flex items-center">
+                        <SidebarTrigger className="-ml-1" />
+                    </div>
 
                     {/* Navigation and Actions */}
                     <div className="flex items-center space-x-4">
