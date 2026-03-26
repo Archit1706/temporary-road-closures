@@ -4,6 +4,9 @@ import { useForm } from 'react-hook-form';
 import { Calendar, Clock, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation, Route, Edit3 } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { UpdateClosureData, authApi, Closure } from '@/services/api';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EditClosureFormProps {
     isOpen: boolean;
@@ -63,6 +66,7 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
 }) => {
     const { updateClosure, state } = useClosures();
     const { editLoading } = state;
+    const isMobile = useIsMobile();
     const [currentStep, setCurrentStep] = useState(1);
     const totalSteps = 3;
 
@@ -538,16 +542,144 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
         }
     };
 
+    // Shared form header
+    const renderFormHeader = () => (
+        <div className="bg-orange-600 text-white p-4 flex items-start justify-between shrink-0">
+            <div className="flex items-start space-x-3">
+                <div className="mt-0.5">
+                    <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold leading-tight">Edit Closure</h2>
+                    <div className="flex items-center space-x-2 text-xs text-orange-100 mt-1">
+                        <Shield className="w-3 h-3" />
+                        <span>ID: {closure.id} - Updating backend</span>
+                    </div>
+                </div>
+            </div>
+            {!isMobile && (
+                <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-orange-700 rounded mt-0.5 transition-colors"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            )}
+        </div>
+    );
+
+    // Shared progress steps
+    const renderProgressSteps = () => (
+        <div className="px-4 py-3 border-b border-gray-200 shrink-0">
+            <div className="flex items-center justify-between">
+                {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                        <div className={`
+                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
+                            ${step <= currentStep
+                                ? 'bg-orange-600 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                            }
+                        `}>
+                            {step}
+                        </div>
+                        {step < 3 && (
+                            <div className={`
+                                w-12 h-1 mx-1
+                                ${step < currentStep ? 'bg-orange-600' : 'bg-gray-200'}
+                            `} />
+                        )}
+                    </div>
+                ))}
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+                Step {currentStep} of {totalSteps}: {
+                    currentStep === 1 ? 'Basic Information' :
+                        currentStep === 2 ? 'Location & Timing' :
+                            'Review & Update'
+                }
+            </div>
+        </div>
+    );
+
+    // Shared form footer
+    const renderFormFooter = () => (
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
+            <div className="flex items-center justify-between space-x-2">
+                <div className="flex space-x-2">
+                    {currentStep > 1 && (
+                        <button
+                            type="button"
+                            onClick={prevStep}
+                            className="px-6 py-2 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50 font-medium text-sm transition-colors"
+                        >
+                            Previous
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex space-x-2">
+                    {currentStep < totalSteps ? (
+                        <button
+                            type="button"
+                            onClick={nextStep}
+                            className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 font-medium text-sm transition-colors"
+                        >
+                            Next
+                        </button>
+                    ) : (
+                        <button
+                            type="submit"
+                            disabled={editLoading}
+                            className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
+                        >
+                            {editLoading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Updating...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Edit3 className="w-4 h-4" />
+                                    <span>Update Closure</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    // --- MOBILE: Bottom Sheet ---
+    if (isMobile) {
+        return (
+            <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+                <SheetContent side="bottom" className="max-h-[85vh] flex flex-col p-0 rounded-t-2xl" showCloseButton={true}>
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-3 pb-1 shrink-0">
+                        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                    </div>
+                    <SheetTitle className="sr-only">Edit Closure</SheetTitle>
+                    <SheetDescription className="sr-only">Edit closure form</SheetDescription>
+                    {renderFormHeader()}
+                    {renderProgressSteps()}
+                    <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                            <div className="p-4 pb-6">
+                                {renderStepContent()}
+                            </div>
+                        </div>
+                        {renderFormFooter()}
+                    </form>
+                </SheetContent>
+            </Sheet>
+        );
+    }
+
+    // --- DESKTOP: Sidebar ---
     return (
         <>
-            {/* Backdrop for mobile */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
-                    onClick={onClose}
-                />
-            )}
-
             {/* Form Sidebar */}
             <div className={`
                 fixed top-16 right-0 h-[calc(100vh-4rem)] bg-white shadow-xl transform transition-all duration-300 ease-in-out z-50 border-l border-gray-200
@@ -588,115 +720,15 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                     </div>
                 ) : (
                     <>
-                        {/* Header */}
-                        <div className="bg-orange-600 text-white p-4 flex items-start justify-between">
-                            <div className="flex items-start space-x-3">
-                                <div className="mt-0.5">
-                                    <Edit3 className="w-5 h-5" />
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-semibold leading-tight">Edit Closure</h2>
-                                    <div className="flex items-center space-x-2 text-xs text-orange-100 mt-1">
-                                        <Shield className="w-3 h-3" />
-                                        <span>ID: {closure.id} - Updating backend</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={onClose}
-                                className="p-1 hover:bg-orange-700 rounded mt-0.5 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Progress Steps */}
-                        <div className="px-4 py-3 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                                {[1, 2, 3].map((step) => (
-                                    <div key={step} className="flex items-center">
-                                        <div className={`
-                                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                                            ${step <= currentStep
-                                                ? 'bg-orange-600 text-white'
-                                                : 'bg-gray-200 text-gray-600'
-                                            }
-                                        `}>
-                                            {step}
-                                        </div>
-                                        {step < 3 && (
-                                            <div className={`
-                                                w-12 h-1 mx-1
-                                                ${step < currentStep ? 'bg-orange-600' : 'bg-gray-200'}
-                                            `} />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-2 text-xs text-gray-600">
-                                Step {currentStep} of {totalSteps}: {
-                                    currentStep === 1 ? 'Basic Information' :
-                                        currentStep === 2 ? 'Location & Timing' :
-                                            'Review & Update'
-                                }
-                            </div>
-                        </div>
-
-                        {/* Form Content */}
+                        {renderFormHeader()}
+                        {renderProgressSteps()}
                         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-                            {/* Scrollable Content Area */}
                             <div className="flex-1 overflow-y-auto min-h-0">
                                 <div className="p-4 pb-6">
                                     {renderStepContent()}
                                 </div>
                             </div>
-
-                            {/* Fixed Footer - Always Visible */}
-                            <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
-                                <div className="flex items-center justify-between space-x-2">
-                                    <div className="flex space-x-2">
-                                        {currentStep > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={prevStep}
-                                                className="px-6 py-2 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50 font-medium text-sm transition-colors"
-                                            >
-                                                Previous
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <div className="flex space-x-2">
-                                        {currentStep < totalSteps ? (
-                                            <button
-                                                type="button"
-                                                onClick={nextStep}
-                                                className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 font-medium text-sm transition-colors"
-                                            >
-                                                Next
-                                            </button>
-                                        ) : (
-                                            <button
-                                                type="submit"
-                                                disabled={editLoading}
-                                                className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
-                                            >
-                                                {editLoading ? (
-                                                    <>
-                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                        <span>Updating...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Edit3 className="w-4 h-4" />
-                                                        <span>Update Closure</span>
-                                                    </>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            {renderFormFooter()}
                         </form>
                     </>
                 )}

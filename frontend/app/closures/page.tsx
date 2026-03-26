@@ -85,7 +85,7 @@ const PointSelectionInstructions: React.FC<{
   const GeometryIcon = getGeometryIcon();
 
   return (
-    <Card className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-none">
+    <Card className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-none">
       <CardContent className="p-4">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
@@ -520,7 +520,7 @@ function ClosuresPageContent() {
 
       {/* Point Selection Status - Fixed position when create form is open */}
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-20 right-[25rem] z-40">
+        <div className="fixed top-20 right-4 md:right-[25rem] z-40">
           <Alert className="bg-primary text-primary-foreground border-none shadow-xl py-2 px-4 flex items-center gap-3">
             {geometryType === 'Point' ? <Target className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
             <span className="text-sm font-bold">
@@ -543,7 +543,7 @@ function ClosuresPageContent() {
 
       {/* Edit Form Status - Fixed position when edit form is open */}
       {isEditFormOpen && editingClosure && (
-        <div className="fixed top-20 right-[25rem] z-40">
+        <div className="fixed top-20 right-4 md:right-[25rem] z-40">
           <Alert className="bg-orange-600 text-white border-none shadow-xl py-2 px-4 flex items-center gap-3">
             <Edit3 className="w-4 h-4" />
             <span className="text-sm font-bold truncate max-w-[200px]">
