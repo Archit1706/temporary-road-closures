@@ -90,7 +90,7 @@ const CTASection: React.FC<CTASectionProps> = ({
                     <ButtonComponent
                         {...buttonProps}
                         className={`
-                            inline-flex items-center px-8 py-4 rounded-lg font-semibold transition-all duration-300
+                            inline-flex items-center px-8 py-4 rounded-full font-semibold transition-all duration-300
                             ${styles.buttonBg} shadow-lg hover:shadow-xl transform hover:scale-105 group
                         `}
                     >

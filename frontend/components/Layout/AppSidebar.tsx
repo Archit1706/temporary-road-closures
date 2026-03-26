@@ -63,15 +63,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="bg-white border-b border-gray-100 p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:h-[64px] group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
+      <SidebarHeader className="bg-white border-b p-2 h-16 flex items-center group-data-[collapsible=icon]:justify-center transition-all duration-300">
         <div className="flex items-center w-full h-full">
           <Link href="/" className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden min-w-0 flex-1 hover:opacity-80 transition-opacity">
-            <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg shrink-0">
-              <Construction className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-center w-8 h-8 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 bg-blue-600 rounded-lg shrink-0 transition-all duration-200">
+              <Construction className="w-5 h-5 text-white" />
             </div>
             <span className="font-bold text-base text-gray-900 tracking-tight truncate">OSM Road Closures</span>
           </Link>
-          <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" />
+          <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 transition-colors" />
         </div>
       </SidebarHeader>
 
@@ -180,7 +180,7 @@ export function AppSidebar() {
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring rounded-md">
                   <SidebarMenuButton size="lg" render={<div />} className="w-full cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                    <Avatar className="h-8 w-8 rounded-full group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
+                    <Avatar className="h-8 w-8 rounded-full group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 transition-all duration-200">
                       <AvatarFallback className="rounded-full bg-blue-100 text-blue-700 text-xs text-[10px] font-black uppercase">
                         {user?.full_name 
                           ? user.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
@@ -211,10 +211,10 @@ export function AppSidebar() {
             ) : (
               <Link
                 href="/login"
-                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:mx-auto"
+                className="flex items-center justify-center w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-all duration-200 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:mx-auto"
               >
-                <LogIn className="h-4 w-4 shrink-0 font-bold" />
-                <span className="group-data-[collapsible=icon]:hidden font-bold uppercase tracking-tighter text-[11px]">Login to Report</span>
+                <LogIn className="h-4 w-4 shrink-0 group-data-[collapsible=icon]:h-5 group-data-[collapsible=icon]:w-5" />
+                <span className="ml-2 group-data-[collapsible=icon]:hidden font-bold uppercase tracking-tighter text-[11px]">Login to Report</span>
               </Link>
             )}
           </SidebarMenuItem>

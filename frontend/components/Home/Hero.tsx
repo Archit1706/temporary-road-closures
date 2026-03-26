@@ -74,7 +74,7 @@ const Hero: React.FC = () => {
                         <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
                             <Link
                                 href="/closures"
-                                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors group"
+                                className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium transition-colors group"
                             >
                                 View Live Closures
                                 <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -83,7 +83,7 @@ const Hero: React.FC = () => {
                                 href="https://github.com/Archit1706/temporary-road-closures"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                                className="inline-flex items-center px-6 py-3 border border-gray-300 text-gray-700 rounded-full hover:bg-gray-50 font-medium transition-colors"
                             >
                                 View on GitHub
                             </a>
