@@ -13,7 +13,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <LocationProvider>
         <SidebarProvider>
           <AppSidebar />
-          <main className="flex-1 overflow-hidden relative">
+          <main className="flex-1 w-full overflow-hidden relative bg-white">
             {children}
           </main>
         </SidebarProvider>

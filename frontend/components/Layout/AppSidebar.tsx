@@ -12,7 +12,8 @@ import {
   LogIn,
   Info,
   ShieldCheck,
-  Bell
+  Bell,
+  TriangleAlert
 } from 'lucide-react';
 
 import {
@@ -89,6 +90,21 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Report Closure Action */}
+        {isAuthenticated && (
+          <SidebarGroup>
+            <SidebarGroupContent className="px-2">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
+                className="w-full flex items-center space-x-2 px-3 py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 font-medium text-sm transition-colors"
+              >
+                <TriangleAlert className="w-4 h-4" />
+                <span>Report Closure</span>
+              </button>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Alerts Section */}
         <SidebarGroup className="flex-1">

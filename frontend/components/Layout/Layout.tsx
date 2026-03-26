@@ -7,6 +7,7 @@ interface LayoutProps {
     children: React.ReactNode;
     onToggleForm: () => void;
     isFormOpen: boolean;
+    isFormMinimized?: boolean;
     onEditClosure?: (closureId: number) => void;
 }
 
@@ -14,12 +15,19 @@ const Layout: React.FC<LayoutProps> = ({
     children,
     onToggleForm,
     isFormOpen,
+    isFormMinimized = false,
     onEditClosure
 }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
+    };
+
+    // Determine the right margin for the main content
+    const getRightMargin = () => {
+        if (!isFormOpen) return 'mr-0';
+        return isFormMinimized ? 'mr-12' : 'mr-96';
     };
 
     return (
@@ -42,7 +50,7 @@ const Layout: React.FC<LayoutProps> = ({
                 {/* Main Content - Adjust right margin when form is open */}
                 <main className={`
                     flex-1 relative transition-all duration-300 ease-in-out
-                    ${isFormOpen ? 'mr-96' : 'mr-0'}
+                    ${getRightMargin()}
                 `}>
                     {children}
 

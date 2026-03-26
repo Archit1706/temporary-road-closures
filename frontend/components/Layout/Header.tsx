@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Construction, TriangleAlert, Menu, X, LogIn, LogOut, User } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -72,26 +72,6 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
 
 
 
-                        {/* Report Closure Button - Only show when authenticated */}
-                        {isAuthenticated && (
-                            <Button
-                                variant={isFormOpen ? "destructive" : "default"}
-                                onClick={onToggleForm}
-                                className={`flex items-center space-x-2 ${isFormOpen ? "bg-red-100 text-red-700 hover:bg-red-200" : ""}`}
-                            >
-                                {isFormOpen ? (
-                                    <>
-                                        <X className="w-4 h-4" />
-                                        <span>Cancel</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <TriangleAlert className="w-4 h-4" />
-                                        <span>Report Closure</span>
-                                    </>
-                                )}
-                            </Button>
-                        )}
 
                         {/* Mobile menu button */}
                         <Button variant="ghost" size="icon" className="md:hidden text-gray-400 hover:text-gray-500">
