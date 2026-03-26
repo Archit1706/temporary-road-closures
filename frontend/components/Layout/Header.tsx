@@ -4,6 +4,10 @@ import { Construction, TriangleAlert, Menu, X, LogIn, LogOut, User } from 'lucid
 import { useClosures } from '@/context/ClosuresContext';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import dynamic from 'next/dynamic';
+
+const DemoControlPanel = dynamic(() => import('@/components/Demo/DemoControlPanel'), { ssr: false });
+
 
 interface HeaderProps {
     onToggleForm: () => void;
@@ -42,30 +46,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                     <div className="flex items-center space-x-4">
                         {/* Authentication Status */}
                         <div className="hidden md:flex items-center space-x-4">
-                            {isAuthenticated ? (
-                                <div className="flex items-center space-x-3">
-                                    <div className="flex items-center space-x-2 text-sm text-green-600">
-                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                        <span>Backend Connected</span>
-                                    </div>
-                                    {user && (
-                                        <div className="flex items-center space-x-2">
-                                            <User className="w-4 h-4 text-gray-600" />
-                                            <span className="text-sm text-gray-700">{user.full_name}</span>
-                                            {user.is_moderator && (
-                                                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                                                    Moderator
-                                                </span>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="flex items-center space-x-2 text-sm text-orange-600">
-                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                    <span>Demo Mode</span>
-                                </div>
-                            )}
+                            <DemoControlPanel />
                         </div>
 
                         {/* Auth Button */}

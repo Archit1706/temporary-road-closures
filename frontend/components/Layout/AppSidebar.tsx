@@ -74,14 +74,13 @@ export function AppSidebar() {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <Link href={item.url} className="w-full">
-                    <SidebarMenuButton 
-                      isActive={pathname === item.url || pathname?.startsWith(item.url + '/')}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </Link>
+                  <SidebarMenuButton 
+                    render={<Link href={item.url} />}
+                    isActive={pathname === item.url || pathname?.startsWith(item.url + '/')}
+                  >
+                    <item.icon className="w-4 h-4 mr-2" />
+                    <span>{item.title}</span>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -94,20 +93,18 @@ export function AppSidebar() {
           <SidebarMenuItem>
             {isAuthenticated ? (
               <DropdownMenu>
-                <DropdownMenuTrigger>
-                  <div className="w-full">
-                    <SidebarMenuButton size="lg" className="w-full">
-                      <Avatar className="h-8 w-8 rounded-lg">
-                        <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700">
-                          {user?.username?.substring(0, 2).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="grid flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-semibold">{user?.username}</span>
-                        <span className="truncate text-xs text-gray-500">Editor</span>
-                      </div>
-                    </SidebarMenuButton>
-                  </div>
+                <DropdownMenuTrigger className="w-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring rounded-md">
+                  <SidebarMenuButton size="lg" render={<div />} className="w-full cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700">
+                        {user?.username?.substring(0, 2).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 text-left text-sm leading-tight">
+                      <span className="truncate font-semibold">{user?.username}</span>
+                      <span className="truncate text-xs text-gray-500">Editor</span>
+                    </div>
+                  </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-[200px]">
                   <DropdownMenuItem>
@@ -121,12 +118,14 @@ export function AppSidebar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Link href="/login" className="w-full">
-                <SidebarMenuButton size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center">
-                  <LogIn className="mr-2 h-4 w-4" />
-                  <span>Login to Report</span>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton 
+                render={<Link href="/login" />}
+                size="lg" 
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center"
+              >
+                <LogIn className="mr-2 h-4 w-4" />
+                <span>Login to Report</span>
+              </SidebarMenuButton>
             )}
           </SidebarMenuItem>
         </SidebarMenu>

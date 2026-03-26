@@ -102,7 +102,7 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
     const connectionStatus = getConnectionStatus();
 
     return (
-        <div className={`fixed bottom-4 left-84 z-50 ${className}`}>
+        <div className={`relative ${className}`}>
             {/* Collapsed state - just the indicator */}
             {!isExpanded && (
                 <button
@@ -122,7 +122,7 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
 
             {/* Expanded state - full panel */}
             {isExpanded && (
-                <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[320px]">
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[320px] z-50">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">
