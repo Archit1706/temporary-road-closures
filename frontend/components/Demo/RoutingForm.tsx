@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { MapPin, Navigation, Route, Zap, AlertTriangle, RotateCcw, ArrowRight, Clock, TrendingUp, Car, Bike, User, CheckCircle2 } from 'lucide-react';
+import { 
+    MapPin, Navigation, Route, Zap, AlertTriangle, 
+    RotateCcw, ArrowRight, Clock, TrendingUp, Car, 
+    Bike, User, CheckCircle2, Info, AlertCircle, 
+    SeparatorHorizontal, Loader2 
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -380,7 +385,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                     >
                         {isCalculating ? (
                             <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                <Loader2 className="w-5 h-5 animate-spin" />
                                 <span>Generating...</span>
                             </>
                         ) : (

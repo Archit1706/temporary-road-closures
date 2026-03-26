@@ -309,8 +309,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
         <div className="h-screen flex flex-col bg-gray-50">
             <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-2 pr-6 w-full shrink-0">
                 <div className="flex items-center gap-2">
-                    <SidebarTrigger />
-                    <Separator orientation="vertical" className="h-6 md:hidden" />
                 </div>
 
                 <div className="flex items-center gap-4 ml-auto">
@@ -426,29 +424,9 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         onDestinationSelect={setDestinationPoint}
                     />
 
-                    {/* Sidebar toggle for mobile */}
-                    {!isSidebarOpen && (
-                        <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="absolute top-4 left-4 z-[1000] shadow-lg md:hidden"
-                        >
-                            <MapPin className="w-5 h-5" />
-                        </Button>
-                    )}
+                    {/* Sidebar toggle for mobile removed */}
 
-                    {/* Close sidebar button */}
-                    {isSidebarOpen && (
-                        <Button
-                            variant="secondary"
-                            size="icon"
-                            onClick={() => setIsSidebarOpen(false)}
-                            className="absolute top-4 left-4 z-[1000] shadow-lg md:hidden"
-                        >
-                            <X className="w-4 h-4" />
-                        </Button>
-                    )}
+                    {/* Close sidebar button removed */}
 
                     {/* Routing Status */}
                     {isCalculating && (
