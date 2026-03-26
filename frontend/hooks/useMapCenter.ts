@@ -7,6 +7,7 @@ interface MapCenter {
     loading: boolean;
     error: string | null;
     usingGeolocation: boolean;
+    retry: () => void;
 }
 
 interface UseMapCenterOptions {
@@ -28,13 +29,16 @@ export const useMapCenter = (options: UseMapCenterOptions = {}): MapCenter => {
         maximumAge = 300000 // 5 minutes
     } = options;
 
-    const [mapCenter, setMapCenter] = useState<MapCenter>({
+    const [retryCount, setRetryCount] = useState(0);
+    const [mapCenter, setMapCenter] = useState<Omit<MapCenter, 'retry'>>({
         center: fallbackCenter,
         zoom: fallbackZoom,
         loading: useGeolocation,
         error: null,
         usingGeolocation: false
     });
+
+    const retry = () => setRetryCount(prev => prev + 1);
 
     useEffect(() => {
         // Skip geolocation if disabled
@@ -58,6 +62,7 @@ export const useMapCenter = (options: UseMapCenterOptions = {}): MapCenter => {
         }
 
         console.log('🌍 Attempting to get user location...');
+        setMapCenter(prev => ({ ...prev, loading: true }));
 
         const getUserLocation = () => {
             navigator.geolocation.getCurrentPosition(
@@ -105,9 +110,9 @@ export const useMapCenter = (options: UseMapCenterOptions = {}): MapCenter => {
         };
 
         getUserLocation();
-    }, [useGeolocation, geolocationZoom, timeout, maximumAge]);
+    }, [useGeolocation, geolocationZoom, timeout, maximumAge, retryCount]);
 
-    return mapCenter;
+    return { ...mapCenter, retry };
 };
 
 // Preset configurations for common use cases

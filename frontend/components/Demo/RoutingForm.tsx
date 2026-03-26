@@ -213,13 +213,13 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                 type="button"
                                 onClick={() => onTransportationModeChange(mode.key)}
                                 className={cn(
-                                    "flex-1 h-10 gap-2 font-bold uppercase tracking-tighter text-[10px] transition-all duration-300 rounded-full relative z-10 bg-transparent hover:!bg-white/10 shadow-none border-none",
+                                    "flex-1 h-9 gap-1.5 font-bold uppercase tracking-tighter text-[10px] transition-all duration-300 rounded-full relative z-10 bg-transparent hover:!bg-white/10 shadow-none border-none px-2",
                                     isSelected 
                                         ? "text-white" 
                                         : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <Icon className="w-4 h-4" />
+                                <Icon className="w-3.5 h-3.5" />
                                 <span>{mode.label}</span>
                             </Button>
                         );
@@ -271,7 +271,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     {...register('source', { required: 'Start location is required' })}
                                     placeholder="Enter address or coordinates"
                                     className={cn(
-                                        "h-11 bg-white shadow-sm border-gray-200 focus:ring-green-500 rounded-full px-5",
+                                        "h-10 bg-white shadow-sm border-gray-200 focus:ring-green-500 rounded-full px-5 text-sm",
                                         isSelectingSource && "border-green-500 bg-green-50 ring-2 ring-green-100"
                                     )}
                                 />
@@ -337,7 +337,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     {...register('destination', { required: 'Destination is required' })}
                                     placeholder="Enter address or coordinates"
                                     className={cn(
-                                        "h-11 bg-white shadow-sm border-gray-200 focus:ring-red-500 rounded-full px-5",
+                                        "h-10 bg-white shadow-sm border-gray-200 focus:ring-red-500 rounded-full px-5 text-sm",
                                         isSelectingDestination && "border-red-500 bg-red-50 ring-2 ring-red-100"
                                     )}
                                 />
@@ -370,16 +370,16 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                     <Button
                         type="submit"
                         disabled={isCalculating || (!sourcePoint && !watch('source')) || (!destinationPoint && !watch('destination'))}
-                        className="flex-1 h-11 text-base font-bold gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 rounded-full transition-all duration-200"
+                        className="flex-1 h-10 text-sm font-bold gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 rounded-full transition-all duration-200"
                     >
                         {isCalculating ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="w-4 h-4 animate-spin" />
                                 <span>Generating...</span>
                             </>
                         ) : (
                             <>
-                                <Route className="w-5 h-5" />
+                                <Route className="w-4 h-4" />
                                 <span>Calculate Route</span>
                             </>
                         )}
@@ -389,10 +389,10 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                         type="button"
                         variant="ghost"
                         onClick={handleClear}
-                        className="h-11 w-11 p-0 rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-all duration-200 shrink-0"
+                        className="h-10 w-10 p-0 rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-all duration-200 shrink-0"
                         title="Reset form"
                     >
-                        <RotateCcw className="w-5 h-5" />
+                        <RotateCcw className="w-4 h-4" />
                     </Button>
                 </div>
             </form>

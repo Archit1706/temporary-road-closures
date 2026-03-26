@@ -221,7 +221,7 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                 </div>
 
                 {/* Closures List */}
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
                     {closures
                         .sort((a, b) => {
                             // Sort by relevance first, then by status, then by start time
