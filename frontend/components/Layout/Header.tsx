@@ -70,24 +70,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                             </div>
                         </div>
 
-                        {/* Auth Button */}
-                        {isAuthenticated ? (
-                            <Button
-                                variant="secondary"
-                                onClick={handleLogout}
-                                className="flex items-center space-x-2"
-                            >
-                                <LogOut className="w-4 h-4" />
-                                <span className="hidden sm:inline">Logout</span>
-                            </Button>
-                        ) : (
-                            <Link href={`/login${redirectParam}`}>
-                                <Button variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200 flex items-center space-x-2">
-                                    <LogIn className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Login</span>
-                                </Button>
-                            </Link>
-                        )}
+
 
                         {/* Report Closure Button - Only show when authenticated */}
                         {isAuthenticated && (
