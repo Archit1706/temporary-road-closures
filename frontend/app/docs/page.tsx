@@ -4,33 +4,23 @@ import DocsHeader from '@/components/Docs/Header';
 import DocsSidebar from '@/components/Docs/Sidebar';
 import DocsContent from '@/components/Docs/Content';
 
-// Main Documentation Page
 const DocsPage = () => {
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [activeSection, setActiveSection] = useState('introduction');
 
-    const toggleSidebar = () => {
-        setIsSidebarOpen(!isSidebarOpen);
-    };
-
-    const handleSectionChange = (section: string) => {
-        setActiveSection(section);
-        if (window.innerWidth < 768) {
-            setIsSidebarOpen(false);
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-gray-50">
-            <DocsHeader onToggleSidebar={toggleSidebar} isSidebarOpen={isSidebarOpen} />
+        <div className="flex flex-col h-screen overflow-hidden">
+            {/* Top bar — same as before */}
+            <DocsHeader
+                onToggleSidebar={() => {}}
+                isSidebarOpen={false}
+            />
 
-            <div className="flex">
+            {/* Body: docs sidebar + content */}
+            <div className="flex flex-1 overflow-hidden">
                 <DocsSidebar
-                    isOpen={isSidebarOpen}
                     activeSection={activeSection}
-                    onSectionChange={handleSectionChange}
+                    onSectionChange={setActiveSection}
                 />
-
                 <DocsContent activeSection={activeSection} />
             </div>
         </div>
