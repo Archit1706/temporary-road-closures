@@ -1,10 +1,16 @@
 "use client"
 import React from 'react';
-import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2, Target, Route, TriangleAlert } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2, Target, Route as RouteIcon, TriangleAlert } from 'lucide-react';
 import { format, isAfter, isBefore } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ClosuresListPanelProps {
     isOpen: boolean;
@@ -26,19 +32,6 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
         return 'active';
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'upcoming':
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'expired':
-                return 'bg-gray-100 text-gray-800 border-gray-200';
-            default:
-                return 'bg-gray-100 text-gray-800 border-gray-200';
-        }
-    };
-
     const getConfidenceColor = (level: number) => {
         if (level >= 8) return 'text-green-600';
         if (level >= 6) return 'text-blue-600';
@@ -56,7 +49,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
         if (closure.geometry.type === 'Point') {
             return Target;
         }
-        return Route;
+        return RouteIcon;
     };
 
     const getGeometryLabel = (closure: Closure) => {
@@ -124,84 +117,89 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
             {/* Overlay for mobile */}
             {isOpen && (
                 <div
-                    className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
+                    className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 md:hidden"
                     onClick={onClose}
                 />
             )}
 
             {/* Sidebar */}
             <div className={`
-                fixed top-16 left-0 h-[calc(100vh-4rem)] w-80 bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50
+                fixed top-16 left-0 h-[calc(100vh-4rem)] w-80 bg-background shadow-2xl transform transition-transform duration-300 ease-in-out z-50
                 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-                md:relative md:top-0 md:h-full md:translate-x-0 md:shadow-none md:border-r md:border-gray-200
+                md:relative md:top-0 md:h-full md:translate-x-0 md:shadow-none md:border-r md:border-border
             `}>
                 {/* Header */}
-                <div className="p-4 border-b border-gray-200">
-                    <h2 className="text-lg font-semibold text-gray-900">
-                        Road Closures ({closures.length})
-                    </h2>
-                    <p className="text-sm text-gray-500 mt-1 mb-1">
-                        Click on a closure to view on map
-                    </p>
-
-                    {isAuthenticated && (
-                        <div className="mt-3">
-                            <button
-                                onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
-                                className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 font-medium text-sm transition-colors"
-                            >
-                                <TriangleAlert className="w-4 h-4" />
-                                <span>Report Closure</span>
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Status Summary */}
-                    <div className="flex space-x-2 mt-3">
-                        <div className="flex-1 text-center p-2 bg-red-50 rounded-lg">
-                            <div className="text-sm font-semibold text-red-800">{activeClosures}</div>
-                            <div className="text-xs text-red-600">Active</div>
-                        </div>
-                        <div className="flex-1 text-center p-2 bg-yellow-50 rounded-lg">
-                            <div className="text-sm font-semibold text-yellow-800">{upcomingClosures}</div>
-                            <div className="text-xs text-yellow-600">Upcoming</div>
-                        </div>
-                        <div className="flex-1 text-center p-2 bg-gray-50 rounded-lg">
-                            <div className="text-sm font-semibold text-gray-800">{expiredClosures}</div>
-                            <div className="text-xs text-gray-600">Expired</div>
+                <div className="p-4 space-y-4">
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-bold tracking-tight text-foreground">
+                            Road Closures
+                        </h2>
+                        <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono text-[10px] py-0">
+                                {closures.length} TOTAL
+                            </Badge>
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
+                                Real-time reporting
+                            </span>
                         </div>
                     </div>
 
-                    {/* Geometry Type Statistics */}
+                    {isAuthenticated && (
+                        <Button
+                            onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
+                            className="w-full bg-destructive hover:bg-destructive/90 text-white font-black uppercase tracking-tighter h-11 transition-all active:scale-95 shadow-none"
+                        >
+                            <TriangleAlert className="w-4 h-4" />
+                            <span>Report Closure</span>
+                        </Button>
+                    )}
+
+                    {/* Status Summary Grid */}
+                    <div className="grid grid-cols-3 gap-2">
+                        <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-destructive/10 border border-destructive/20 transition-all hover:bg-destructive/20">
+                            <span className="text-base font-black text-destructive leading-none">{activeClosures}</span>
+                            <span className="text-[9px] font-bold uppercase text-destructive/70 mt-0.5 tracking-tighter">Active</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 transition-all hover:bg-amber-500/20">
+                            <span className="text-base font-black text-amber-600 leading-none">{upcomingClosures}</span>
+                            <span className="text-[9px] font-bold uppercase text-amber-600/70 mt-0.5 tracking-tighter">Soon</span>
+                        </div>
+                        <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-muted border border-border transition-all hover:bg-muted/80">
+                            <span className="text-base font-black text-muted-foreground leading-none">{expiredClosures}</span>
+                            <span className="text-[9px] font-bold uppercase text-muted-foreground mt-0.5 tracking-tighter">Old</span>
+                        </div>
+                    </div>
+
+                    {/* Geography Type Statistics Cards */}
                     {(pointClosures > 0 || lineStringClosures.length > 0) && (
-                        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="p-2.5 rounded-md bg-primary/5 border border-primary/20 space-y-1.5">
                             <div className="flex items-center justify-between text-xs">
-                                <div className="flex items-center space-x-1">
-                                    <MapPin className="w-3 h-3 text-blue-600" />
-                                    <span className="text-blue-800 font-medium">Geometry Types</span>
+                                <div className="flex items-center gap-1.5">
+                                    <MapPin className="w-3 h-3 text-primary" />
+                                    <span className="font-bold text-primary text-[10px] uppercase tracking-tighter">Geometry Types</span>
                                 </div>
-                                <div className="flex space-x-2 text-blue-700">
+                                <div className="flex gap-2 text-muted-foreground font-bold font-mono">
                                     {pointClosures > 0 && (
-                                        <div className="flex items-center space-x-1">
-                                            <Target className="w-3 h-3" />
+                                        <div className="flex items-center gap-1">
+                                            <Target className="w-3 h-3 text-orange-500" />
                                             <span>{pointClosures}</span>
                                         </div>
                                     )}
                                     {lineStringClosures.length > 0 && (
-                                        <div className="flex items-center space-x-1">
-                                            <Route className="w-3 h-3" />
+                                        <div className="flex items-center gap-1">
+                                            <RouteIcon className="w-3 h-3 text-primary" />
                                             <span>{lineStringClosures.length}</span>
                                         </div>
                                     )}
                                 </div>
                             </div>
                             {lineStringClosures.length > 0 && (
-                                <div className="flex items-center justify-between text-xs mt-1">
-                                    <div className="flex items-center space-x-1">
-                                        <Navigation className="w-3 h-3 text-blue-600" />
-                                        <span className="text-blue-800 font-medium">Direction Info</span>
+                                <div className="flex items-center justify-between text-xs pt-1.5 border-t border-primary/10">
+                                    <div className="flex items-center gap-1.5">
+                                        <Navigation className="w-3 h-3 text-primary" />
+                                        <span className="font-bold text-primary text-[10px] uppercase tracking-tighter">Direction Info</span>
                                     </div>
-                                    <div className="flex space-x-2 text-blue-700">
+                                    <div className="flex gap-2 text-muted-foreground font-bold font-mono">
                                         <span>↔ {bidirectionalClosures}</span>
                                         <span>→ {unidirectionalClosures}</span>
                                     </div>
@@ -210,46 +208,44 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                         </div>
                     )}
 
-                    {/* Authentication Status */}
                     {!isAuthenticated && (
-                        <div className="mt-3 p-2 bg-orange-50 border border-orange-200 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-4 h-4 text-orange-600" />
-                                <span className="text-sm text-orange-700">Demo Mode - Limited Features</span>
+                        <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-900 py-2">
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-amber-600" />
+                                <span className="text-[11px] font-bold uppercase tracking-tight">Demo Mode Active</span>
                             </div>
-                        </div>
-                    )}
-
-                    {/* Edit Instructions */}
-                    {isAuthenticated && (
-                        <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center space-x-2">
-                                <Edit3 className="w-4 h-4 text-green-600" />
-                                <span className="text-sm text-green-700">
-                                    Edit buttons available for your closures
-                                </span>
-                            </div>
-                        </div>
+                        </Alert>
                     )}
                 </div>
 
+                <Separator className="opacity-50" />
+
                 {/* Closures List */}
-                <div className="flex-1 overflow-y-auto hide-scrollbar max-h-[calc(100vh-12rem)]">
+                    <div className="flex-1 min-h-0">
+                        <ScrollArea className="h-full px-4 py-2">
                     {loading ? (
-                        <div className="p-4 text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="text-sm text-gray-500 mt-2">Loading closures...</p>
+                        <div className="space-y-3 py-4">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="space-y-2">
+                                    <Skeleton className="h-4 w-3/4" />
+                                    <Skeleton className="h-20 w-full" />
+                                </div>
+                            ))}
                         </div>
                     ) : closures.length === 0 ? (
-                        <div className="p-4 text-center">
-                            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <p className="text-gray-500">No road closures reported</p>
-                            <p className="text-sm text-gray-400 mt-1">
-                                Be the first to report a closure!
-                            </p>
+                        <div className="flex flex-col items-center justify-center py-12 text-center space-y-4">
+                            <div className="p-4 bg-muted rounded-full">
+                                <AlertCircle className="w-8 h-8 text-muted-foreground" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="font-bold text-muted-foreground">Clear Skies</p>
+                                <p className="text-xs text-muted-foreground/60 max-w-[180px]">
+                                    No road closures reported in this area.
+                                </p>
+                            </div>
                         </div>
                     ) : (
-                        <div className="p-2 overflow-y-auto hide-scrollbar">
+                        <div className="space-y-3 pb-6">
                             {closures.map((closure) => {
                                 const status = getClosureStatus(closure);
                                 const isSelected = selectedClosure?.id === closure.id;
@@ -259,60 +255,55 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                                 const GeometryIcon = getGeometryIcon(closure);
 
                                 return (
-                                    <div
+                                    <Card
                                         key={closure.id}
+                                        onClick={() => handleClosureClick(closure)}
                                         className={`
-                                            p-3 mb-2 rounded-lg border cursor-pointer transition-colors relative group
+                                            cursor-pointer transition-all duration-200 group overflow-hidden rounded-lg outline-none ring-0 py-0 shadow-none border-2
                                             ${isSelected
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                ? 'border-blue-600 bg-transparent'
+                                                : 'border-border/50 hover:border-muted-foreground/30'
                                             }
                                         `}
                                     >
-                                        {/* Action Buttons - Visible on hover for authenticated users */}
-                                        {isAuthenticated && canEdit && (
-                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                                <div className="flex space-x-1">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={(e) => handleEditClick(e, closure.id)}
-                                                        className="h-7 w-7 bg-white shadow-sm hover:text-blue-600 hover:bg-gray-50"
-                                                        title="Edit closure"
-                                                    >
-                                                        <Edit3 className="w-3 h-3 text-gray-600 hover:text-blue-600" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="icon"
-                                                        onClick={(e) => handleDeleteClick(e, closure.id, closure.description)}
-                                                        className="h-7 w-7 bg-white shadow-sm hover:text-red-600 hover:bg-gray-50"
-                                                        title="Delete closure"
-                                                    >
-                                                        <Trash2 className="w-3 h-3 text-gray-600 hover:text-red-600" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Main Content - Click handler for selection */}
-                                        <div onClick={() => handleClosureClick(closure)}>
-                                            {/* Header with Status and Confidence */}
-                                            <div className="flex items-center justify-between mb-2">
-                                                <span className={`
-                                                    inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border
-                                                    ${getStatusColor(status)}
-                                                `}>
-                                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                                </span>
-                                                <div className="flex items-center space-x-2">
+                                        <CardContent className="p-4">
+                                            {/* Header with Status and Actions */}
+                                            <div className="flex items-start justify-between mb-3">
+                                                <Badge 
+                                                    variant={status === 'active' ? 'destructive' : status === 'upcoming' ? 'secondary' : 'outline'}
+                                                    className={`uppercase tracking-tighter text-[10px] font-black ${status === 'upcoming' ? 'bg-amber-500 text-white hover:bg-amber-600 border-none' : ''}`}
+                                                >
+                                                    {status}
+                                                </Badge>
+                                                
+                                                <div className="flex items-center gap-2">
+                                                    {isAuthenticated && canEdit && (
+                                                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => handleEditClick(e, closure.id)}
+                                                                className="h-6 w-6 hover:bg-primary/10 hover:text-primary"
+                                                            >
+                                                                <Edit3 className="h-3 w-3" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={(e) => handleDeleteClick(e, closure.id, closure.description)}
+                                                                className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                                                            >
+                                                                <Trash2 className="h-3 w-3" />
+                                                            </Button>
+                                                        </div>
+                                                    )}
                                                     <div className="flex items-center space-x-1">
-                                                        <Zap className="w-3 h-3 text-gray-400" />
+                                                        <Zap className="w-3 h-3 text-muted-foreground" />
                                                         <span className={`text-xs font-medium ${getConfidenceColor(closure.confidence_level)}`}>
                                                             {closure.confidence_level}/10
                                                         </span>
                                                     </div>
-                                                    <span className="text-xs text-gray-400">
+                                                    <span className="text-xs text-muted-foreground">
                                                         {formatDuration(closure.duration_hours)}
                                                     </span>
                                                     {/* Edit indicator for owned closures */}
@@ -325,33 +316,28 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                                             </div>
 
                                             {/* Description */}
-                                            <h3 className="font-medium text-gray-900 mb-2 line-clamp-2 pr-8">
+                                            <h3 className="text-sm font-bold text-foreground leading-tight mb-3 line-clamp-2">
                                                 {closure.description}
                                             </h3>
 
-                                            {/* Closure Type and Geometry Info */}
-                                            <div className="flex items-center justify-between mb-2">
-                                                <div className="flex items-center space-x-1">
-                                                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                    <span className="text-sm text-gray-600 capitalize">
-                                                        {closure.closure_type.replace('_', ' ')}
-                                                    </span>
+                                            {/* Meta Info Grid */}
+                                            <div className="grid grid-cols-2 gap-y-2 text-[10px] items-center">
+                                                <div className="flex items-center gap-1.5 text-muted-foreground font-bold uppercase tracking-tighter">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></div>
+                                                    <span>{closure.closure_type.replace('_', ' ')}</span>
                                                 </div>
-                                                <div className="flex items-center space-x-1">
-                                                    <GeometryIcon className={`w-3 h-3 ${closure.geometry.type === 'Point' ? 'text-orange-600' : 'text-blue-600'
-                                                        }`} />
-                                                    <span className="text-sm" title={geometryLabel}>
-                                                        {directionIcon}
-                                                    </span>
-                                                    <span className="text-xs text-gray-500">
+                                                <div className="flex items-center gap-1.5 justify-end text-muted-foreground">
+                                                    <GeometryIcon className={`w-3 h-3 ${closure.geometry.type === 'Point' ? 'text-orange-600' : 'text-primary'}`} />
+                                                    <span className="text-sm" title={geometryLabel}>{directionIcon}</span>
+                                                    <span className="text-xs">
                                                         {closure.geometry.type === 'Point' ? 'Point' :
                                                             closure.is_bidirectional ? 'Both ways' : 'One way'}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            {/* Timing */}
-                                            <div className="space-y-1 text-xs text-gray-500">
+                                            {/* Timing & Details */}
+                                            <div className="mt-3 pt-3 border-t border-border/50 space-y-1 text-xs text-muted-foreground">
                                                 <div className="flex items-center space-x-1">
                                                     <Calendar className="w-3 h-3" />
                                                     <span>
@@ -388,7 +374,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                                                 {/* Submitter info */}
                                                 <div className="flex items-center space-x-1">
                                                     <User className="w-3 h-3" />
-                                                    <span className="text-xs">ID: {closure.submitter_id}</span>
+                                                    <span className="text-xs">ID: #{closure.id}</span>
                                                     {canEdit && (
                                                         <span className="text-green-600 font-medium">(Your closure)</span>
                                                     )}
@@ -402,40 +388,39 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                                                     <span className="text-xs text-yellow-600">Needs validation</span>
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
+                                        </CardContent>
+                                    </Card>
                                 );
                             })}
                         </div>
                     )}
-                </div>
+                        </ScrollArea>
+                    </div>
 
                 {/* Footer */}
-                <div className="p-3 border-t border-gray-200 bg-gray-50">
-                    <div className="text-xs text-gray-500 text-center">
-                        {isAuthenticated ? (
-                            <span>✓ Connected to backend API</span>
-                        ) : (
-                            <span>⚠ Using demo data</span>
+                <div className="p-4 border-t border-border bg-muted/30">
+                    <div className="flex flex-col gap-2">
+                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
+                            <span className={isAuthenticated ? "text-green-600" : "text-amber-600"}>
+                                {isAuthenticated ? "● API Connected" : "⚠ Demo Mode"}
+                            </span>
+                            <span className="text-muted-foreground/60">
+                                {pointClosures > 0 && `📍 ${pointClosures} points`}
+                                {pointClosures > 0 && lineStringClosures.length > 0 && ' • '}
+                                {lineStringClosures.length > 0 && `🛣️ ${lineStringClosures.length} segments`}
+                                {lineStringClosures.length > 0 && (
+                                    <span className="ml-1">
+                                        (↔ {bidirectionalClosures} • → {unidirectionalClosures})
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+                        {isAuthenticated && (
+                            <div className="text-[9px] text-muted-foreground text-center animate-pulse tracking-tight font-medium">
+                                Right-click map or hover items to manage reports
+                            </div>
                         )}
                     </div>
-                    {(pointClosures > 0 || lineStringClosures.length > 0) && (
-                        <div className="text-xs text-gray-400 text-center mt-1">
-                            {pointClosures > 0 && `📍 ${pointClosures} points`}
-                            {pointClosures > 0 && lineStringClosures.length > 0 && ' • '}
-                            {lineStringClosures.length > 0 && `🛣️ ${lineStringClosures.length} segments`}
-                            {lineStringClosures.length > 0 && (
-                                <span className="ml-1">
-                                    (↔ {bidirectionalClosures} • → {unidirectionalClosures})
-                                </span>
-                            )}
-                        </div>
-                    )}
-                    {isAuthenticated && (
-                        <div className="text-xs text-green-600 text-center mt-1">
-                            Hover over your closures to edit or delete
-                        </div>
-                    )}
                 </div>
             </div>
         </>
