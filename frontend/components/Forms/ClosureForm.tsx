@@ -9,6 +9,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { useIsMobile } from '@/hooks/use-mobile';
 interface ClosureFormProps {
     isOpen: boolean;
     onClose: () => void;
@@ -116,6 +118,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 }) => {
     const { createClosure, updateClosure, state } = useClosures();
     const { loading } = state;
+    const isMobile = useIsMobile();
     const [currentStep, setCurrentStep] = useState(1);
     const [editPoints, setEditPoints] = useState<L.LatLng[]>([]);
     const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
@@ -1034,19 +1037,168 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         }
     };
 
+    // Shared form header
+    const renderFormHeader = () => (
+        <div className="bg-blue-600 text-white p-4 flex items-start justify-between shrink-0">
+            <div className="flex items-start space-x-3">
+                <div className="mt-0.5">
+                    {isEditMode ? <Edit className="w-5 h-5" /> : <TriangleAlert className="w-5 h-5" />}
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold leading-tight">
+                        {isEditMode ? 'Edit Closure' : 'Report Closure'}
+                    </h2>
+                    <div className="flex items-center space-x-2 text-xs text-blue-100 mt-1">
+                        {state.isAuthenticated ? (
+                            <>
+                                <Shield className="w-3 h-3" />
+                                <span>
+                                    Authenticated - {isEditMode ? 'Updating' : 'Saving'} to backend
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <Info className="w-3 h-3" />
+                                <span>Demo mode - Changes temporary</span>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+            {!isMobile && (
+                <button
+                    onClick={onClose}
+                    className="p-1 hover:bg-blue-700 rounded mt-0.5 transition-colors"
+                >
+                    <X className="w-5 h-5" />
+                </button>
+            )}
+        </div>
+    );
+
+    // Shared progress steps
+    const renderProgressSteps = () => (
+        <div className="px-4 py-3 border-b border-gray-200 shrink-0">
+            <div className="flex items-center justify-between">
+                {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                        <div className={`
+                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
+                            ${step <= currentStep
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                            }
+                        `}>
+                            {step}
+                        </div>
+                        {step < 3 && (
+                            <div className={`
+                                w-12 h-1 mx-1
+                                ${step < currentStep ? 'bg-blue-600' : 'bg-gray-200'}
+                            `} />
+                        )}
+                    </div>
+                ))}
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+                Step {currentStep} of {totalSteps}: {
+                    currentStep === 1 ? 'Closure Details' :
+                        currentStep === 2 ? 'Location & Timing' :
+                            'Review & Submit'
+                }
+            </div>
+        </div>
+    );
+
+    // Shared form footer
+    const renderFormFooter = () => (
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
+            <div className="flex items-center justify-between space-x-2">
+                <div className="flex space-x-2">
+                    {currentStep > 1 && (
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={prevStep}
+                            className="rounded-full px-6"
+                        >
+                            Previous
+                        </Button>
+                    )}
+                </div>
+
+                <div className="flex space-x-2">
+                    {currentStep < totalSteps ? (
+                        <Button
+                            type="button"
+                            onClick={nextStep}
+                            className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8"
+                        >
+                            Next
+                        </Button>
+                    ) : (
+                        <Button
+                            type="submit"
+                            disabled={loading || (
+                                !isEditMode && (
+                                    (watchedGeometryType === 'Point' && getCurrentPoints().length !== 1) ||
+                                    (watchedGeometryType === 'LineString' && !routeInfo && getCurrentPoints().length < 2)
+                                )
+                            )}
+                            className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2 rounded-full px-8"
+                        >
+                            {loading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>{isEditMode ? 'Updating...' : 'Submitting...'}</span>
+                                </>
+                            ) : (
+                                <>
+                                    {isEditMode ? <Edit className="w-4 h-4" /> : <TriangleAlert className="w-4 h-4" />}
+                                    <span>
+                                        {isEditMode
+                                            ? (state.isAuthenticated ? 'Update Closure' : 'Update in Demo')
+                                            : (state.isAuthenticated ? 'Submit to Backend' : 'Submit to Demo')
+                                        }
+                                    </span>
+                                </>
+                            )}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    // --- MOBILE: Bottom Sheet ---
+    if (isMobile) {
+        return (
+            <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+                <SheetContent side="bottom" className="max-h-[85vh] flex flex-col p-0 rounded-t-2xl" showCloseButton={true}>
+                    {/* Drag handle */}
+                    <div className="flex justify-center pt-3 pb-1 shrink-0">
+                        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                    </div>
+                    <SheetTitle className="sr-only">{isEditMode ? 'Edit Closure' : 'Report Closure'}</SheetTitle>
+                    <SheetDescription className="sr-only">Closure form</SheetDescription>
+                    {renderFormHeader()}
+                    {renderProgressSteps()}
+                    <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
+                        <div className="flex-1 overflow-y-auto min-h-0">
+                            <div className="p-4 pb-6">
+                                {renderStepContent()}
+                            </div>
+                        </div>
+                        {renderFormFooter()}
+                    </form>
+                </SheetContent>
+            </Sheet>
+        );
+    }
+
+    // --- DESKTOP: Sidebar ---
     return (
         <>
-            {/* Rest of the component remains the same as before - sidebar, header, form controls, etc. */}
-            {/* ... (keeping the existing JSX structure for the sidebar, header, and form controls) */}
-
-            {/* Backdrop for mobile */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
-                    onClick={onClose}
-                />
-            )}
-
             {/* Form Sidebar */}
             <div className={`
                 fixed top-16 right-0 h-[calc(100vh-4rem)] bg-white shadow-xl transform transition-all duration-300 ease-in-out z-50 border-l border-gray-200
@@ -1087,139 +1239,15 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     </div>
                 ) : (
                     <>
-                        {/* Header */}
-                        <div className="bg-blue-600 text-white p-4 flex items-start justify-between">
-                            <div className="flex items-start space-x-3">
-                                <div className="mt-0.5">
-                                    {isEditMode ? <Edit className="w-5 h-5" /> : <TriangleAlert className="w-5 h-5" />}
-                                </div>
-                                <div>
-                                    <h2 className="text-lg font-semibold leading-tight">
-                                        {isEditMode ? 'Edit Closure' : 'Report Closure'}
-                                    </h2>
-                                    <div className="flex items-center space-x-2 text-xs text-blue-100 mt-1">
-                                        {state.isAuthenticated ? (
-                                            <>
-                                                <Shield className="w-3 h-3" />
-                                                <span>
-                                                    Authenticated - {isEditMode ? 'Updating' : 'Saving'} to backend
-                                                </span>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Info className="w-3 h-3" />
-                                                <span>Demo mode - Changes temporary</span>
-                                            </>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={onClose}
-                                className="p-1 hover:bg-blue-700 rounded mt-0.5 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Progress Steps */}
-                        <div className="px-4 py-3 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                                {[1, 2, 3].map((step) => (
-                                    <div key={step} className="flex items-center">
-                                        <div className={`
-                                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                                            ${step <= currentStep
-                                                ? 'bg-blue-600 text-white'
-                                                : 'bg-gray-200 text-gray-600'
-                                            }
-                                        `}>
-                                            {step}
-                                        </div>
-                                        {step < 3 && (
-                                            <div className={`
-                                                w-12 h-1 mx-1
-                                                ${step < currentStep ? 'bg-blue-600' : 'bg-gray-200'}
-                                            `} />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-2 text-xs text-gray-600">
-                                Step {currentStep} of {totalSteps}: {
-                                    currentStep === 1 ? 'Closure Details' :
-                                        currentStep === 2 ? 'Location & Timing' :
-                                            'Review & Submit'
-                                }
-                            </div>
-                        </div>
-
-                        {/* Form Content */}
+                        {renderFormHeader()}
+                        {renderProgressSteps()}
                         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-                            {/* Scrollable Content Area */}
                             <div className="flex-1 overflow-y-auto min-h-0">
                                 <div className="p-4 pb-6">
                                     {renderStepContent()}
                                 </div>
                             </div>
-
-                            {/* Fixed Footer - Always Visible */}
-                            <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
-                                <div className="flex items-center justify-between space-x-2">
-                                    <div className="flex space-x-2">
-                                        {currentStep > 1 && (
-                                            <Button
-                                                type="button"
-                                                variant="outline"
-                                                onClick={prevStep}
-                                                className="rounded-full px-6"
-                                            >
-                                                Previous
-                                            </Button>
-                                        )}
-                                    </div>
-
-                                    <div className="flex space-x-2">
-                                        {currentStep < totalSteps ? (
-                                            <Button
-                                                type="button"
-                                                onClick={nextStep}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8"
-                                            >
-                                                Next
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                type="submit"
-                                                disabled={loading || (
-                                                    !isEditMode && (
-                                                        (watchedGeometryType === 'Point' && getCurrentPoints().length !== 1) ||
-                                                        (watchedGeometryType === 'LineString' && !routeInfo && getCurrentPoints().length < 2)
-                                                    )
-                                                )}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2 rounded-full px-8"
-                                            >
-                                                {loading ? (
-                                                    <>
-                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                        <span>{isEditMode ? 'Updating...' : 'Submitting...'}</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        {isEditMode ? <Edit className="w-4 h-4" /> : <TriangleAlert className="w-4 h-4" />}
-                                                        <span>
-                                                            {isEditMode
-                                                                ? (state.isAuthenticated ? 'Update Closure' : 'Update in Demo')
-                                                                : (state.isAuthenticated ? 'Submit to Backend' : 'Submit to Demo')
-                                                            }
-                                                        </span>
-                                                    </>
-                                                )}
-                                            </Button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            {renderFormFooter()}
                         </form>
                     </>
                 )}
