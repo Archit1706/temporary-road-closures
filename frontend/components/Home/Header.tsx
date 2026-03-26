@@ -80,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                         {isAuthenticated ? (
                             <button
                                 onClick={handleLogout}
-                                className="flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                className="flex items-center space-x-2 px-3 py-2 rounded-full font-medium transition-colors text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
                             >
                                 <LogOut className="w-4 h-4" />
                                 <span className="hidden sm:inline">Logout</span>
@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                         ) : (
                             <Link
                                 href={`/login${redirectParam}`}
-                                className="flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm bg-green-100 text-green-700 hover:bg-green-200"
+                                className="flex items-center space-x-2 px-3 py-2 rounded-full font-medium transition-colors text-sm bg-green-100 text-green-700 hover:bg-green-200"
                             >
                                 <LogIn className="w-4 h-4" />
                                 <span className="hidden sm:inline">Login</span>
@@ -100,7 +100,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                             <button
                                 onClick={onToggleForm}
                                 className={`
-                                    flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors
+                                    flex items-center space-x-2 px-4 py-2 rounded-full font-medium transition-colors
                                     ${isFormOpen
                                         ? 'bg-red-100 text-red-700 hover:bg-red-200'
                                         : 'bg-blue-600 text-white hover:bg-blue-700'
