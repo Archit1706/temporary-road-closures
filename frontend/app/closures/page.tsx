@@ -44,35 +44,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-// Auth Notice Component
-const AuthNotice: React.FC = () => {
-  const { state } = useClosures();
-  const { isAuthenticated } = state;
 
-  if (isAuthenticated) return null;
-
-  return (
-    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 max-w-md">
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 shadow-lg">
-        <div className="flex items-start space-x-3">
-          <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-          <div className="flex-1">
-            <h4 className="text-sm font-medium text-blue-900 mb-1">
-              Login Required for Full Features
-            </h4>
-            <p className="text-sm text-blue-700 mb-3">
-              You can view closures, but need to log in to report new ones or edit existing closures.
-            </p>
-            <button className="inline-flex items-center px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors">
-              <LogIn className="w-4 h-4 mr-1" />
-              Login in Header
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 // Point Selection Instructions Component
 const PointSelectionInstructions: React.FC<{
@@ -489,7 +461,6 @@ function ClosuresPageContent() {
       </Layout>
 
       {/* Auth Notice for non-authenticated users */}
-      <AuthNotice />
 
       {/* Edit Status Indicator */}
       <EditStatus
