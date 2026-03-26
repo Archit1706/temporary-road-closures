@@ -212,8 +212,8 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
 
     // Shared closures list content
     const renderClosuresList = () => (
-        <div className="flex-1 min-h-0">
-            <ScrollArea className="h-full px-4 py-2">
+        <div className="flex-1 overflow-y-auto min-h-0 overflow-x-hidden scrollbar-thin">
+            <div className="px-4 py-2">
                 {loading ? (
                     <div className="space-y-3 py-4">
                         {[1, 2, 3, 4].map(i => (
@@ -391,7 +391,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                         })}
                     </div>
                 )}
-            </ScrollArea>
+            </div>
         </div>
     );
 
@@ -427,7 +427,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
     if (isMobile) {
         return (
             <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-                <SheetContent side="bottom" className="max-h-[75vh] flex flex-col p-0 rounded-t-2xl" showCloseButton={false}>
+                <SheetContent side="bottom" className="!h-[80vh] sm:!h-[75vh] flex flex-col p-0 gap-0 rounded-t-2xl overflow-hidden" showCloseButton={false}>
                     {/* Drag handle */}
                     <div className="flex justify-center pt-3 pb-1 shrink-0">
                         <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
@@ -435,7 +435,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                     <SheetTitle className="sr-only">Road Closures</SheetTitle>
                     <SheetDescription className="sr-only">List of road closures</SheetDescription>
                     {renderHeader()}
-                    <Separator className="opacity-50" />
+                    <Separator className="opacity-50 shrink-0" />
                     {renderClosuresList()}
                     {renderFooter()}
                 </SheetContent>
