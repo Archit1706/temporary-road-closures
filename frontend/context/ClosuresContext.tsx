@@ -200,10 +200,7 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
                     dispatch({ type: 'SET_AUTHENTICATED', payload: true });
                     dispatch({ type: 'SET_USER', payload: userData });
 
-                    // Show success message
-                    toast.success(`Welcome, ${userData.full_name || userData.username}!`, {
-                        duration: 4000
-                    });
+                    // Removed success message as requested
 
                     console.log('✅ OAuth login successful:', userData.username);
 
@@ -267,9 +264,6 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
             dispatch({ type: 'SET_USER', payload: response.user });
             dispatch({ type: 'SET_LOADING', payload: false });
 
-            toast.success(`Welcome back, ${response.user.full_name}!`, {
-                duration: 3000
-            });
             console.log('✅ Login successful, user authenticated:', response.user.username);
         } catch (error: any) {
             const errorMessage = parseErrorMessage(error);
@@ -316,9 +310,6 @@ export const ClosuresProvider: React.FC<ClosuresProviderProps> = ({ children }) 
         dispatch({ type: 'SET_SELECTED_CLOSURE', payload: null });
         dispatch({ type: 'SET_EDITING_CLOSURE', payload: null });
 
-        toast.success('Logged out successfully. See you next time!', {
-            duration: 3000
-        });
         console.log('👋 User logged out');
     }, []);
 

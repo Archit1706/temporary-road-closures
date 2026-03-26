@@ -147,7 +147,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                     {isAuthenticated && (
                         <Button
                             onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
-                            className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold uppercase tracking-tighter h-11 transition-all active:scale-95 shadow-none rounded-full"
+                            className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold uppercase tracking-tighter h-11 transition-all shadow-none rounded-full"
                         >
                             <TriangleAlert className="w-4 h-4" />
                             <span>Report Closure</span>
