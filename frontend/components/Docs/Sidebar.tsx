@@ -108,13 +108,15 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
 
     return (
         <aside className="w-56 flex-shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto border-r border-gray-100 bg-white">
-            {/* Header */}
-            <div className="px-3 pt-4 pb-2">
-                <div className="flex items-center gap-2 px-2 mb-1">
-                    <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                        API Docs
-                    </span>
+            <div className="px-5 pt-4 pb-2">
+                <div className="flex items-center gap-2.5 px-0.5 mb-1">
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shrink-0 shadow-sm">
+                        <BookOpen className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex flex-col leading-tight">
+                        <span className="text-sm font-bold text-gray-900 tracking-tight">API Reference</span>
+                        <span className="text-[10px] text-gray-500 font-medium tracking-tight">Technical Docs</span>
+                    </div>
                 </div>
             </div>
 
@@ -123,7 +125,7 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                 {/* Sliding Highlight */}
                 {markerPos.height > 0 && (
                     <div 
-                        className="absolute bg-blue-600 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-none"
+                        className="absolute bg-gray-900 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-sm"
                         style={{
                             top: markerPos.top,
                             height: markerPos.height,
@@ -145,18 +147,15 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                                     onClick={() => toggleSection(item.id)}
                                     data-active={isActive}
                                     className={cn(
-                                        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold transition-all duration-150 relative z-10",
+                                        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative z-10",
                                         isActive
                                             ? "!text-white !bg-transparent hover:!text-white"
                                             : isChildActive
-                                                ? "text-blue-700 bg-blue-50/50"
+                                                ? "text-gray-900 bg-gray-100/50 hover:bg-gray-100/50 font-bold"
                                                 : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
                                     )}
                                 >
-                                    <div className="flex items-center gap-2.5">
-                                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                                        <span className="text-[13px]">{item.label}</span>
-                                    </div>
+                                    <span className="text-[14px]">{item.label}</span>
                                     {isExpanded
                                         ? <ChevronDown className="w-3 h-3 opacity-50" />
                                         : <ChevronRight className="w-3 h-3 opacity-50" />
@@ -171,7 +170,7 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                                                 onClick={() => onSectionChange(child.id)}
                                                 data-active={activeSection === child.id}
                                                 className={cn(
-                                                    "w-full text-left px-3 py-1.5 rounded-lg text-[12px] transition-all duration-150 relative z-10 font-bold",
+                                                    "w-full text-left px-3 py-1.5 rounded-lg text-[12px] transition-all duration-150 relative z-10 font-medium",
                                                     activeSection === child.id
                                                         ? "!text-white !bg-transparent hover:!text-white shadow-none"
                                                         : "text-gray-500 hover:text-gray-500 hover:bg-transparent"
@@ -192,14 +191,13 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                             onClick={() => onSectionChange(item.id)}
                             data-active={isActive}
                             className={cn(
-                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all duration-150 relative z-10",
+                                "w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative z-10",
                                 isActive
                                     ? "!text-white !bg-transparent hover:!text-white shadow-none"
                                     : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
                             )}
                         >
-                            <Icon className="w-3.5 h-3.5 shrink-0" />
-                            <span className="text-[13px]">{item.label}</span>
+                            <span className="text-[14px]">{item.label}</span>
                         </button>
                     );
                 })}

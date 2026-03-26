@@ -75,11 +75,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="bg-white border-b p-2 h-16 flex items-center group-data-[collapsible=icon]:justify-center transition-all duration-300">
         <div className="flex items-center w-full h-full">
-          <Link href="/" className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden min-w-0 flex-1 hover:opacity-80 transition-opacity">
-            <div className="flex items-center justify-center w-8 h-8 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 bg-blue-600 rounded-lg shrink-0 transition-all duration-200">
+          <Link href="/" className="flex items-center space-x-2.5 group-data-[collapsible=icon]:hidden min-w-0 flex-1 hover:opacity-80 transition-opacity ml-1">
+            <div className="flex items-center justify-center w-9 h-9 bg-blue-600 rounded-lg shrink-0 shadow-sm transition-all duration-200">
               <Construction className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-base text-gray-900 tracking-tight truncate">OSM Road Closures</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-bold text-sm text-gray-900 tracking-tight">OSM Road Closures</span>
+              <span className="text-[10px] text-gray-500 font-medium">Internal Platform</span>
+            </div>
           </Link>
           <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 transition-colors" />
         </div>
@@ -87,18 +90,18 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="relative">
               {/* Sliding Highlight Background */}
               {activeIndex !== -1 && (
                 <div 
                   className={cn(
-                    "absolute left-0 right-0 rounded-lg bg-blue-600 transition-all duration-300 ease-in-out z-0",
-                    isCollapsed ? "h-10 w-10 mx-auto" : "h-8"
+                    "absolute left-0 right-0 rounded-lg bg-gray-900 transition-all duration-300 ease-in-out z-0 shadow-sm",
+                    isCollapsed ? "h-10 w-10 mx-auto" : "h-9"
                   )}
                   style={{
-                    transform: `translateY(${activeIndex * itemHeight}px)`,
+                    transform: `translateY(${activeIndex * (isCollapsed ? 40 : 36)}px)`,
                   }}
                 />
               )}
@@ -109,10 +112,10 @@ export function AppSidebar() {
                     isActive={false}
                     tooltip={item.title}
                     className={cn(
-                      "transition-all duration-300 rounded-lg group-data-[collapsible=icon]:rounded-lg h-8 font-bold",
+                      "transition-all duration-300 rounded-lg group-data-[collapsible=icon]:rounded-lg h-9 font-medium",
                       index === activeIndex 
                         ? "!text-white shadow-none !bg-transparent hover:!text-white" 
-                        : "!text-gray-500 bg-transparent hover:!text-gray-500"
+                        : "!text-gray-600 bg-transparent hover:!text-gray-600"
                     )}
                   >
                     <item.icon className={cn(
