@@ -162,15 +162,22 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
     } : null;
 
     const selectedMode = transportationModes.find(mode => mode.key === transportationMode);
+    const DynamicIcon = selectedMode?.icon || Navigation;
 
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
             <div className="flex items-center space-x-3">
-                <Navigation className="w-6 h-6 text-blue-600" />
+                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg shrink-0">
+                    <DynamicIcon className="w-6 h-6 text-white" />
+                </div>
                 <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Route Planning</h2>
-                    <p className="text-sm text-gray-500">Plan routes that avoid relevant road closures</p>
+                    <h2 className="text-xl font-bold text-gray-900">Closure-Aware Routing</h2>
+                    <p className="text-sm text-gray-500">
+                        {transportationMode === 'auto' && 'Avoids road closures'}
+                        {transportationMode === 'bicycle' && 'Avoids bicycle closures'}
+                        {transportationMode === 'pedestrian' && 'Avoids pedestrian closures'}
+                    </p>
                 </div>
             </div>
 
