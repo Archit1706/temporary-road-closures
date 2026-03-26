@@ -28,10 +28,12 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { useClosures } from '@/context/ClosuresContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 const navItems = [
   {
@@ -58,8 +60,16 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { state, logout } = useClosures();
-  const { isAuthenticated, user } = state;
+  const { state: closuresState, logout } = useClosures();
+  const { isAuthenticated, user } = closuresState;
+  const { state: sidebarCollapsibleState } = useSidebar();
+  const isCollapsed = sidebarCollapsibleState === "collapsed";
+
+  const activeIndex = navItems.findIndex(
+    (item) => pathname === item.url || pathname?.startsWith(item.url + '/')
+  );
+
+  const itemHeight = isCollapsed ? 40 : 32;
 
   return (
     <Sidebar collapsible="icon">
@@ -79,16 +89,36 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Menu</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {navItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+            <SidebarMenu className="relative">
+              {/* Sliding Highlight Background */}
+              {activeIndex !== -1 && (
+                <div 
+                  className={cn(
+                    "absolute left-0 right-0 rounded-lg bg-blue-600 transition-all duration-300 ease-in-out z-0",
+                    isCollapsed ? "h-10 w-10 mx-auto" : "h-8"
+                  )}
+                  style={{
+                    transform: `translateY(${activeIndex * itemHeight}px)`,
+                  }}
+                />
+              )}
+              {navItems.map((item, index) => (
+                <SidebarMenuItem key={item.title} className="relative z-10">
                   <SidebarMenuButton 
                     render={<Link href={item.url} />}
-                    isActive={pathname === item.url || pathname?.startsWith(item.url + '/')}
+                    isActive={false}
                     tooltip={item.title}
-                    className="transition-all duration-200 hover:bg-gray-100 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-bold data-[active=true]:shadow-lg data-[active=true]:hover:bg-blue-700 rounded-lg group-data-[collapsible=icon]:rounded-lg"
+                    className={cn(
+                      "transition-all duration-300 rounded-lg group-data-[collapsible=icon]:rounded-lg h-8 font-bold",
+                      index === activeIndex 
+                        ? "!text-white shadow-none !bg-transparent hover:!text-white" 
+                        : "!text-gray-500 bg-transparent hover:!text-gray-500"
+                    )}
                   >
-                    <item.icon className="group-data-[active=true]:text-white" />
+                    <item.icon className={cn(
+                      "transition-colors duration-300",
+                      index === activeIndex ? "text-white" : "text-gray-500"
+                    )} />
                     <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

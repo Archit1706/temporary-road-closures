@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
     ChevronDown,
     ChevronRight,
@@ -32,6 +32,33 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
             [section]: !prev[section]
         }));
     };
+
+    const navRef = useRef<HTMLElement>(null);
+    const [markerPos, setMarkerPos] = useState({ top: 0, height: 0, left: 0, width: 0 });
+
+    useEffect(() => {
+        // Delay calculation slightly to allow DOM to update after expansion
+        const timer = setTimeout(() => {
+            if (!navRef.current) return;
+            const activeItem = navRef.current.querySelector('[data-active="true"]');
+            if (activeItem) {
+                const el = activeItem as HTMLElement;
+                const navRect = navRef.current.getBoundingClientRect();
+                const elRect = el.getBoundingClientRect();
+                
+                setMarkerPos({
+                    top: elRect.top - navRect.top + navRef.current.scrollTop,
+                    height: elRect.height,
+                    left: elRect.left - navRect.left,
+                    width: elRect.width
+                });
+            } else {
+                setMarkerPos({ top: 0, height: 0, left: 0, width: 0 });
+            }
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [activeSection, expandedSections]);
 
     const sidebarItems = [
         { id: 'introduction', label: 'Introduction', icon: Home },
@@ -92,7 +119,19 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
             </div>
 
             {/* Nav */}
-            <nav className="px-3 pb-6 space-y-0.5">
+            <nav ref={navRef} className="px-3 pb-6 space-y-0.5 relative">
+                {/* Sliding Highlight */}
+                {markerPos.height > 0 && (
+                    <div 
+                        className="absolute bg-blue-600 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-none"
+                        style={{
+                            top: markerPos.top,
+                            height: markerPos.height,
+                            left: markerPos.left,
+                            width: markerPos.width,
+                        }}
+                    />
+                )}
                 {sidebarItems.map((item) => {
                     const Icon = item.icon;
                     const isExpanded = expandedSections[item.id];
@@ -104,11 +143,14 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                             <div key={item.id}>
                                 <button
                                     onClick={() => toggleSection(item.id)}
+                                    data-active={isActive}
                                     className={cn(
-                                        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
-                                        isChildActive
-                                            ? "text-blue-700 bg-blue-50"
-                                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-bold transition-all duration-150 relative z-10",
+                                        isActive
+                                            ? "!text-white !bg-transparent hover:!text-white"
+                                            : isChildActive
+                                                ? "text-blue-700 bg-blue-50/50"
+                                                : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
                                     )}
                                 >
                                     <div className="flex items-center gap-2.5">
@@ -127,11 +169,12 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                                             <button
                                                 key={child.id}
                                                 onClick={() => onSectionChange(child.id)}
+                                                data-active={activeSection === child.id}
                                                 className={cn(
-                                                    "w-full text-left px-3 py-1.5 rounded-lg text-[12px] transition-all duration-150",
+                                                    "w-full text-left px-3 py-1.5 rounded-lg text-[12px] transition-all duration-150 relative z-10 font-bold",
                                                     activeSection === child.id
-                                                        ? "bg-blue-600 text-white font-bold shadow-sm"
-                                                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                                        ? "!text-white !bg-transparent hover:!text-white shadow-none"
+                                                        : "text-gray-500 hover:text-gray-500 hover:bg-transparent"
                                                 )}
                                             >
                                                 {child.label}
@@ -147,11 +190,12 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                         <button
                             key={item.id}
                             onClick={() => onSectionChange(item.id)}
+                            data-active={isActive}
                             className={cn(
-                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150",
+                                "w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-bold transition-all duration-150 relative z-10",
                                 isActive
-                                    ? "bg-blue-600 text-white shadow-sm font-bold"
-                                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                    ? "!text-white !bg-transparent hover:!text-white shadow-none"
+                                    : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
                             )}
                         >
                             <Icon className="w-3.5 h-3.5 shrink-0" />
