@@ -457,11 +457,11 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
   const getTransportationModeInfo = (mode: TransportationMode) => {
     switch (mode) {
       case 'auto':
-        return { icon: '🚗', label: 'Driving' };
+        return { icon: null, label: 'Driving' };
       case 'bicycle':
-        return { icon: '🚲', label: 'Cycling' };
+        return { icon: null, label: 'Cycling' };
       case 'pedestrian':
-        return { icon: '🚶', label: 'Walking' };
+        return { icon: null, label: 'Walking' };
     }
   };
 
@@ -592,32 +592,7 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
         />
       </MapContainer>
 
-      {/* Location Status Indicator */}
-      <div className="absolute top-20 left-4 z-10">
-        <div className={`px-3 py-2 rounded-lg shadow-lg border text-sm ${mapCenter.usingGeolocation
-          ? 'bg-green-50 border-green-200 text-green-800'
-          : mapCenter.error
-            ? 'bg-orange-50 border-orange-200 text-orange-800'
-            : 'bg-blue-50 border-blue-200 text-blue-800'
-          }`}>
-          {mapCenter.usingGeolocation ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-              <span>📍 Using your location</span>
-            </div>
-          ) : mapCenter.error ? (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-              <span>🌍 Using default location</span>
-            </div>
-          ) : (
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>🗺️ Map centered</span>
-            </div>
-          )}
-        </div>
-      </div>
+
 
       {/* Enhanced Map Legend */}
       <div className="absolute bottom-4 left-4 z-10 bg-white rounded-lg shadow-lg border border-gray-200 p-3 max-w-xs">
@@ -654,11 +629,11 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
           {/* Closure indicators with transportation mode awareness */}
           <div className="flex items-center space-x-2">
             <div className="w-5 h-5 bg-red-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs">⚠</div>
-            <span>Blocks {modeInfo.label.toLowerCase()} 🚫</span>
+            <span>Blocks {modeInfo.label.toLowerCase()}</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center text-white text-xs">⚠</div>
-            <span>Safe for {modeInfo.label.toLowerCase()} ✓</span>
+            <span>Safe for {modeInfo.label.toLowerCase()}</span>
           </div>
           <div className="flex items-center space-x-2">
             <div className="w-5 h-5 bg-gray-400 rounded-full border-2 border-white flex items-center justify-center text-white text-xs">⚠</div>
@@ -674,7 +649,7 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
               Only closures affecting {modeInfo.label.toLowerCase()} are avoided in routing.
             </p>
             <div className="mt-1 text-blue-600">
-              Example: Road construction affects 🚗🚲 but not 🚶
+              Example: Road construction affects vehicles and cycles but not pedestrians
             </div>
           </div>
 
@@ -685,28 +660,17 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
             : 'bg-gray-50 text-gray-600'
             }`}>
             {mapCenter.usingGeolocation ? (
-              <p>📍 Map centered on your location</p>
+              <p>Map centered on your location</p>
             ) : mapCenter.error ? (
-              <p>🌍 Location access denied - using default view</p>
+              <p>Location access denied - using default view</p>
             ) : (
-              <p>🗺️ Using default map center</p>
+              <p>Using default map center</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Click Instructions */}
-      {(!sourcePoint || !destinationPoint) && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="text-sm font-medium text-center flex items-center space-x-2">
-            <span>{modeInfo.icon}</span>
-            <span>
-              {!sourcePoint && !destinationPoint && `Click on map to set start location for ${modeInfo.label.toLowerCase()}`}
-              {sourcePoint && !destinationPoint && `Click on map to set destination for ${modeInfo.label.toLowerCase()}`}
-            </span>
-          </div>
-        </div>
-      )}
+
 
       {/* Transportation mode indicator */}
       {(sourcePoint || destinationPoint) && (

@@ -64,14 +64,14 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="bg-white border-b border-gray-100 p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:h-[64px] group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
-        <div className="flex items-center justify-between w-full h-full">
-          <div className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center w-full h-full">
+          <div className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden min-w-0 flex-1">
             <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg shrink-0">
               <Construction className="w-6 h-6 text-white" />
             </div>
-            <span className="font-bold text-lg text-gray-900 tracking-tight truncate">OSM Road Closures</span>
+            <span className="font-bold text-base text-gray-900 tracking-tight truncate">OSM Road Closures</span>
           </div>
-          <SidebarTrigger className="shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" />
+          <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" />
         </div>
       </SidebarHeader>
 
@@ -137,32 +137,50 @@ export function AppSidebar() {
               </div>
             )}
 
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-              <div className="flex items-start space-x-2">
-                <Bell className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs font-semibold text-amber-900 mb-1">
-                    Tip
-                  </h4>
-                  <p className="text-xs text-amber-700 leading-relaxed">
-                    Use the &quot;Report Closure&quot; button in the header to add new road closures, or hover over existing closures in the sidebar to edit them.
-                  </p>
+            {pathname === '/closure-aware-routing' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold text-blue-900 mb-1">
+                      Routing Guide
+                    </h4>
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      Click on the map to set the start location for driving, then click again to set your destination.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {pathname === '/closures' && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <Bell className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold text-amber-900 mb-1">
+                      Tip
+                    </h4>
+                    <p className="text-xs text-amber-700 leading-relaxed">
+                      Use the &quot;Report Closure&quot; button in the map view panel to add new road closures, or hover over existing closures in the list to edit them.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-gray-200 bg-gray-50 p-4">
+      <SidebarFooter className="border-t border-gray-200 bg-gray-50 p-4 group-data-[collapsible=icon]:p-2">
         <SidebarMenu>
           <SidebarMenuItem>
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring rounded-md">
                   <SidebarMenuButton size="lg" render={<div />} className="w-full cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                    <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700">
+                    <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
+                      <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 text-xs">
                         {user?.username?.substring(0, 2).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -187,10 +205,10 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 render={<Link href="/login" />}
                 size="lg" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center group-data-[collapsible=icon]:p-0"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center group-data-[collapsible=icon]:bg-blue-600 group-data-[collapsible=icon]:rounded-full"
                 tooltip="Login to Report"
               >
-                <LogIn className="group-data-[state=expanded]:mr-2 h-4 w-4 shrink-0" />
+                <LogIn className="group-data-[state=expanded]:mr-2 h-4 w-4 shrink-0 font-bold" />
                 <span className="group-data-[collapsible=icon]:hidden">Login to Report</span>
               </SidebarMenuButton>
             )}
