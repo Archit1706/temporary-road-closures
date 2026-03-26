@@ -144,16 +144,16 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent className="pl-2">
                 <ChartContainer 
-                  className="h-[350px] w-full"
+                  className="h-[350px] w-full outline-none focus:outline-none focus-visible:outline-none [&_*:focus]:outline-none [&_*:focus-visible]:!outline-none [&_.recharts-wrapper]:!outline-none [&_.recharts-surface]:!outline-none"
                   config={{ 
                     value: { label: "Count", color: "#2563eb" } 
                   }}
                 >
-                  <BarChart data={localStats.reasonData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                  <BarChart data={localStats.reasonData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }} className="focus:outline-none">
                     <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
                     <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Bar dataKey="value" radius={[4, 4, 0, 0]} />
+                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                    <Bar dataKey="value" radius={[4, 4, 0, 0]} activeBar={false} style={{ outline: 'none' }} />
                   </BarChart>
                 </ChartContainer>
               </CardContent>

@@ -1,7 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, CheckCircle, Clock, Activity } from 'lucide-react';
+import { BarChart3, TrendingUp, AlertCircle, CheckCircle, Clock, Activity, Map as MapIcon, Link as LinkIcon } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { closuresApi, ClosureStats } from '@/services/api';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog";
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    ChartConfig,
+    ChartContainer,
+    ChartTooltip,
+    ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Pie, PieChart, Cell } from "recharts";
 
 interface StatsDashboardProps {
     isOpen: boolean;
@@ -72,216 +92,229 @@ const StatsDashboard: React.FC<StatsDashboardProps> = ({ isOpen, onClose }) => {
         };
     }, [closures]);
 
-    if (!isOpen) return null;
+    // Format chart data
+    const reasonData = Object.entries(localStats.byReason)
+        .sort((a, b) => b[1] - a[1]) // Sort descending
+        .map(([reason, count]) => ({
+            reason: reason.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+            count,
+        }));
+
+    const reasonChartConfig: ChartConfig = {
+        count: {
+            label: "Closures",
+            color: "hsl(var(--chart-1))",
+        },
+    };
+
+    const severityColors: Record<string, string> = {
+        low: "hsl(var(--chart-2))",
+        medium: "hsl(var(--chart-4))",
+        high: "hsl(var(--chart-3))",
+        critical: "hsl(var(--chart-5))",
+        active: "hsl(var(--chart-1))",
+        inactive: "hsl(var(--muted))"
+    };
+
+    const severityData = Object.entries(localStats.bySeverity).map(([severity, count]) => ({
+        severity: severity.charAt(0).toUpperCase() + severity.slice(1),
+        count,
+        fill: severityColors[severity.toLowerCase()] || severityColors.inactive,
+    }));
+
+    const severityChartConfig: ChartConfig = {
+        count: {
+            label: "Count",
+        },
+    };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black bg-opacity-50"
-                onClick={onClose}
-            />
-
-            {/* Dashboard Modal */}
-            <div className="relative bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-                {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                            <BarChart3 className="w-6 h-6" />
-                            <div>
-                                <h2 className="text-xl font-semibold">Road Closures Dashboard</h2>
-                                <p className="text-blue-100 text-sm">Real-time statistics and insights</p>
-                            </div>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-hidden flex flex-col p-0 gap-0">
+                <DialogHeader className="p-6 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-t-xl shrink-0 border-b-0 m-0">
+                    <div className="flex items-center space-x-3">
+                        <BarChart3 className="w-6 h-6 text-white" />
+                        <div>
+                            <DialogTitle className="text-xl font-semibold text-white">Road Closures Dashboard</DialogTitle>
+                            <DialogDescription className="text-blue-100 text-sm m-0">
+                                Real-time statistics and insights
+                            </DialogDescription>
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="p-2 hover:bg-blue-600 rounded-lg transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
                     </div>
-                </div>
+                </DialogHeader>
 
-                {/* Content */}
-                <div className="p-6 overflow-y-auto max-h-[calc(90vh-6rem)]">
+                <div className="p-6 overflow-y-auto w-full max-h-full">
                     {loading ? (
-                        <div className="flex items-center justify-center h-64">
+                        <div className="flex items-center justify-center h-48 w-full">
                             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
                         </div>
                     ) : (
-                        <div className="space-y-6">
+                        <div className="grid gap-6">
                             {/* Overview Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-blue-600 text-sm font-medium">Total Closures</p>
-                                            <p className="text-2xl font-bold text-blue-900">{localStats.total}</p>
-                                        </div>
-                                        <Activity className="w-8 h-8 text-blue-600" />
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b-0 space-y-0">
+                                        <CardTitle className="text-sm font-medium">Total Closures</CardTitle>
+                                        <Activity className="w-4 h-4 text-blue-600" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{localStats.total}</div>
+                                    </CardContent>
+                                </Card>
 
-                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-red-600 text-sm font-medium">Active Now</p>
-                                            <p className="text-2xl font-bold text-red-900">{localStats.active}</p>
-                                        </div>
-                                        <AlertCircle className="w-8 h-8 text-red-600" />
-                                    </div>
-                                </div>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b-0 space-y-0">
+                                        <CardTitle className="text-sm font-medium">Active Now</CardTitle>
+                                        <AlertCircle className="w-4 h-4 text-red-600" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{localStats.active}</div>
+                                    </CardContent>
+                                </Card>
 
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-yellow-600 text-sm font-medium">Upcoming</p>
-                                            <p className="text-2xl font-bold text-yellow-900">{localStats.upcoming}</p>
-                                        </div>
-                                        <Clock className="w-8 h-8 text-yellow-600" />
-                                    </div>
-                                </div>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b-0 space-y-0">
+                                        <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
+                                        <Clock className="w-4 h-4 text-yellow-600" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{localStats.upcoming}</div>
+                                    </CardContent>
+                                </Card>
 
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <p className="text-green-600 text-sm font-medium">Completed</p>
-                                            <p className="text-2xl font-bold text-green-900">{localStats.expired}</p>
-                                        </div>
-                                        <CheckCircle className="w-8 h-8 text-green-600" />
-                                    </div>
-                                </div>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2 border-b-0 space-y-0">
+                                        <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                                        <CheckCircle className="w-4 h-4 text-green-600" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">{localStats.expired}</div>
+                                    </CardContent>
+                                </Card>
                             </div>
 
                             {/* Charts Row */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* By Reason */}
-                                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Closures by Reason</h3>
-                                    <div className="space-y-3">
-                                        {Object.entries(localStats.byReason).map(([reason, count]) => {
-                                            const percentage = (count / localStats.total) * 100;
-                                            return (
-                                                <div key={reason} className="flex items-center space-x-3">
-                                                    <div className="w-24 text-sm text-gray-600 capitalize">
-                                                        {reason.replace('_', ' ')}
-                                                    </div>
-                                                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                                        <div
-                                                            className="bg-blue-600 h-2 rounded-full"
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="w-12 text-sm text-gray-900 font-medium">
-                                                        {count}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* By Reason Chart */}
+                                <Card>
+                                    <CardHeader className="border-b-0">
+                                        <CardTitle className="text-lg">Closures by Reason</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="h-[300px]">
+                                        <ChartContainer config={reasonChartConfig} className="w-full h-full outline-none focus:outline-none focus-visible:outline-none [&_*:focus]:outline-none [&_*:focus-visible]:!outline-none [&_.recharts-wrapper]:!outline-none [&_.recharts-surface]:!outline-none">
+                                            <BarChart data={reasonData} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                                                <XAxis type="number" hide />
+                                                <YAxis dataKey="reason" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, className: 'fill-muted-foreground' }} width={110} />
+                                                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                                                <Bar dataKey="count" fill="var(--color-count)" radius={[0, 4, 4, 0]} activeBar={false} />
+                                            </BarChart>
+                                        </ChartContainer>
+                                    </CardContent>
+                                </Card>
 
-                                {/* By Severity */}
-                                <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Closures by Severity</h3>
-                                    <div className="space-y-3">
-                                        {Object.entries(localStats.bySeverity).map(([severity, count]) => {
-                                            const percentage = (count / localStats.total) * 100;
-                                            const colors = {
-                                                low: 'bg-green-500',
-                                                medium: 'bg-yellow-500',
-                                                high: 'bg-orange-500',
-                                                critical: 'bg-red-500',
-                                            };
-
-                                            return (
-                                                <div key={severity} className="flex items-center space-x-3">
-                                                    <div className="w-16 text-sm text-gray-600 capitalize">
-                                                        {severity}
-                                                    </div>
-                                                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                                                        <div
-                                                            className={`${colors[severity as keyof typeof colors]} h-2 rounded-full`}
-                                                            style={{ width: `${percentage}%` }}
-                                                        />
-                                                    </div>
-                                                    <div className="w-12 text-sm text-gray-900 font-medium">
-                                                        {count}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
+                                {/* By Severity Chart */}
+                                <Card>
+                                    <CardHeader className="border-b-0">
+                                        <CardTitle className="text-lg">Closures by Severity</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="flex items-center justify-center h-[300px]">
+                                        {severityData.length > 0 ? (
+                                            <ChartContainer config={severityChartConfig} className="w-full h-full pb-0 flex items-center justify-center [&_.recharts-pie-label-text]:fill-foreground outline-none focus:outline-none focus-visible:outline-none [&_*:focus]:outline-none [&_*:focus-visible]:!outline-none [&_.recharts-wrapper]:!outline-none [&_.recharts-surface]:!outline-none">
+                                                <PieChart>
+                                                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                                                    <Pie
+                                                        data={severityData}
+                                                        dataKey="count"
+                                                        nameKey="severity"
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        outerRadius={100}
+                                                        innerRadius={60}
+                                                        paddingAngle={2}
+                                                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                                                        labelLine={false}
+                                                    >
+                                                        {severityData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                                        ))}
+                                                    </Pie>
+                                                </PieChart>
+                                            </ChartContainer>
+                                        ) : (
+                                            <div className="text-muted-foreground">No severity data available</div>
+                                        )}
+                                    </CardContent>
+                                </Card>
                             </div>
 
-                            {/* Recent Activity */}
-                            <div className="bg-white border border-gray-200 rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-                                <div className="space-y-3">
-                                    {closures
-                                        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                                        .slice(0, 5)
-                                        .map((closure) => {
-                                            const isActive = new Date() >= new Date(closure.start_time) && new Date() <= new Date(closure.end_time);
-                                            return (
-                                                <div key={closure.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                                                    <div className={`w-3 h-3 rounded-full ${isActive ? 'bg-red-500' : 'bg-gray-400'}`} />
-                                                    <div className="flex-1">
-                                                        <p className="text-sm font-medium text-gray-900">{closure.description}</p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {closure.closure_type.replace('_', ' ')} • by {closure.submitter_id} • {new Date(closure.created_at).toLocaleDateString()}
-                                                        </p>
-                                                    </div>
-                                                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
-                                                        }`}>
-                                                        {isActive ? 'Active' : 'Inactive'}
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                </div>
-                            </div>
+                            {/* Two-Column Bottom Row */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* Recent Activity */}
+                                <Card>
+                                    <CardHeader className="border-b-0">
+                                        <CardTitle className="text-lg">Recent Activity</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            {closures
+                                                .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                                                .slice(0, 5)
+                                                .map((closure) => {
+                                                    const isActive = new Date() >= new Date(closure.start_time) && new Date() <= new Date(closure.end_time);
+                                                    return (
+                                                        <div key={closure.id} className="flex items-center space-x-3 p-3 bg-muted/50 rounded-xl">
+                                                            <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${isActive ? 'bg-red-500' : 'bg-muted-foreground'}`} />
+                                                            <div className="flex-1 truncate">
+                                                                <p className="text-sm font-medium truncate">{closure.description}</p>
+                                                                <p className="text-xs text-muted-foreground truncate">
+                                                                    {closure.closure_type.replace('_', ' ')} &bull; {new Date(closure.created_at).toLocaleDateString()}
+                                                                </p>
+                                                            </div>
+                                                            <div className={`px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider ${isActive ? 'bg-red-500/10 text-red-600' : 'bg-muted text-muted-foreground'
+                                                                }`}>
+                                                                {isActive ? 'Active' : 'Inactive'}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                        </div>
+                                    </CardContent>
+                                </Card>
 
-                            {/* OpenLR Statistics (for GSoC project) */}
-                            <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-4">OpenLR Integration Status</h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="text-center">
-                                        <div className="text-2xl font-bold text-purple-600">
-                                            {closures.filter(c => c.openlr_code).length}
+                                {/* System Statistics */}
+                                <Card className="bg-gradient-to-br from-indigo-50/50 to-blue-50/50 dark:from-indigo-950/20 dark:to-blue-950/20 border-indigo-100 dark:border-indigo-900/50">
+                                    <CardHeader className="border-b-0 pb-2">
+                                        <CardTitle className="text-lg flex items-center gap-2">
+                                            <LinkIcon className="w-5 h-5 text-indigo-600" />
+                                            System Coverage
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div className="bg-white/60 dark:bg-black/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-900/30 text-center">
+                                                <div className="text-3xl font-bold text-indigo-600">
+                                                    {closures.filter(c => c.openlr_code).length}
+                                                </div>
+                                                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">OpenLR Refs</div>
+                                            </div>
+                                            <div className="bg-white/60 dark:bg-black/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/30 text-center">
+                                                <div className="text-3xl font-bold text-blue-600">
+                                                    {closures.filter(c => c.geometry.type === 'LineString').length}
+                                                </div>
+                                                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mt-1">Line Geometries</div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm text-gray-600">With OpenLR Data</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-2xl font-bold text-blue-600">
-                                            {Math.round((closures.filter(c => c.openlr_code).length / Math.max(closures.length, 1)) * 100)}%
+                                        <div className="bg-white/80 dark:bg-black/40 p-4 rounded-xl text-sm text-muted-foreground border border-indigo-50 dark:border-indigo-900/20 leading-relaxed">
+                                            Integrated with OpenLR spatial encoding for seamless interoperability across diverse navigation networks and TomTom digital maps.
                                         </div>
-                                        <div className="text-sm text-gray-600">Coverage Rate</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-2xl font-bold text-green-600">
-                                            {closures.filter(c => c.geometry.type === 'LineString').length}
-                                        </div>
-                                        <div className="text-sm text-gray-600">Road Segments</div>
-                                    </div>
-                                </div>
-                                <div className="mt-4 p-3 bg-white rounded-lg border border-purple-200">
-                                    <p className="text-sm text-gray-600">
-                                        <strong>OpenLR Integration:</strong> This system uses OpenLR (Open Location Referencing)
-                                        to encode road locations in a map-agnostic format, enabling interoperability with various
-                                        navigation systems and OSM applications.
-                                    </p>
-                                </div>
+                                    </CardContent>
+                                </Card>
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 };
 
