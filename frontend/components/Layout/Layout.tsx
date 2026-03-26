@@ -1,7 +1,7 @@
 "use client"
 import React, { useState } from 'react';
 import Header from './Header';
-import Sidebar from './Sidebar';
+import ClosuresListPanel from '../Map/ClosuresListPanel';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -33,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({
             {/* Main Content Area */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Left Sidebar */}
-                <Sidebar
+                <ClosuresListPanel
                     isOpen={isSidebarOpen}
                     onClose={() => setIsSidebarOpen(false)}
                     onEditClosure={onEditClosure}

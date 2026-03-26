@@ -491,9 +491,5 @@ function decodePolyline(str: string, precision: number = 6): [number, number][] 
 }
 
 export default function ClosureAwareRoutingPageWrapper() {
-    return (
-        <ClosuresProvider>
-            <ClosureAwareRoutingPage />
-        </ClosuresProvider>
-    );
+    return <ClosureAwareRoutingPage />;
 }
