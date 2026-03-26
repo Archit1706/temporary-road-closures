@@ -123,7 +123,7 @@ const PointSelectionInstructions: React.FC<{
                   variant="ghost" 
                   size="sm" 
                   onClick={onClear}
-                  className="h-8 text-xs hover:bg-destructive/10 hover:text-destructive"
+                  className="h-8 text-xs hover:bg-destructive/10 hover:text-destructive rounded-full px-4"
                 >
                   Clear
                 </Button>
@@ -131,7 +131,7 @@ const PointSelectionInstructions: React.FC<{
               <Button 
                 size="sm" 
                 onClick={onFinish}
-                className={`h-8 text-xs font-bold ${geometryType === 'Point' ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
+                className={`h-8 text-xs font-bold rounded-full px-6 ${geometryType === 'Point' ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
               >
                 Done
               </Button>

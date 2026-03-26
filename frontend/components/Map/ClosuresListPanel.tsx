@@ -135,7 +135,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                             Road Closures
                         </h2>
                         <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="font-mono text-[10px] py-0">
+                            <Badge variant="outline" className="font-mono text-[10px] py-0 rounded-full px-2">
                                 {closures.length} TOTAL
                             </Badge>
                             <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
@@ -147,7 +147,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                     {isAuthenticated && (
                         <Button
                             onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
-                            className="w-full bg-destructive hover:bg-destructive/90 text-white font-black uppercase tracking-tighter h-11 transition-all active:scale-95 shadow-none"
+                            className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold uppercase tracking-tighter h-11 transition-all active:scale-95 shadow-none rounded-full"
                         >
                             <TriangleAlert className="w-4 h-4" />
                             <span>Report Closure</span>
@@ -157,15 +157,15 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                     {/* Status Summary Grid */}
                     <div className="grid grid-cols-3 gap-2">
                         <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-destructive/10 border border-destructive/20 transition-all hover:bg-destructive/20">
-                            <span className="text-base font-black text-destructive leading-none">{activeClosures}</span>
+                            <span className="text-base font-bold text-destructive leading-none">{activeClosures}</span>
                             <span className="text-[9px] font-bold uppercase text-destructive/70 mt-0.5 tracking-tighter">Active</span>
                         </div>
                         <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 transition-all hover:bg-amber-500/20">
-                            <span className="text-base font-black text-amber-600 leading-none">{upcomingClosures}</span>
+                            <span className="text-base font-bold text-amber-600 leading-none">{upcomingClosures}</span>
                             <span className="text-[9px] font-bold uppercase text-amber-600/70 mt-0.5 tracking-tighter">Soon</span>
                         </div>
                         <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-muted border border-border transition-all hover:bg-muted/80">
-                            <span className="text-base font-black text-muted-foreground leading-none">{expiredClosures}</span>
+                            <span className="text-base font-bold text-muted-foreground leading-none">{expiredClosures}</span>
                             <span className="text-[9px] font-bold uppercase text-muted-foreground mt-0.5 tracking-tighter">Old</span>
                         </div>
                     </div>
@@ -272,7 +272,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                                                     <div className="flex items-start justify-between mb-3">
                                                         <Badge 
                                                             variant={status === 'active' ? 'destructive' : status === 'upcoming' ? 'secondary' : 'outline'}
-                                                            className={`uppercase tracking-tighter text-[10px] font-black ${status === 'upcoming' ? 'bg-amber-500 text-white hover:bg-amber-600 border-none' : ''}`}
+                                                            className={`uppercase tracking-tighter text-[10px] font-bold ${status === 'upcoming' ? 'bg-amber-500 text-white hover:bg-amber-600 border-none' : ''}`}
                                                         >
                                                             {status}
                                                         </Badge>
@@ -406,7 +406,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                 {/* Footer Section - Height matched to AppSidebar */}
                 <div className="h-[81px] px-4 border-t border-border bg-muted/30 shrink-0 flex flex-col justify-center">
                     <div className="flex flex-col gap-1">
-                        <div className="flex items-center justify-between text-[10px] font-black uppercase tracking-tighter">
+                        <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter">
                             <span className={isAuthenticated ? "text-green-600" : "text-amber-600"}>
                                 {isAuthenticated ? "● API Connected" : "⚠ Demo Mode"}
                             </span>
@@ -422,7 +422,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                             </span>
                         </div>
                         {isAuthenticated && (
-                            <div className="text-[10px] text-muted-foreground/70 text-left uppercase tracking-tighter font-black">
+                            <div className="text-[10px] text-muted-foreground/70 text-left uppercase tracking-tighter font-bold">
                                 Right-click map or hover items to manage reports
                             </div>
                         )}

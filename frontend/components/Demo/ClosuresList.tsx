@@ -157,7 +157,7 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
         <div className="border-t border-gray-200 bg-white">
             <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">
                         Road Closures <span className="text-slate-400">({closures.length})</span>
                     </h3>
                 </div>
@@ -201,19 +201,19 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                 {/* Secondary Stats */}
                 <div className="grid grid-cols-3 gap-2 mt-4 mb-6">
                     <div className="text-center p-2 bg-red-50/50 rounded-xl border border-red-100/50">
-                        <div className="text-sm font-black text-red-700 leading-tight">
+                        <div className="text-sm font-bold text-red-700 leading-tight">
                             {activeClosures.length}
                         </div>
                         <div className="text-[8px] font-bold text-red-600 uppercase tracking-tight">Active</div>
                     </div>
                     <div className="text-center p-2 bg-amber-50/50 rounded-xl border border-amber-100/50">
-                        <div className="text-sm font-black text-amber-700 leading-tight">
+                        <div className="text-sm font-bold text-amber-700 leading-tight">
                             {upcomingClosures.length}
                         </div>
                         <div className="text-[8px] font-bold text-amber-600 uppercase tracking-tight">Upcoming</div>
                     </div>
                     <div className="text-center p-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
-                        <div className="text-sm font-black text-slate-700 leading-tight">
+                        <div className="text-sm font-bold text-slate-700 leading-tight">
                             {expiredClosures.length}
                         </div>
                         <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tight">Expired</div>
