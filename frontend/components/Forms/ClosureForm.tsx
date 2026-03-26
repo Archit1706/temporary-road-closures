@@ -15,6 +15,8 @@ interface ClosureFormProps {
     selectedPoints?: L.LatLng[];
     onPointsSelect: () => void;
     isSelectingPoints: boolean;
+    isMinimized?: boolean;
+    onToggleMinimize?: () => void;
     editingClosure?: Closure | null;
     mode?: 'create' | 'edit';
 }
@@ -107,13 +109,14 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     selectedPoints = [],
     onPointsSelect,
     isSelectingPoints,
+    isMinimized = false,
+    onToggleMinimize,
     editingClosure = null,
     mode = 'create'
 }) => {
     const { createClosure, updateClosure, state } = useClosures();
     const { loading } = state;
     const [currentStep, setCurrentStep] = useState(1);
-    const [isMinimized, setIsMinimized] = useState(false);
     const [editPoints, setEditPoints] = useState<L.LatLng[]>([]);
     const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
     const totalSteps = 3;
@@ -192,7 +195,6 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         if (!isOpen) {
             reset();
             setCurrentStep(1);
-            setIsMinimized(false);
             setEditPoints([]);
             setRouteInfo(null);
         }
@@ -1055,7 +1057,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                 {/* Minimize/Expand Button */}
                 <div className="absolute -left-8 top-4 z-10">
                     <button
-                        onClick={() => setIsMinimized(!isMinimized)}
+                        onClick={onToggleMinimize}
                         className="bg-white border border-gray-200 rounded-l-lg p-2 shadow-md hover:bg-gray-50 transition-colors"
                     >
                         {isMinimized ? (
@@ -1068,14 +1070,17 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
                 {/* Minimized State */}
                 {isMinimized ? (
-                    <div className="p-4 border-b border-gray-200 bg-blue-600 text-white flex flex-col items-center space-y-2">
-                        {isEditMode ? <Edit className="w-5 h-5" /> : <TriangleAlert className="w-5 h-5" />}
-                        <div className="text-xs text-center font-medium transform -rotate-90 whitespace-nowrap">
+                    <div className="p-4 border-b border-gray-200 bg-blue-600 text-white flex flex-col items-center gap-4">
+                        {isEditMode ? <Edit className="w-5 h-5 flex-shrink-0" /> : <TriangleAlert className="w-5 h-5 flex-shrink-0" />}
+                        <div 
+                            className="text-xs text-center font-medium whitespace-nowrap tracking-wider py-2"
+                            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                        >
                             {isEditMode ? 'Edit Closure' : 'Report Closure'}
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-1 hover:bg-blue-700 rounded"
+                            className="p-1 hover:bg-blue-700 rounded flex-shrink-0"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -1083,14 +1088,16 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                 ) : (
                     <>
                         {/* Header */}
-                        <div className="bg-blue-600 text-white p-4 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                {isEditMode ? <Edit className="w-5 h-5" /> : <TriangleAlert className="w-5 h-5" />}
+                        <div className="bg-blue-600 text-white p-4 flex items-start justify-between">
+                            <div className="flex items-start space-x-3">
+                                <div className="mt-0.5">
+                                    {isEditMode ? <Edit className="w-5 h-5" /> : <TriangleAlert className="w-5 h-5" />}
+                                </div>
                                 <div>
-                                    <h2 className="text-lg font-semibold">
+                                    <h2 className="text-lg font-semibold leading-tight">
                                         {isEditMode ? 'Edit Closure' : 'Report Closure'}
                                     </h2>
-                                    <div className="flex items-center space-x-2 text-xs text-blue-100">
+                                    <div className="flex items-center space-x-2 text-xs text-blue-100 mt-1">
                                         {state.isAuthenticated ? (
                                             <>
                                                 <Shield className="w-3 h-3" />
@@ -1109,7 +1116,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-1 hover:bg-blue-700 rounded"
+                                className="p-1 hover:bg-blue-700 rounded mt-0.5 transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>

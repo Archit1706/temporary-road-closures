@@ -216,6 +216,8 @@ function ClosuresPageContent() {
   const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);
   const [isSelectingPoints, setIsSelectingPoints] = useState(false);
   const [geometryType, setGeometryType] = useState<'Point' | 'LineString'>('LineString');
+  const [isFormMinimized, setIsFormMinimized] = useState(false);
+  const [isEditFormMinimized, setIsEditFormMinimized] = useState(false);
 
   // Move useClosures hook here, before any conditional returns
   const { state, stopEditingClosure } = useClosures();
@@ -277,10 +279,30 @@ function ClosuresPageContent() {
     window.addEventListener('finishSelection', handleFinishSelection);
     window.addEventListener('geometryTypeChanged', handleGeometryTypeChange as EventListener);
 
+    // Listen for sidebar's Report Closure button
+    const handleSidebarToggle = () => {
+      // Toggle form open — reuse same logic as handleToggleForm
+      setIsFormOpen(prev => {
+        if (prev) {
+          setSelectedPoints([]);
+          setIsSelectingPoints(false);
+          setRouteState({ isRouting: false, hasRoute: false });
+          setGeometryType('LineString');
+        }
+        if (!prev && isEditFormOpen) {
+          setIsEditFormOpen(false);
+          stopEditingClosure();
+        }
+        return !prev;
+      });
+    };
+    window.addEventListener('toggle-closure-form', handleSidebarToggle);
+
     return () => {
       window.removeEventListener('clearPoints', handleClearPoints);
       window.removeEventListener('finishSelection', handleFinishSelection);
       window.removeEventListener('geometryTypeChanged', handleGeometryTypeChange as EventListener);
+      window.removeEventListener('toggle-closure-form', handleSidebarToggle);
     };
   }, [geometryType]);
 
@@ -429,6 +451,7 @@ function ClosuresPageContent() {
       <Layout
         onToggleForm={handleToggleForm}
         isFormOpen={isFormOpen}
+        isFormMinimized={isFormMinimized || isEditFormMinimized}
         onEditClosure={handleEditClosure}
       >
         <MapComponent
@@ -444,6 +467,8 @@ function ClosuresPageContent() {
         {/* Create Form Sidebar */}
         <ClosureForm
           isOpen={isFormOpen}
+          isMinimized={isFormMinimized}
+          onToggleMinimize={() => setIsFormMinimized(!isFormMinimized)}
           onClose={handleToggleForm}
           selectedPoints={selectedPoints}
           onPointsSelect={handlePointsSelect}
@@ -454,6 +479,8 @@ function ClosuresPageContent() {
         {editingClosure && (
           <EditClosureForm
             isOpen={isEditFormOpen}
+            isMinimized={isEditFormMinimized}
+            onToggleMinimize={() => setIsEditFormMinimized(!isEditFormMinimized)}
             onClose={handleToggleEditForm}
             closure={editingClosure}
           />
