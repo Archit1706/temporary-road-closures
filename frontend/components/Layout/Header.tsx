@@ -53,8 +53,8 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
         <header className="bg-white shadow-lg border-b border-gray-200">
             <div className="mx-auto px-4 sm:px-6 lg:px-6">
                 <div className="flex justify-between items-center h-16">
-                    {/* Sidebar Trigger (replaces redundant logo) */}
-                    <div className="flex items-center">
+                    {/* Mobile Sidebar Trigger */}
+                    <div className="flex items-center md:hidden">
                         <SidebarTrigger className="-ml-1" />
                     </div>
 
@@ -69,14 +69,6 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                                 <span className="text-gray-600 font-medium">{getLocationLabel()}</span>
                             </div>
                         </div>
-
-
-
-
-                        {/* Mobile menu button */}
-                        <Button variant="ghost" size="icon" className="md:hidden text-gray-400 hover:text-gray-500">
-                            <Menu className="w-5 h-5" />
-                        </Button>
                     </div>
                 </div>
             </div>
