@@ -3,12 +3,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/sonner';
 import { ClosuresProvider } from '@/context/ClosuresContext';
-import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User } from 'lucide-react';
+import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import RoutingForm from '@/components/Demo/RoutingForm';
 import ClosuresList from '@/components/Demo/ClosuresList';
 import { Closure } from '@/services/api';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLocationStatus } from '@/context/LocationContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Dynamically import map to avoid SSR issues
 const RoutingMapComponent = dynamic(
@@ -301,51 +307,54 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
     return (
         <div className="h-screen flex flex-col bg-gray-50">
-            {/* Header */}
-            <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
-                <div className="flex items-center space-x-4 md:hidden">
-                    <SidebarTrigger className="-ml-1" />
+            <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-2 pr-6 w-full shrink-0">
+                <div className="flex items-center gap-2">
+                    <SidebarTrigger />
+                    <Separator orientation="vertical" className="h-6 md:hidden" />
                 </div>
 
-                    <div className="flex items-center space-x-4 ml-auto">
-                        {/* Route Statistics */}
-                        {route && (
-                            <div className="hidden md:flex items-center space-x-4 text-sm">
-                                <div className="flex items-center space-x-1 text-green-600">
-                                    <Route className="w-4 h-4" />
-                                    <span>{route.distance.toFixed(2)} km</span>
-                                </div>
-                                <div className="flex items-center space-x-1 text-blue-600">
-                                    <Zap className="w-4 h-4" />
-                                    <span>{Math.round(route.duration)} min</span>
-                                </div>
-                                <div className="flex items-center space-x-1 text-orange-600">
-                                    <AlertTriangle className="w-4 h-4" />
-                                    <span>{route.avoidedClosures} avoided</span>
-                                </div>
+                <div className="flex items-center gap-4 ml-auto">
+                    {/* Route Statistics */}
+                    {route && (
+                        <div className="hidden md:flex items-center gap-3">
+                            <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-100 uppercase tracking-tight">
+                                <Route className="w-3 h-3" />
+                                {route.distance.toFixed(1)} km
                             </div>
-                        )}
-
-                        {/* Transportation Mode Indicator */}
-                        <div className="hidden md:flex items-center space-x-2 px-3 py-1 bg-gray-100 rounded-lg">
-                            <TransportationIcon className="w-4 h-4 text-gray-600" />
-                            <span className="text-sm text-gray-700 capitalize">{transportationMode}</span>
+                            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-100 uppercase tracking-tight">
+                                <Zap className="w-3 h-3" />
+                                {Math.round(route.duration)} min
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold border border-orange-100 uppercase tracking-tight">
+                                <AlertTriangle className="w-3 h-3" />
+                                {route.avoidedClosures} avoided
+                            </div>
                         </div>
+                    )}
 
-                        <button
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="md:hidden p-2 text-gray-600 hover:text-gray-900"
-                        >
-                            <MapPin className="w-5 h-5" />
-                        </button>
-                        {/* Location Status */}
-                    <div className="hidden md:flex items-center space-x-3 ml-2">
-                        <div className="flex items-center space-x-1.5 text-sm">
-                            <div className={`w-2 h-2 rounded-full ${getLocationDotColor()}`}></div>
-                            <span className="text-gray-600 font-medium">{getLocationLabel()}</span>
-                        </div>
+                    {/* Location Status */}
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg cursor-help group transition-colors hover:bg-white">
+                                    <div className={cn("w-2 h-2 rounded-full ring-2 ring-white", getLocationDotColor())} />
+                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{getLocationLabel()}</span>
+                                </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-xs">Location source for routing operations</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    <Separator orientation="vertical" className="h-6" />
+
+                    {/* Mode Indicator */}
+                    <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-900 border-gray-800 text-white rounded-lg shadow-sm">
+                        <TransportationIcon className="w-4 h-4" />
+                        <span className="text-[11px] font-black uppercase tracking-widest hidden sm:inline">{transportationMode}</span>
                     </div>
-                    </div>
+                </div>
             </header>
 
             {/* Main Content */}
@@ -419,42 +428,55 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
                     {/* Sidebar toggle for mobile */}
                     {!isSidebarOpen && (
-                        <button
+                        <Button
+                            variant="secondary"
+                            size="icon"
                             onClick={() => setIsSidebarOpen(true)}
-                            className="absolute top-4 left-4 z-10 bg-white shadow-lg rounded-lg p-3 border border-gray-200 md:hidden"
+                            className="absolute top-4 left-4 z-[1000] shadow-lg md:hidden"
                         >
-                            <MapPin className="w-5 h-5 text-gray-600" />
-                        </button>
+                            <MapPin className="w-5 h-5" />
+                        </Button>
                     )}
 
                     {/* Close sidebar button */}
                     {isSidebarOpen && (
-                        <button
+                        <Button
+                            variant="secondary"
+                            size="icon"
                             onClick={() => setIsSidebarOpen(false)}
-                            className="absolute top-4 left-4 z-10 bg-white shadow-lg rounded-lg p-2 border border-gray-200 md:hidden"
+                            className="absolute top-4 left-4 z-[1000] shadow-lg md:hidden"
                         >
-                            <X className="w-4 h-4 text-gray-600" />
-                        </button>
+                            <X className="w-4 h-4" />
+                        </Button>
                     )}
 
                     {/* Routing Status */}
                     {isCalculating && (
-                        <div className="absolute top-4 right-4 z-10 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
-                            <div className="flex items-center space-x-2">
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                <span className="text-sm font-medium">Calculating {transportationMode} route...</span>
-                            </div>
-                        </div>
+                        <Card className="absolute top-4 right-4 z-[1000] border-blue-100 bg-white/95 backdrop-blur-sm shadow-xl min-w-[240px] animate-in slide-in-from-top-4">
+                            <CardContent className="p-4 flex items-center gap-3">
+                                <div className="relative">
+                                    <div className="h-10 w-10 rounded-full border-t-2 border-r-2 border-blue-600 animate-spin" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <TransportationIcon className="w-4 h-4 text-blue-600" />
+                                    </div>
+                                </div>
+                                <div className="space-y-0.5">
+                                    <p className="text-sm font-black text-gray-900 uppercase tracking-tight">Generating Path</p>
+                                    <p className="text-[11px] font-bold text-blue-600/80 uppercase tracking-widest leading-none">
+                                        {transportationMode} Mode
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     )}
 
                     {/* Error Display */}
                     {error && (
-                        <div className="absolute top-4 right-4 z-10 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
-                            <div className="flex items-center space-x-2">
-                                <AlertTriangle className="w-4 h-4" />
-                                <span className="text-sm">{error}</span>
-                            </div>
-                        </div>
+                        <Alert variant="destructive" className="absolute top-4 right-4 z-[1000] max-w-sm bg-white/95 backdrop-blur-sm shadow-xl border-red-100 animate-in slide-in-from-top-4">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertTitle className="font-black uppercase tracking-tight text-xs">Route Error</AlertTitle>
+                            <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
+                        </Alert>
                     )}
                 </div>
             </div>

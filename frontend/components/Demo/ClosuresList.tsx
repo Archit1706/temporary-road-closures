@@ -156,13 +156,12 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
     return (
         <div className="border-t border-gray-200 bg-white">
             <div className="p-4">
-                <div className="flex items-center space-x-2 mb-4">
-                    <AlertTriangle className="w-5 h-5 text-orange-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                        Closures in Route Area
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                        Road Closures <span className="text-slate-400">({closures.length})</span>
                     </h3>
-                    <span className="text-sm text-gray-500">({closures.length})</span>
                 </div>
+                <p className="text-sm font-medium text-slate-500 mb-6 leading-none">Click on a closure to view on map</p>
 
                 {/* Transportation Mode Header */}
                 <div className="flex items-center space-x-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -200,18 +199,24 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                 </div>
 
                 {/* Secondary Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="text-center p-2 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-800">{activeClosures.length}</div>
-                        <div className="text-xs text-gray-600">Active Now</div>
+                <div className="grid grid-cols-3 gap-2 mt-4 mb-6">
+                    <div className="text-center p-2 bg-red-50/50 rounded-xl border border-red-100/50">
+                        <div className="text-sm font-black text-red-700 leading-tight">
+                            {activeClosures.length}
+                        </div>
+                        <div className="text-[8px] font-bold text-red-600 uppercase tracking-tight">Active</div>
                     </div>
-                    <div className="text-center p-2 bg-yellow-50 rounded-lg">
-                        <div className="text-sm font-semibold text-yellow-800">{upcomingClosures.length}</div>
-                        <div className="text-xs text-yellow-600">Upcoming</div>
+                    <div className="text-center p-2 bg-amber-50/50 rounded-xl border border-amber-100/50">
+                        <div className="text-sm font-black text-amber-700 leading-tight">
+                            {upcomingClosures.length}
+                        </div>
+                        <div className="text-[8px] font-bold text-amber-600 uppercase tracking-tight">Upcoming</div>
                     </div>
-                    <div className="text-center p-2 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-800">{expiredClosures.length}</div>
-                        <div className="text-xs text-gray-600">Expired</div>
+                    <div className="text-center p-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
+                        <div className="text-sm font-black text-slate-700 leading-tight">
+                            {expiredClosures.length}
+                        </div>
+                        <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tight">Expired</div>
                     </div>
                 </div>
 
