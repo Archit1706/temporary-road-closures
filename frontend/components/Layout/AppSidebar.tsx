@@ -27,6 +27,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useClosures } from '@/context/ClosuresContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -61,13 +62,16 @@ export function AppSidebar() {
   const { isAuthenticated, user } = state;
 
   return (
-    <Sidebar>
-      <SidebarHeader className="bg-white border-b border-gray-100 p-4">
-        <div className="flex items-center space-x-2">
-          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
-            <Construction className="w-6 h-6 text-white" />
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="bg-white border-b border-gray-100 p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:h-[64px] group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center justify-between w-full h-full">
+          <div className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg shrink-0">
+              <Construction className="w-6 h-6 text-white" />
+            </div>
+            <span className="font-bold text-lg text-gray-900 tracking-tight truncate">OSM Road Closures</span>
           </div>
-          <span className="font-bold text-lg text-gray-900 tracking-tight">OSM Road Closures</span>
+          <SidebarTrigger className="shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" />
         </div>
       </SidebarHeader>
 
@@ -81,9 +85,10 @@ export function AppSidebar() {
                   <SidebarMenuButton 
                     render={<Link href={item.url} />}
                     isActive={pathname === item.url || pathname?.startsWith(item.url + '/')}
+                    tooltip={item.title}
                   >
-                    <item.icon className="w-4 h-4 mr-2" />
-                    <span>{item.title}</span>
+                    <item.icon />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -91,23 +96,10 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Report Closure Action */}
-        {isAuthenticated && (
-          <SidebarGroup>
-            <SidebarGroupContent className="px-2">
-              <button
-                onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
-                className="w-full flex items-center space-x-2 px-3 py-2.5 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 font-medium text-sm transition-colors"
-              >
-                <TriangleAlert className="w-4 h-4" />
-                <span>Report Closure</span>
-              </button>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
+
 
         {/* Alerts Section */}
-        <SidebarGroup className="flex-1">
+        <SidebarGroup className="flex-1 group-data-[collapsible=icon]:hidden">
           <SidebarGroupLabel>
             <Bell className="w-3 h-3 mr-1" />
             Alerts
@@ -174,13 +166,13 @@ export function AppSidebar() {
                         {user?.username?.substring(0, 2).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight">
+                    <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                       <span className="truncate font-semibold">{user?.username}</span>
                       <span className="truncate text-xs text-gray-500">Editor</span>
                     </div>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-[200px]">
+                <DropdownMenuContent align="end" side="right" sideOffset={8} className="w-[200px]">
                   <DropdownMenuItem>
                     <User className="mr-2 h-4 w-4" />
                     Profile
@@ -195,10 +187,11 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 render={<Link href="/login" />}
                 size="lg" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center group-data-[collapsible=icon]:p-0"
+                tooltip="Login to Report"
               >
-                <LogIn className="mr-2 h-4 w-4" />
-                <span>Login to Report</span>
+                <LogIn className="group-data-[state=expanded]:mr-2 h-4 w-4 shrink-0" />
+                <span className="group-data-[collapsible=icon]:hidden">Login to Report</span>
               </SidebarMenuButton>
             )}
           </SidebarMenuItem>

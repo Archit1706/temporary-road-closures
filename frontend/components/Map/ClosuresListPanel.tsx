@@ -1,6 +1,6 @@
 "use client"
 import React from 'react';
-import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2, Target, Route } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2, Target, Route, TriangleAlert } from 'lucide-react';
 import { format, isAfter, isBefore } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
@@ -140,9 +140,21 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                     <h2 className="text-lg font-semibold text-gray-900">
                         Road Closures ({closures.length})
                     </h2>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-sm text-gray-500 mt-1 mb-1">
                         Click on a closure to view on map
                     </p>
+
+                    {isAuthenticated && (
+                        <div className="mt-3">
+                            <button
+                                onClick={() => window.dispatchEvent(new CustomEvent('toggle-closure-form'))}
+                                className="w-full flex items-center justify-center space-x-2 px-3 py-2 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg text-red-700 font-medium text-sm transition-colors"
+                            >
+                                <TriangleAlert className="w-4 h-4" />
+                                <span>Report Closure</span>
+                            </button>
+                        </div>
+                    )}
 
                     {/* Status Summary */}
                     <div className="flex space-x-2 mt-3">
