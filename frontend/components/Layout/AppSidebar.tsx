@@ -97,7 +97,7 @@ export function AppSidebar() {
               {activeIndex !== -1 && (
                 <div 
                   className={cn(
-                    "absolute left-0 right-0 rounded-lg bg-gray-900 transition-all duration-300 ease-in-out z-0 shadow-sm",
+                    "absolute left-0 right-0 rounded-lg bg-blue-600 transition-all duration-300 ease-in-out z-0 shadow-sm",
                     isCollapsed ? "h-10 w-10 mx-auto" : "h-9"
                   )}
                   style={{

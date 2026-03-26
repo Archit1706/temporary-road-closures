@@ -196,10 +196,10 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                     {/* Sliding Highlight */}
                     <div 
                         className={cn(
-                            "absolute top-1 bottom-1 w-[calc(33.33%-5.33px)] rounded-full transition-all duration-300 ease-in-out z-0",
+                            "absolute top-1 bottom-1 w-[calc((100%-8px)/3)] rounded-full transition-all duration-300 ease-in-out z-0 left-1",
                             transportationMode === 'auto' && "translate-x-0 bg-blue-600",
-                            transportationMode === 'bicycle' && "translate-x-[calc(100%+4px)] bg-green-600",
-                            transportationMode === 'pedestrian' && "translate-x-[calc(200%+8px)] bg-orange-600"
+                            transportationMode === 'bicycle' && "translate-x-full bg-green-600",
+                            transportationMode === 'pedestrian' && "translate-x-[200%] bg-orange-600"
                         )}
                     />
                     
@@ -366,11 +366,11 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                     )}
                 </div>
 
-                <div className="flex space-x-3 pt-4">
+                <div className="flex items-center gap-1.5 p-1 bg-gray-100/80 rounded-full mt-4">
                     <Button
                         type="submit"
                         disabled={isCalculating || (!sourcePoint && !watch('source')) || (!destinationPoint && !watch('destination'))}
-                        className="flex-1 h-12 text-base font-bold gap-2 shadow-md bg-blue-600 hover:bg-blue-700 rounded-full"
+                        className="flex-1 h-11 text-base font-bold gap-2 shadow-sm bg-blue-600 hover:bg-blue-700 rounded-full transition-all duration-200"
                     >
                         {isCalculating ? (
                             <>
@@ -387,9 +387,9 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
 
                     <Button
                         type="button"
-                        variant="secondary"
+                        variant="ghost"
                         onClick={handleClear}
-                        className="h-12 w-12 p-0 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                        className="h-11 w-11 p-0 rounded-full text-gray-500 hover:text-gray-900 hover:bg-white transition-all duration-200 shrink-0"
                         title="Reset form"
                     >
                         <RotateCcw className="w-5 h-5" />

@@ -173,11 +173,11 @@ export default function DashboardPage() {
                     const isActive = new Date() >= new Date(closure.start_time) && new Date() <= new Date(closure.end_time);
                     return (
                       <div key={closure.id} className="flex items-center">
-                        <div className={`mr-4 flex h-9 w-9 items-center justify-center rounded-full ${isActive ? 'bg-red-100' : 'bg-gray-100'}`}>
-                          <AlertCircle className={`h-4 w-4 ${isActive ? 'text-red-600' : 'text-gray-500'}`} />
+                        <div className={`flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-full ${isActive ? 'bg-red-100' : 'bg-gray-100'}`}>
+                          <AlertCircle className={`h-5 w-5 ${isActive ? 'text-red-600' : 'text-gray-500'}`} />
                         </div>
                         <div className="ml-4 space-y-1">
-                          <p className="text-sm font-medium leading-none line-clamp-1">{closure.description || 'No description'}</p>
+                          <p className="text-sm font-semibold leading-none line-clamp-1">{closure.description || 'No description'}</p>
                           <p className="text-sm text-muted-foreground capitalize">
                             {closure.closure_type.replace('_', ' ')} • {new Date(closure.created_at).toLocaleDateString()}
                           </p>

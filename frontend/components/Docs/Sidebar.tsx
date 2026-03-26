@@ -125,7 +125,7 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                 {/* Sliding Highlight */}
                 {markerPos.height > 0 && (
                     <div 
-                        className="absolute bg-gray-900 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-sm"
+                        className="absolute bg-blue-600 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-sm"
                         style={{
                             top: markerPos.top,
                             height: markerPos.height,
