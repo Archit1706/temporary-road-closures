@@ -2,6 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Construction, TriangleAlert, Menu, X, LogIn, LogOut, User } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
+import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
     onToggleForm: () => void;
@@ -78,34 +79,29 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
 
                         {/* Auth Button */}
                         {isAuthenticated ? (
-                            <button
+                            <Button
+                                variant="secondary"
                                 onClick={handleLogout}
-                                className="flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                className="flex items-center space-x-2"
                             >
                                 <LogOut className="w-4 h-4" />
                                 <span className="hidden sm:inline">Logout</span>
-                            </button>
+                            </Button>
                         ) : (
-                            <Link
-                                href={`/login${redirectParam}`}
-                                className="flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-colors text-sm bg-green-100 text-green-700 hover:bg-green-200"
-                            >
-                                <LogIn className="w-4 h-4" />
-                                <span className="hidden sm:inline">Login</span>
+                            <Link href={`/login${redirectParam}`}>
+                                <Button variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-200 flex items-center space-x-2">
+                                    <LogIn className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Login</span>
+                                </Button>
                             </Link>
                         )}
 
                         {/* Report Closure Button - Only show when authenticated */}
                         {isAuthenticated && (
-                            <button
+                            <Button
+                                variant={isFormOpen ? "destructive" : "default"}
                                 onClick={onToggleForm}
-                                className={`
-                                    flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors
-                                    ${isFormOpen
-                                        ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                                    }
-                                `}
+                                className={`flex items-center space-x-2 ${isFormOpen ? "bg-red-100 text-red-700 hover:bg-red-200" : ""}`}
                             >
                                 {isFormOpen ? (
                                     <>
@@ -118,13 +114,13 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                                         <span>Report Closure</span>
                                     </>
                                 )}
-                            </button>
+                            </Button>
                         )}
 
                         {/* Mobile menu button */}
-                        <button className="md:hidden p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100">
+                        <Button variant="ghost" size="icon" className="md:hidden text-gray-400 hover:text-gray-500">
                             <Menu className="w-5 h-5" />
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </div>

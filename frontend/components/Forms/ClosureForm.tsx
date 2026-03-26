@@ -5,7 +5,10 @@ import { Calendar, Clock, MapPin, User, TriangleAlert, X, Info, Zap, ChevronLeft
 import { useClosures } from '@/context/ClosuresContext';
 import { CreateClosureData, authApi, UpdateClosureData, Closure } from '@/services/api';
 import L from 'leaflet';
-
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 interface ClosureFormProps {
     isOpen: boolean;
     onClose: () => void;
@@ -400,13 +403,13 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                             <label className="text-sm font-medium text-gray-700">
                                 Description *
                             </label>
-                            <textarea
+                            <Textarea
                                 {...register('description', {
                                     required: 'Description is required',
                                     minLength: { value: 10, message: 'Description must be at least 10 characters' }
                                 })}
                                 placeholder="Describe the road closure..."
-                                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none text-sm"
+                                className="resize-none"
                                 rows={3}
                             />
                             {errors.description && (
@@ -675,18 +678,17 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 </div>
                             )}
 
-                            <button
+                            <Button
                                 type="button"
+                                variant="outline"
                                 onClick={onPointsSelect}
-                                className={`
-                                    w-full p-3 border rounded-lg text-left transition-colors text-sm
-                                    ${isSelectingPoints
+                                className={`w-full justify-start text-left font-normal h-auto py-3 ${
+                                    isSelectingPoints
                                         ? 'border-blue-500 bg-blue-50 text-blue-700'
                                         : currentPoints.length >= requiredPoints || (isEditMode && editingClosure)
                                             ? 'border-green-500 bg-green-50 text-green-700'
-                                            : 'border-gray-300 hover:border-gray-400'
-                                    }
-                                `}
+                                            : 'border-gray-300'
+                                }`}
                             >
                                 {isSelectingPoints ? (
                                     `Selecting ${watchedGeometryType === 'Point' ? 'point' : 'points'}... click on the map`
@@ -697,7 +699,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 ) : (
                                     `Select ${watchedGeometryType === 'Point' ? 'Point' : 'Points'}`
                                 )}
-                            </button>
+                            </Button>
 
                             {/* Route Information - Only for LineString */}
                             {watchedGeometryType === 'LineString' && routeInfo && !isEditMode && (
@@ -781,10 +783,9 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                     <Calendar className="w-4 h-4" />
                                     <span>Start Time *</span>
                                 </label>
-                                <input
+                                <Input
                                     type="datetime-local"
                                     {...register('start_time', { required: 'Start time is required' })}
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                 />
                                 {errors.start_time && (
                                     <p className="text-sm text-red-600">{errors.start_time.message}</p>
@@ -796,7 +797,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                     <Clock className="w-4 h-4" />
                                     <span>End Time *</span>
                                 </label>
-                                <input
+                                <Input
                                     type="datetime-local"
                                     {...register('end_time', {
                                         required: 'End time is required',
@@ -804,7 +805,6 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             return new Date(value) > new Date(formValues.start_time) || 'End time must be after start time';
                                         }
                                     })}
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                                 />
                                 {errors.end_time && (
                                     <p className="text-sm text-red-600">{errors.end_time.message}</p>
@@ -818,14 +818,13 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <User className="w-4 h-4" />
                                 <span>Source *</span>
                             </label>
-                            <input
+                            <Input
                                 type="text"
                                 {...register('source', {
                                     required: 'Source is required',
                                     minLength: { value: 2, message: 'Source must be at least 2 characters' }
                                 })}
                                 placeholder="e.g., City of Chicago, CPD District 1"
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                             />
                             {errors.source && (
                                 <p className="text-sm text-red-600">{errors.source.message}</p>
@@ -838,11 +837,10 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <Info className="w-4 h-4" />
                                 <span>Attribution <span className="text-gray-500 font-normal">(Optional)</span></span>
                             </label>
-                            <input
+                            <Input
                                 type="text"
                                 {...register('attribution')}
                                 placeholder="e.g., © City Transportation Department"
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                             />
                             <p className="text-xs text-gray-500">
                                 Credit for third-party data sources. This will be displayed with the closure information.
@@ -855,11 +853,10 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <Shield className="w-4 h-4" />
                                 <span>Data License <span className="text-gray-500 font-normal">(Optional)</span></span>
                             </label>
-                            <input
+                            <Input
                                 type="text"
                                 {...register('data_license')}
                                 placeholder="e.g., CC BY 4.0, ODbL"
-                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                             />
                             <p className="text-xs text-gray-500">
                                 License under which this data is provided (e.g., Creative Commons, Open Database License).
@@ -949,107 +946,83 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
 
                         {/* Route Integration Notice - Only for LineString */}
                         {watchedGeometryType === 'LineString' && routeInfo && !isEditMode && (
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                                <div className="flex items-start space-x-2">
-                                    <Route className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-green-700">
-                                        <p className="font-medium mb-1">Valhalla Route Integration</p>
-                                        <p>
-                                            This closure will use the automatically calculated road path from Valhalla
-                                            ({routeInfo.points_count} coordinate points) instead of direct point-to-point lines.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            <Alert className="bg-green-50 text-green-800 border-green-200">
+                                <Route className="w-4 h-4 !text-green-600" />
+                                <AlertTitle>Valhalla Route Integration</AlertTitle>
+                                <AlertDescription className="text-green-700">
+                                    This closure will use the automatically calculated road path from Valhalla ({routeInfo.points_count} coordinate points) instead of direct point-to-point lines.
+                                </AlertDescription>
+                            </Alert>
                         )}
 
                         {/* Point Closure Notice */}
                         {watchedGeometryType === 'Point' && !isEditMode && (
-                            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
-                                <div className="flex items-start space-x-2">
-                                    <Target className="w-4 h-4 text-orange-600 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-orange-700">
-                                        <p className="font-medium mb-1">Point Closure</p>
-                                        <p>
-                                            This closure will affect a specific location or intersection. No route calculation needed.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            <Alert className="bg-orange-50 text-orange-800 border-orange-200 mt-4">
+                                <Target className="w-4 h-4 !text-orange-600" />
+                                <AlertTitle>Point Closure</AlertTitle>
+                                <AlertDescription className="text-orange-700">
+                                    This closure will affect a specific location or intersection. No route calculation needed.
+                                </AlertDescription>
+                            </Alert>
                         )}
 
                         {/* Edit Mode Notice */}
                         {isEditMode && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                                <div className="flex items-start space-x-2">
-                                    <Edit className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                    <div className="text-xs text-blue-700">
-                                        <p className="font-medium mb-1">Editing Existing Closure</p>
-                                        <p>
-                                            You are updating closure #{editingClosure?.id}. Only modified fields will be updated.
-                                            {currentPointsStep3.length === 0 && ' The location will remain unchanged.'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            <Alert className="bg-blue-50 text-blue-800 border-blue-200 mt-4">
+                                <Edit className="w-4 h-4 !text-blue-600" />
+                                <AlertTitle>Editing Existing Closure</AlertTitle>
+                                <AlertDescription className="text-blue-700">
+                                    You are updating closure #{editingClosure?.id}. Only modified fields will be updated.
+                                    {currentPointsStep3.length === 0 && ' The location will remain unchanged.'}
+                                </AlertDescription>
+                            </Alert>
                         )}
 
                         {/* Backend Integration Notice */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                            <div className="flex items-start space-x-2">
-                                <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                <div className="text-xs text-blue-700">
-                                    <p className="font-medium mb-1">Backend API Integration</p>
-                                    <p>
-                                        This closure will be {isEditMode ? 'updated' : 'submitted'} with OpenLR encoding,
-                                        {watchedGeometryType === 'LineString' && ' directional information,'}
-                                        and timezone-aware timestamps.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                        <Alert className="bg-blue-50 text-blue-800 border-blue-200 mt-4">
+                            <Info className="w-4 h-4 !text-blue-600" />
+                            <AlertTitle>Backend API Integration</AlertTitle>
+                            <AlertDescription className="text-blue-700">
+                                This closure will be {isEditMode ? 'updated' : 'submitted'} with OpenLR encoding,
+                                {watchedGeometryType === 'LineString' && ' directional information,'}
+                                and timezone-aware timestamps.
+                            </AlertDescription>
+                        </Alert>
 
                         {/* Validation Warnings */}
                         {!isEditMode && (
                             <>
                                 {watchedGeometryType === 'Point' && currentPointsStep3.length !== 1 && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                        <div className="flex items-center space-x-2">
-                                            <TriangleAlert className="w-4 h-4 text-red-600" />
-                                            <span className="text-sm text-red-700 font-medium">
-                                                Point closure requires exactly 1 point selected
-                                            </span>
-                                        </div>
-                                    </div>
+                                    <Alert variant="destructive" className="mt-4">
+                                        <TriangleAlert className="w-4 h-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>
+                                            Point closure requires exactly 1 point selected
+                                        </AlertDescription>
+                                    </Alert>
                                 )}
 
                                 {watchedGeometryType === 'LineString' && !routeInfo && currentPointsStep3.length < 2 && (
-                                    <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                        <div className="flex items-center space-x-2">
-                                            <TriangleAlert className="w-4 h-4 text-red-600" />
-                                            <span className="text-sm text-red-700 font-medium">
-                                                Road segment requires at least 2 points for route calculation
-                                            </span>
-                                        </div>
-                                    </div>
+                                    <Alert variant="destructive" className="mt-4">
+                                        <TriangleAlert className="w-4 h-4" />
+                                        <AlertTitle>Error</AlertTitle>
+                                        <AlertDescription>
+                                            Road segment requires at least 2 points for route calculation
+                                        </AlertDescription>
+                                    </Alert>
                                 )}
                             </>
                         )}
 
                         {/* Authentication Warning */}
                         {!state.isAuthenticated && (
-                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                                <div className="flex items-center space-x-2">
-                                    <Info className="w-4 h-4 text-yellow-600" />
-                                    <div className="text-sm text-yellow-700">
-                                        <p className="font-medium mb-1">Demo Mode Active</p>
-                                        <p>
-                                            You're not logged in. This closure will be saved temporarily for demo purposes only.
-                                            Log in to save permanently to the backend.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+                            <Alert className="bg-yellow-50 text-yellow-800 border-yellow-200 mt-4">
+                                <Info className="w-4 h-4 !text-yellow-600" />
+                                <AlertTitle>Demo Mode Active</AlertTitle>
+                                <AlertDescription className="text-yellow-700">
+                                    You're not logged in. This closure will be saved temporarily for demo purposes only. Log in to save permanently to the backend.
+                                </AlertDescription>
+                            </Alert>
                         )}
                     </div>
                 );
@@ -1188,27 +1161,27 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                 <div className="flex items-center justify-between space-x-2">
                                     <div className="flex space-x-2">
                                         {currentStep > 1 && (
-                                            <button
+                                            <Button
                                                 type="button"
+                                                variant="outline"
                                                 onClick={prevStep}
-                                                className="px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors"
                                             >
                                                 Previous
-                                            </button>
+                                            </Button>
                                         )}
                                     </div>
 
                                     <div className="flex space-x-2">
                                         {currentStep < totalSteps ? (
-                                            <button
+                                            <Button
                                                 type="button"
                                                 onClick={nextStep}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm transition-colors"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white"
                                             >
                                                 Next
-                                            </button>
+                                            </Button>
                                         ) : (
-                                            <button
+                                            <Button
                                                 type="submit"
                                                 disabled={loading || (
                                                     !isEditMode && (
@@ -1216,7 +1189,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                                         (watchedGeometryType === 'LineString' && !routeInfo && getCurrentPoints().length < 2)
                                                     )
                                                 )}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
                                             >
                                                 {loading ? (
                                                     <>
@@ -1234,7 +1207,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                                         </span>
                                                     </>
                                                 )}
-                                            </button>
+                                            </Button>
                                         )}
                                     </div>
                                 </div>
