@@ -56,17 +56,7 @@ const Layout: React.FC<LayoutProps> = ({
                         </svg>
                     </button>
 
-                    {/* Form Toggle Hint - Show when form is closed and user is authenticated */}
-                    {!isFormOpen && (
-                        <div className="hidden md:block absolute top-4 right-4 z-20">
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 shadow-lg max-w-xs">
-                                <div className="text-sm text-blue-700">
-                                    <p className="font-medium mb-1">💡 Tip</p>
-                                    <p>Use the "Report Closure" button in the header to add new road closures, or hover over existing closures in the sidebar to edit them.</p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+
                 </main>
             </div>
         </div>
