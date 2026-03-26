@@ -67,34 +67,30 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
         if (isAuthenticated && !apiStatus.usingMock) {
             return {
                 icon: Shield,
-                text: 'Backend API',
+                text: 'Backend Connected',
                 color: 'text-green-600',
-                bgColor: 'bg-green-100',
-                borderColor: 'border-green-200'
+                dotBg: 'bg-green-500'
             };
         } else if (apiStatus.backendAvailable && !isAuthenticated) {
             return {
-                icon: LogIn,
-                text: 'Login Required',
-                color: 'text-blue-600',
-                bgColor: 'bg-blue-100',
-                borderColor: 'border-blue-200'
+                icon: Database,
+                text: 'Demo Mode',
+                color: 'text-orange-600',
+                dotBg: 'bg-orange-500'
             };
         } else if (apiStatus.usingMock) {
             return {
                 icon: Database,
                 text: 'Demo Mode',
                 color: 'text-orange-600',
-                bgColor: 'bg-orange-100',
-                borderColor: 'border-orange-200'
+                dotBg: 'bg-orange-500'
             };
         } else {
             return {
                 icon: AlertTriangle,
-                text: 'Offline',
+                text: 'System Offline',
                 color: 'text-red-600',
-                bgColor: 'bg-red-100',
-                borderColor: 'border-red-200'
+                dotBg: 'bg-red-500'
             };
         }
     };
@@ -107,15 +103,11 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
             {!isExpanded && (
                 <button
                     onClick={() => setIsExpanded(true)}
-                    className={`
-                        flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm
-                        ${connectionStatus.bgColor} ${connectionStatus.color} border ${connectionStatus.borderColor}
-                        hover:shadow-xl transition-all duration-200
-                    `}
+                    className="flex items-center space-x-2 text-sm hover:opacity-80 transition-opacity whitespace-nowrap"
                 >
-                    <connectionStatus.icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                        {connectionStatus.text}
+                    <div className={`w-2 h-2 rounded-full ${connectionStatus.dotBg} animate-pulse-slow`}></div>
+                    <span className={`font-medium ${connectionStatus.color}`}>
+                        Server Status
                     </span>
                 </button>
             )}
