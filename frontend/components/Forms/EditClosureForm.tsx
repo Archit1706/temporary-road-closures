@@ -659,7 +659,7 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={prevStep}
-                                                className="px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors"
+                                                className="px-6 py-2 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50 font-medium text-sm transition-colors"
                                             >
                                                 Previous
                                             </button>
@@ -671,7 +671,7 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                                             <button
                                                 type="button"
                                                 onClick={nextStep}
-                                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm transition-colors"
+                                                className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 font-medium text-sm transition-colors"
                                             >
                                                 Next
                                             </button>
@@ -679,7 +679,7 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                                             <button
                                                 type="submit"
                                                 disabled={editLoading}
-                                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
+                                                className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
                                             >
                                                 {editLoading ? (
                                                     <>

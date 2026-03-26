@@ -271,7 +271,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     {...register('source', { required: 'Start location is required' })}
                                     placeholder="Enter address or coordinates"
                                     className={cn(
-                                        "h-11 bg-white shadow-sm border-gray-200 focus:ring-green-500",
+                                        "h-11 bg-white shadow-sm border-gray-200 focus:ring-green-500 rounded-full px-5",
                                         isSelectingSource && "border-green-500 bg-green-50 ring-2 ring-green-100"
                                     )}
                                 />
@@ -283,7 +283,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     size="sm"
                                     onClick={() => handleMapSelection('source')}
                                     className={cn(
-                                        "h-9 px-4 gap-2",
+                                        "h-9 px-4 gap-2 rounded-full",
                                         isSelectingSource && "bg-green-600 hover:bg-green-700 text-white"
                                     )}
                                 >
@@ -337,7 +337,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     {...register('destination', { required: 'Destination is required' })}
                                     placeholder="Enter address or coordinates"
                                     className={cn(
-                                        "h-11 bg-white shadow-sm border-gray-200 focus:ring-red-500",
+                                        "h-11 bg-white shadow-sm border-gray-200 focus:ring-red-500 rounded-full px-5",
                                         isSelectingDestination && "border-red-500 bg-red-50 ring-2 ring-red-100"
                                     )}
                                 />
@@ -349,7 +349,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                                     size="sm"
                                     onClick={() => handleMapSelection('destination')}
                                     className={cn(
-                                        "h-9 px-4 gap-2",
+                                        "h-9 px-4 gap-2 rounded-full",
                                         isSelectingDestination && "bg-red-600 hover:bg-red-700 text-white"
                                     )}
                                 >
@@ -370,7 +370,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                     <Button
                         type="submit"
                         disabled={isCalculating || (!sourcePoint && !watch('source')) || (!destinationPoint && !watch('destination'))}
-                        className="flex-1 h-12 text-base font-bold gap-2 shadow-md bg-blue-600 hover:bg-blue-700"
+                        className="flex-1 h-12 text-base font-bold gap-2 shadow-md bg-blue-600 hover:bg-blue-700 rounded-full"
                     >
                         {isCalculating ? (
                             <>
@@ -389,7 +389,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                         type="button"
                         variant="secondary"
                         onClick={handleClear}
-                        className="h-12 w-12 p-0 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                        className="h-12 w-12 p-0 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
                         title="Reset form"
                     >
                         <RotateCcw className="w-5 h-5" />

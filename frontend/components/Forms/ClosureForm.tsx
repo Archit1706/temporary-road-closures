@@ -1172,6 +1172,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                                 type="button"
                                                 variant="outline"
                                                 onClick={prevStep}
+                                                className="rounded-full px-6"
                                             >
                                                 Previous
                                             </Button>
@@ -1183,7 +1184,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                             <Button
                                                 type="button"
                                                 onClick={nextStep}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white rounded-full px-8"
                                             >
                                                 Next
                                             </Button>
@@ -1196,7 +1197,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                                                         (watchedGeometryType === 'LineString' && !routeInfo && getCurrentPoints().length < 2)
                                                     )
                                                 )}
-                                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2"
+                                                className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-2 rounded-full px-8"
                                             >
                                                 {loading ? (
                                                     <>

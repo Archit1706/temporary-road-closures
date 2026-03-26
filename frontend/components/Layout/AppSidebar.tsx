@@ -86,8 +86,9 @@ export function AppSidebar() {
                     render={<Link href={item.url} />}
                     isActive={pathname === item.url || pathname?.startsWith(item.url + '/')}
                     tooltip={item.title}
+                    className="transition-all duration-200 hover:bg-gray-100 data-[active=true]:bg-blue-600 data-[active=true]:text-white data-[active=true]:font-bold data-[active=true]:shadow-lg data-[active=true]:hover:bg-blue-700 rounded-lg group-data-[collapsible=icon]:rounded-lg"
                   >
-                    <item.icon />
+                    <item.icon className="group-data-[active=true]:text-white" />
                     <span className="group-data-[collapsible=icon]:hidden">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -179,19 +180,25 @@ export function AppSidebar() {
               <DropdownMenu>
                 <DropdownMenuTrigger className="w-full focus:outline-none focus:ring-2 focus:ring-sidebar-ring rounded-md">
                   <SidebarMenuButton size="lg" render={<div />} className="w-full cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">
-                    <Avatar className="h-8 w-8 rounded-lg group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
-                      <AvatarFallback className="rounded-lg bg-blue-100 text-blue-700 text-xs">
-                        {user?.username?.substring(0, 2).toUpperCase() || 'U'}
+                    <Avatar className="h-8 w-8 rounded-full group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
+                      <AvatarFallback className="rounded-full bg-blue-100 text-blue-700 text-xs text-[10px] font-black uppercase">
+                        {user?.full_name 
+                          ? user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                          : user?.username?.substring(0, 2).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                      <span className="truncate font-semibold">{user?.username}</span>
+                      <span className="truncate font-bold tracking-tight text-gray-900">{user?.full_name || user?.username}</span>
                       <span className="truncate text-xs text-gray-500">Editor</span>
                     </div>
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" side="right" sideOffset={8} className="w-[200px]">
-                  <DropdownMenuItem>
+                <DropdownMenuContent align="start" side="top" sideOffset={8} className="w-[200px] p-2">
+                  <div className="px-2 py-2 border-b border-gray-100 mb-1">
+                    <p className="text-xs font-bold text-gray-900 truncate">{user?.full_name}</p>
+                    <p className="text-[10px] text-gray-500 truncate lowercase">@{user?.username}</p>
+                  </div>
+                  <DropdownMenuItem className="rounded-md">
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </DropdownMenuItem>
@@ -205,11 +212,11 @@ export function AppSidebar() {
               <SidebarMenuButton 
                 render={<Link href="/login" />}
                 size="lg" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center group-data-[collapsible=icon]:bg-blue-600 group-data-[collapsible=icon]:rounded-full"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white justify-center rounded-full group-data-[collapsible=icon]:rounded-full"
                 tooltip="Login to Report"
               >
                 <LogIn className="group-data-[state=expanded]:mr-2 h-4 w-4 shrink-0 font-bold" />
-                <span className="group-data-[collapsible=icon]:hidden">Login to Report</span>
+                <span className="group-data-[collapsible=icon]:hidden font-bold uppercase tracking-tighter text-[11px]">Login to Report</span>
               </SidebarMenuButton>
             )}
           </SidebarMenuItem>
