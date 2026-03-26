@@ -14,7 +14,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import LocationIndicator from '@/components/Layout/LocationIndicator';
+import DemoControlPanel from '@/components/Demo/DemoControlPanel';
 
 // Dynamically import map to avoid SSR issues
 const RoutingMapComponent = dynamic(
@@ -82,20 +83,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const { status: locationStatus } = useLocationStatus();
-
-    const getLocationLabel = () => {
-        if (locationStatus.loading) return 'Locating...';
-        if (locationStatus.usingGeolocation) return 'Your Location';
-        if (locationStatus.error) return 'Default Location';
-        return 'Map Centered';
-    };
-
-    const getLocationDotColor = () => {
-        if (locationStatus.loading) return 'bg-blue-400 animate-pulse';
-        if (locationStatus.usingGeolocation) return 'bg-green-500';
-        if (locationStatus.error) return 'bg-orange-500';
-        return 'bg-blue-500';
-    };
 
     // Calculate bounding box with 1-mile buffer
     const calculateBoundingBox = useCallback((source: RoutePoint, destination: RoutePoint) => {
@@ -309,48 +296,33 @@ const ClosureAwareRoutingPage: React.FC = () => {
         <div className="h-screen flex flex-col bg-gray-50">
             <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-2 pr-6 w-full shrink-0">
                 <div className="flex items-center gap-2">
+                    {/* Placeholder for left-side content if needed */}
                 </div>
 
-                <div className="flex items-center gap-4 ml-auto">
+                <div className="flex items-center gap-3 ml-auto">
                     {/* Route Statistics */}
                     {route && (
-                        <div className="hidden md:flex items-center gap-3">
-                            <div className="flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-100 uppercase tracking-tight">
-                                <Route className="w-3 h-3" />
+                        <div className="hidden lg:flex items-center gap-2 mr-2">
+                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-green-100 uppercase tracking-tight">
                                 {route.distance.toFixed(1)} km
                             </div>
-                            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-bold border border-blue-100 uppercase tracking-tight">
-                                <Zap className="w-3 h-3" />
+                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-blue-100 uppercase tracking-tight">
                                 {Math.round(route.duration)} min
-                            </div>
-                            <div className="flex items-center gap-1.5 bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full text-xs font-bold border border-orange-100 uppercase tracking-tight">
-                                <AlertTriangle className="w-3 h-3" />
-                                {route.avoidedClosures} avoided
                             </div>
                         </div>
                     )}
 
-                    {/* Location Status */}
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger>
-                                <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-100 rounded-lg cursor-help group transition-colors hover:bg-white">
-                                    <div className={cn("w-2 h-2 rounded-full ring-2 ring-white", getLocationDotColor())} />
-                                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{getLocationLabel()}</span>
-                                </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p className="text-xs">Location source for routing operations</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
+                    <div className="flex items-center gap-1.5">
+                        {/* Mode Indicator */}
+                        <div className="flex items-center gap-2 px-3 py-1 bg-slate-950 border border-slate-800 text-white rounded-full shadow-sm">
+                            <TransportationIcon className="w-3.5 h-3.5" />
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{transportationMode}</span>
+                        </div>
 
-                    <Separator orientation="vertical" className="h-6" />
+                        <Separator orientation="vertical" className="h-4 bg-gray-200 mx-0.5" />
 
-                    {/* Mode Indicator */}
-                    <div className="flex items-center gap-2.5 px-3 py-1.5 bg-gray-900 border-gray-800 text-white rounded-lg shadow-sm">
-                        <TransportationIcon className="w-4 h-4" />
-                        <span className="text-[11px] font-black uppercase tracking-widest hidden sm:inline">{transportationMode}</span>
+                        {/* Location Status */}
+                            <LocationIndicator className="hidden md:flex" />
                     </div>
                 </div>
             </header>

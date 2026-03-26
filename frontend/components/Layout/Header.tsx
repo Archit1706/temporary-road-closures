@@ -4,6 +4,7 @@ import { useClosures } from '@/context/ClosuresContext';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLocationStatus } from '@/context/LocationContext';
 import dynamic from 'next/dynamic';
+import LocationIndicator from './LocationIndicator';
 
 const DemoControlPanel = dynamic(() => import('@/components/Demo/DemoControlPanel'), { ssr: false });
 
@@ -17,20 +18,6 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
     const { state, logout } = useClosures();
     const { isAuthenticated, user } = state;
     const { status: locationStatus } = useLocationStatus();
-
-    const getLocationLabel = () => {
-        if (locationStatus.loading) return 'Locating...';
-        if (locationStatus.usingGeolocation) return 'Your Location';
-        if (locationStatus.error) return 'Default Location';
-        return 'Map Centered';
-    };
-
-    const getLocationDotColor = () => {
-        if (locationStatus.loading) return 'bg-blue-400 animate-pulse';
-        if (locationStatus.usingGeolocation) return 'bg-green-500';
-        if (locationStatus.error) return 'bg-orange-500';
-        return 'bg-blue-500';
-    };
 
     // Get current path for redirect
     const getCurrentPath = () => {
@@ -63,13 +50,8 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                         {/* Location & Status (Desktop) */}
                         <div className="hidden lg:flex items-center gap-3">
                             <DemoControlPanel />
-                            <div className="h-4 w-px bg-border"></div>
-                            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full border border-border/50 transition-all hover:bg-muted">
-                                <div className={`w-1.5 h-1.5 rounded-full ${getLocationDotColor()}`}></div>
-                                <span className="text-[11px] font-black uppercase tracking-tight text-muted-foreground">
-                                    {getLocationLabel()}
-                                </span>
-                            </div>
+                            <div className="h-4 w-px bg-border mx-1"></div>
+                            <LocationIndicator />
                         </div>
                     </div>
                 </div>
