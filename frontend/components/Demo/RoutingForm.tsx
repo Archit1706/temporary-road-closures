@@ -180,9 +180,6 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
         <div className="p-4 space-y-6">
             {/* Header */}
             <div className="flex items-center space-x-3">
-                <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg shrink-0">
-                    <DynamicIcon className="w-6 h-6 text-white" />
-                </div>
                 <div>
                     <h2 className="text-xl font-bold text-gray-900">Closure-Aware Routing</h2>
                     <p className="text-sm text-gray-500">
@@ -194,44 +191,36 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
             </div>
 
             <div className="space-y-4">
-                <Label className="text-sm font-semibold text-gray-700">Transportation Mode</Label>
-                <div className="grid grid-cols-3 gap-2 px-8">
+                <Label className="text-sm font-bold text-gray-700 uppercase tracking-tight">Transportation Mode</Label>
+                <div className="relative flex w-full bg-muted/40 p-1 rounded-full border border-border/50 overflow-hidden">
+                    {/* Sliding Highlight */}
+                    <div 
+                        className={cn(
+                            "absolute top-1 bottom-1 w-[calc(33.33%-5.33px)] rounded-full transition-all duration-300 ease-in-out z-0",
+                            transportationMode === 'auto' && "translate-x-0 bg-blue-600",
+                            transportationMode === 'bicycle' && "translate-x-[calc(100%+4px)] bg-green-600",
+                            transportationMode === 'pedestrian' && "translate-x-[calc(200%+8px)] bg-orange-600"
+                        )}
+                    />
+                    
                     {transportationModes.map((mode) => {
                         const Icon = mode.icon;
                         const isSelected = transportationMode === mode.key;
                         
-                        const modeColors = {
-                            auto: 'border-blue-100 text-blue-600 bg-blue-50/30 hover:bg-blue-50 hover:border-blue-200',
-                            bicycle: 'border-green-100 text-green-600 bg-green-50/30 hover:bg-green-50 hover:border-green-200',
-                            pedestrian: 'border-orange-100 text-orange-600 bg-orange-50/30 hover:bg-orange-50 hover:border-orange-200'
-                        };
-
-                        const selectedColors = {
-                            auto: 'bg-blue-600 text-white border-blue-600 shadow-md',
-                            bicycle: 'bg-green-600 text-white border-green-600 shadow-md',
-                            pedestrian: 'bg-orange-600 text-white border-orange-600 shadow-md'
-                        };
-
                         return (
                             <Button
                                 key={mode.key}
+                                type="button"
                                 onClick={() => onTransportationModeChange(mode.key)}
                                 className={cn(
-                                    "flex flex-col items-center justify-center p-0 h-[64px] transition-all duration-300 border-2 rounded-xl shadow-sm hover:shadow-md",
+                                    "flex-1 h-10 gap-2 font-bold uppercase tracking-tighter text-[10px] transition-all duration-300 rounded-full relative z-10 bg-transparent hover:!bg-white/10 shadow-none border-none",
                                     isSelected 
-                                        ? selectedColors[mode.key] 
-                                        : modeColors[mode.key]
+                                        ? "text-white" 
+                                        : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <Icon className={cn("w-6 h-6", isSelected ? "text-white" : "text-current")} />
-                                <div className="mt-1">
-                                    <span className={cn(
-                                        "block text-[10px] font-black uppercase tracking-tight leading-none",
-                                        isSelected ? "text-white/90" : "text-gray-500"
-                                    )}>
-                                        {mode.label}
-                                    </span>
-                                </div>
+                                <Icon className="w-4 h-4" />
+                                <span>{mode.label}</span>
                             </Button>
                         );
                     })}
