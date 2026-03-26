@@ -1,8 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Menu } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
-import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLocationStatus } from '@/context/LocationContext';
 import dynamic from 'next/dynamic';
@@ -50,23 +48,27 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
     };
 
     return (
-        <header className="bg-white shadow-lg border-b border-gray-200">
-            <div className="mx-auto px-4 sm:px-6 lg:px-6">
+        <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm transition-all duration-300">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
-                    {/* Mobile Sidebar Trigger */}
-                    <div className="flex items-center md:hidden">
-                        <SidebarTrigger className="-ml-1" />
+                    {/* Left: Branding & Mobile Trigger */}
+                    <div className="flex items-center gap-4">
+                        <div className="md:hidden">
+                            <SidebarTrigger className="hover:bg-accent hover:text-accent-foreground" />
+                        </div>
                     </div>
 
-                    {/* Navigation and Actions */}
-                    <div className="flex items-center space-x-4 ml-auto">
-                        {/* Server Status & Location */}
-                        <div className="hidden md:flex items-center space-x-3">
+                    {/* Right: Actions */}
+                    <div className="flex items-center gap-4">
+                        {/* Location & Status (Desktop) */}
+                        <div className="hidden lg:flex items-center gap-3">
                             <DemoControlPanel />
-                            <div className="h-4 w-px bg-gray-300"></div>
-                            <div className="flex items-center space-x-1.5 text-sm">
-                                <div className={`w-2 h-2 rounded-full ${getLocationDotColor()}`}></div>
-                                <span className="text-gray-600 font-medium">{getLocationLabel()}</span>
+                            <div className="h-4 w-px bg-border"></div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 rounded-full border border-border/50 transition-all hover:bg-muted">
+                                <div className={`w-1.5 h-1.5 rounded-full ${getLocationDotColor()}`}></div>
+                                <span className="text-[11px] font-black uppercase tracking-tight text-muted-foreground">
+                                    {getLocationLabel()}
+                                </span>
                             </div>
                         </div>
                     </div>

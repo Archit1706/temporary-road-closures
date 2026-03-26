@@ -5,12 +5,14 @@ import React, { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/sonner';
 import { ClosuresProvider, useClosures } from '@/context/ClosuresContext';
-// import Layout from '@/components/Layout/Layout';
-// import ClosureForm from '@/components/Forms/ClosureForm';
-// import EditClosureForm from '@/components/Forms/EditClosureForm';
 import ClientOnly from '@/components/ClientOnly';
-import { LogIn, Info, MapPin, Route, Edit3, TriangleAlert, Target } from 'lucide-react';
+import { LogIn, Info, MapPin, Route as RouteIcon, Edit3, TriangleAlert, Target, X, Check } from 'lucide-react';
 import L from 'leaflet';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 
 // // Dynamically import MapComponent to avoid SSR issues
 // const MapComponent = dynamic(
@@ -36,10 +38,16 @@ const MapComponent = dynamic(() => import('@/components/Map/MapComponent'), { ss
 
 // Loading component
 const LoadingSpinner = () => (
-  <div className="h-screen w-full bg-gray-100 flex items-center justify-center">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-      <p className="text-gray-600">Loading application...</p>
+  <div className="h-screen w-full bg-background flex items-center justify-center">
+    <div className="text-center space-y-6">
+      <div className="relative flex items-center justify-center">
+        <Skeleton className="h-24 w-24 rounded-full" />
+        <div className="absolute animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary"></div>
+      </div>
+      <div className="space-y-2">
+        <h2 className="text-xl font-semibold tracking-tight">Loading application...</h2>
+        <p className="text-muted-foreground text-sm">Preparing your road closure dashboard</p>
+      </div>
     </div>
   </div>
 );
@@ -71,69 +79,67 @@ const PointSelectionInstructions: React.FC<{
   };
 
   const getGeometryIcon = () => {
-    return geometryType === 'Point' ? Target : Route;
+    return geometryType === 'Point' ? Target : RouteIcon;
   };
 
   const GeometryIcon = getGeometryIcon();
 
   return (
-    <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white rounded-lg shadow-lg border border-gray-200 p-4 max-w-md">
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <div className={`w-3 h-3 rounded-full animate-pulse ${geometryType === 'Point' ? 'bg-orange-600' : 'bg-blue-600'}`}></div>
-          <GeometryIcon className={`w-4 h-4 ${geometryType === 'Point' ? 'text-orange-600' : 'text-blue-600'}`} />
-          <span className="font-medium text-gray-900">
-            {geometryType === 'Point' ? 'Point Selection' : 'Road Segment Selection'} ({pointCount}/{geometryType === 'Point' ? '1' : '2+'})
-            {hasRoute && routeInfo && geometryType === 'LineString' && (
-              <span className="text-green-600 ml-2">
-                → Route: {routeInfo.distance_km.toFixed(2)}km
+    <Card className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-none">
+      <CardContent className="p-4">
+        <div className="flex flex-col space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${geometryType === 'Point' ? 'bg-orange-500' : 'bg-primary'}`}></div>
+              <GeometryIcon className={geometryType === 'Point' ? 'text-orange-500' : 'text-primary'} size={18} />
+              <span className="font-semibold text-sm">
+                {geometryType === 'Point' ? 'Point' : 'Road Segment'} Selection
               </span>
-            )}
-          </span>
-        </div>
-      </div>
-
-      <div className="mt-2 text-sm text-gray-600">
-        {getInstructionText()}
-      </div>
-
-      <div className="flex items-center justify-between mt-3">
-        <div className="text-xs text-gray-500">
-          {geometryType === 'Point' ? (
-            <div className="flex items-center space-x-1">
-              <Target className="w-3 h-3" />
-              <span>Single point location</span>
             </div>
-          ) : hasRoute ? (
-            <div className="flex items-center space-x-1">
-              <Route className="w-3 h-3" />
-              <span>Using Valhalla routing</span>
+            <Badge variant="secondary" className="font-mono">
+              {pointCount}/{geometryType === 'Point' ? '1' : '2+'}
+            </Badge>
+          </div>
+
+          <div className="text-sm text-foreground/80 font-medium">
+            {getInstructionText()}
+          </div>
+
+          <div className="flex items-center justify-between pt-2 border-t border-border">
+            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+              {geometryType === 'Point' ? (
+                <span className="flex items-center gap-1"><Target size={10} /> Single Location</span>
+              ) : hasRoute ? (
+                <span className="flex items-center gap-1 text-green-600"><Check size={10} /> Valhalla Route</span>
+              ) : pointCount >= 2 ? (
+                <span className="animate-pulse">Calculating Path...</span>
+              ) : (
+                "Select points on map"
+              )}
             </div>
-          ) : pointCount >= 2 ? (
-            "Route calculation in progress..."
-          ) : (
-            "Click on map to add points"
-          )}
+            <div className="flex gap-2">
+              {pointCount > 0 && (
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={onClear}
+                  className="h-8 text-xs hover:bg-destructive/10 hover:text-destructive"
+                >
+                  Clear
+                </Button>
+              )}
+              <Button 
+                size="sm" 
+                onClick={onFinish}
+                className={`h-8 text-xs font-bold ${geometryType === 'Point' ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
+              >
+                Done
+              </Button>
+            </div>
+          </div>
         </div>
-        <div className="flex space-x-2">
-          {pointCount > 0 && (
-            <button
-              onClick={onClear}
-              className="bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded text-sm"
-            >
-              Clear ({pointCount})
-            </button>
-          )}
-          <button
-            onClick={onFinish}
-            className={`text-white hover:opacity-90 px-3 py-1 rounded text-sm font-medium ${geometryType === 'Point' ? 'bg-orange-600' : 'bg-blue-600'
-              }`}
-          >
-            Done
-          </button>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -149,33 +155,32 @@ const RouteStatus: React.FC<{
   if (!isRouting && !hasRoute && !routeError) return null;
 
   return (
-    <div className="fixed top-4 right-4 z-40 max-w-sm">
+    <div className="fixed top-20 right-4 z-40 flex flex-col items-end gap-2 max-w-sm">
       {isRouting && (
-        <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg mb-2">
-          <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            <span className="text-sm font-medium">Calculating route with Valhalla...</span>
-          </div>
-        </div>
+        <Alert className="bg-primary text-primary-foreground border-none shadow-lg py-2 px-3 flex items-center gap-3">
+          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+          <AlertDescription className="text-xs font-semibold">
+            Calculating route with Valhalla...
+          </AlertDescription>
+        </Alert>
       )}
 
       {routeError && (
-        <div className="bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg mb-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-sm">⚠️ {routeError}</span>
-          </div>
-        </div>
+        <Alert variant="destructive" className="shadow-lg py-2 px-3 border-none flex items-center gap-3">
+          <TriangleAlert className="w-4 h-4" />
+          <AlertDescription className="text-xs font-semibold">
+            {routeError}
+          </AlertDescription>
+        </Alert>
       )}
 
       {hasRoute && routeInfo && (
-        <div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
-            <Route className="w-4 h-4" />
-            <span className="text-sm">
-              Valhalla Route: {routeInfo.distance_km.toFixed(2)}km ({routeInfo.points_count} points)
-            </span>
-          </div>
-        </div>
+        <Alert className="bg-green-600 text-white border-none shadow-lg py-2 px-3 flex items-center gap-3">
+          <RouteIcon className="w-4 h-4" />
+          <AlertDescription className="text-xs font-semibold leading-none">
+            Route Ready: {routeInfo.distance_km.toFixed(2)}km ({routeInfo.points_count} pts)
+          </AlertDescription>
+        </Alert>
       )}
     </div>
   );
@@ -190,21 +195,16 @@ const EditStatus: React.FC<{
   if (!isEditing || !editingClosure) return null;
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 max-w-md">
-      <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
-        <div className="flex items-center space-x-2">
-          <Edit3 className="w-4 h-4" />
-          <span className="text-sm font-medium">
-            Editing Closure #{editingClosure.id}
-          </span>
-          <button
-            onClick={onCancel}
-            className="ml-2 text-orange-200 hover:text-white text-sm underline"
-          >
-            Cancel
-          </button>
-        </div>
-      </div>
+    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 max-w-md">
+      <Alert className="bg-orange-600 text-white border-none shadow-lg py-2 px-4 flex items-center gap-4">
+        <Edit3 className="w-4 h-4" />
+        <AlertDescription className="text-sm font-semibold">
+          Editing Closure #{editingClosure.id}
+        </AlertDescription>
+        <Button variant="link" size="sm" onClick={onCancel} className="text-white underline p-0 h-auto">
+          Cancel
+        </Button>
+      </Alert>
     </div>
   );
 };
@@ -520,53 +520,52 @@ function ClosuresPageContent() {
 
       {/* Point Selection Status - Fixed position when create form is open */}
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-20 right-[25rem] z-40 bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
+        <div className="fixed top-20 right-[25rem] z-40">
+          <Alert className="bg-primary text-primary-foreground border-none shadow-xl py-2 px-4 flex items-center gap-3">
             {geometryType === 'Point' ? <Target className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
-            <span className="text-sm font-medium">
+            <span className="text-sm font-bold">
               {geometryType === 'Point' ? (
-                selectedPoints.length === 0 ? 'Click on map to select point' : 'Point selected'
+                selectedPoints.length === 0 ? 'Click map to select location' : 'Location Selected'
               ) : (
-                selectedPoints.length === 0 ? 'Click on map to add points' :
-                  selectedPoints.length === 1 ? '1 point selected - add more for routing' :
-                    `${selectedPoints.length} points selected`
+                selectedPoints.length === 0 ? 'Click map to define path' :
+                  selectedPoints.length === 1 ? '1 point - select next' :
+                    `${selectedPoints.length} points defined`
               )}
               {routeState.hasRoute && routeState.routeInfo && geometryType === 'LineString' && (
-                <span className="text-green-200 ml-2">
-                  → {routeState.routeInfo.distance_km.toFixed(2)}km route
-                </span>
+                <Badge variant="outline" className="ml-2 bg-green-500/20 text-white border-green-400">
+                  {routeState.routeInfo.distance_km.toFixed(2)}km
+                </Badge>
               )}
             </span>
-          </div>
+          </Alert>
         </div>
       )}
 
       {/* Edit Form Status - Fixed position when edit form is open */}
       {isEditFormOpen && editingClosure && (
-        <div className="fixed top-20 right-[25rem] z-40 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
+        <div className="fixed top-20 right-[25rem] z-40">
+          <Alert className="bg-orange-600 text-white border-none shadow-xl py-2 px-4 flex items-center gap-3">
             <Edit3 className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              Editing: {editingClosure.description.substring(0, 30)}
-              {editingClosure.description.length > 30 ? '...' : ''}
+            <span className="text-sm font-bold truncate max-w-[200px]">
+              Editing: {editingClosure.description}
             </span>
-          </div>
+          </Alert>
         </div>
       )}
 
       {/* Geometry Type Indicator */}
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-40 bg-white border border-gray-200 rounded-lg shadow-lg px-4 py-2">
-          <div className="flex items-center space-x-2">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-40">
+          <div className="bg-background/90 backdrop-blur-md border border-border rounded-full shadow-2xl px-6 py-2 flex items-center gap-3">
             {geometryType === 'Point' ? (
               <>
                 <Target className="w-4 h-4 text-orange-600" />
-                <span className="text-sm font-medium text-orange-700">Point Closure Mode</span>
+                <span className="text-xs font-black uppercase tracking-widest text-orange-700">Point Mode</span>
               </>
             ) : (
               <>
-                <Route className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700">Road Segment Mode</span>
+                <RouteIcon className="w-4 h-4 text-primary" />
+                <span className="text-xs font-black uppercase tracking-widest text-primary">Path Mode</span>
               </>
             )}
           </div>
@@ -575,49 +574,44 @@ function ClosuresPageContent() {
 
       {/* Valhalla Integration Notice - Only for LineString */}
       {geometryType === 'LineString' && selectedPoints.length >= 2 && !routeState.hasRoute && !routeState.isRouting && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-yellow-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
-            <Route className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              Waiting for Valhalla route calculation...
-            </span>
-          </div>
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
+          <Alert className="bg-amber-500 text-amber-950 border-none shadow-lg py-2 px-4 font-bold text-xs ring-2 ring-amber-400/20">
+            <RouteIcon className="w-4 h-4 mr-2 inline" />
+            Waiting for Valhalla path...
+          </Alert>
         </div>
       )}
 
       {/* Route Success Notice - Only for LineString */}
       {geometryType === 'LineString' && routeState.hasRoute && routeState.routeInfo && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
-            <Route className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              Valhalla route ready: {routeState.routeInfo.distance_km.toFixed(2)}km ({routeState.routeInfo.points_count} points)
-            </span>
-          </div>
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
+          <Alert className="bg-green-600 text-white border-none shadow-lg py-2 px-4 font-bold text-xs">
+            <RouteIcon className="w-4 h-4 mr-2 inline" />
+            Path optimized: {routeState.routeInfo.distance_km.toFixed(2)}km
+          </Alert>
         </div>
       )}
 
       {/* Point Selection Success Notice - Only for Point */}
       {geometryType === 'Point' && selectedPoints.length === 1 && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-16 left-1/2 transform -translate-x-1/2 z-40 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
-            <Target className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              Point location selected
-            </span>
-          </div>
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
+          <Alert className="bg-orange-600 text-white border-none shadow-lg py-2 px-4 font-bold text-xs">
+            <Target className="w-4 h-4 mr-2 inline" />
+            Location selected
+          </Alert>
         </div>
       )}
 
       {/* Form Conflict Warning */}
       {isFormOpen && isEditFormOpen && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-2">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[100]">
+          <Alert variant="destructive" className="shadow-2xl border-2 border-white/20">
             <TriangleAlert className="w-4 h-4" />
-            <span className="text-sm font-medium">
-              Cannot have both create and edit forms open simultaneously
-            </span>
-          </div>
+            <AlertTitle>Conflict Detected</AlertTitle>
+            <AlertDescription>
+              Cannot have both create and edit forms open.
+            </AlertDescription>
+          </Alert>
         </div>
       )}
 
