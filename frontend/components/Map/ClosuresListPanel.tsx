@@ -6,13 +6,13 @@ import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
 import { Button } from '@/components/ui/button';
 
-interface SidebarProps {
+interface ClosuresListPanelProps {
     isOpen: boolean;
     onClose: () => void;
     onEditClosure?: (closureId: number) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => {
+const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, onEditClosure }) => {
     const { state, selectClosure, startEditingClosure, canEditClosure, deleteClosure } = useClosures();
     const { closures, selectedClosure, loading, isAuthenticated } = state;
 
@@ -430,4 +430,4 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
     );
 };
 
-export default Sidebar;
+export default ClosuresListPanel;

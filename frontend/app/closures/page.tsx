@@ -639,16 +639,10 @@ function ClosuresPageContent() {
         </div>
       )}
 
-      {/* Notifications */}
-      <Toaster position="top-right" />
     </div>
   );
 }
 
 export default function ClosuresPage() {
-  return (
-    <ClosuresProvider>
-      <ClosuresPageContent />
-    </ClosuresProvider>
-  );
+  return <ClosuresPageContent />;
 }
