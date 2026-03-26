@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { UserPlus, Construction, ArrowLeft, Eye, EyeOff, User, Mail, Lock, CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
 import { ClosuresProvider, useClosures } from '@/context/ClosuresContext';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 

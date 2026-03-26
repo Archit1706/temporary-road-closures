@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure, BoundingBox, getDirectionArrowFromCoords } from '@/services/api';
 import { valhallaAPI } from '@/services/valhallaApi';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 // Import the hook (you'll need to create this file in your hooks directory)
 import { useChicagoMapCenter } from '@/hooks/useMapCenter';

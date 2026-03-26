@@ -4,6 +4,7 @@ import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation,
 import { format, isAfter, isBefore } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
+import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -260,20 +261,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose, onEditClosure }) => 
                                         {isAuthenticated && canEdit && (
                                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                                                 <div className="flex space-x-1">
-                                                    <button
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
                                                         onClick={(e) => handleEditClick(e, closure.id)}
-                                                        className="p-1 bg-white border border-gray-300 rounded hover:bg-gray-50 shadow-sm"
+                                                        className="h-7 w-7 bg-white shadow-sm hover:text-blue-600 hover:bg-gray-50"
                                                         title="Edit closure"
                                                     >
                                                         <Edit3 className="w-3 h-3 text-gray-600 hover:text-blue-600" />
-                                                    </button>
-                                                    <button
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
                                                         onClick={(e) => handleDeleteClick(e, closure.id, closure.description)}
-                                                        className="p-1 bg-white border border-gray-300 rounded hover:bg-gray-50 shadow-sm"
+                                                        className="h-7 w-7 bg-white shadow-sm hover:text-red-600 hover:bg-gray-50"
                                                         title="Delete closure"
                                                     >
                                                         <Trash2 className="w-3 h-3 text-gray-600 hover:text-red-600" />
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </div>
                                         )}

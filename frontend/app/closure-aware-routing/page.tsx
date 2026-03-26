@@ -1,7 +1,7 @@
 "use client"
 import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Toaster } from 'react-hot-toast';
+import { Toaster } from '@/components/ui/sonner';
 import { ClosuresProvider } from '@/context/ClosuresContext';
 import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User } from 'lucide-react';
 import RoutingForm from '@/components/Demo/RoutingForm';
@@ -449,16 +449,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
             </div>
 
             {/* Notifications */}
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    duration: 4000,
-                    style: {
-                        background: '#363636',
-                        color: '#fff',
-                    },
-                }}
-            />
+            <Toaster position="top-right" />
         </div>
     );
 };

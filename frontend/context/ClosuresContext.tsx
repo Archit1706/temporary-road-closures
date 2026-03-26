@@ -1,7 +1,7 @@
 "use client"
 import React, { createContext, useContext, useReducer, useCallback, ReactNode, useEffect } from 'react';
 import { Closure, CreateClosureData, UpdateClosureData, BoundingBox, closuresApi, authApi } from '@/services/api';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 // State interface
 interface ClosuresState {
