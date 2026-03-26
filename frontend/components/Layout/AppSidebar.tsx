@@ -183,7 +183,7 @@ export function AppSidebar() {
                     <Avatar className="h-8 w-8 rounded-full group-data-[collapsible=icon]:h-6 group-data-[collapsible=icon]:w-6">
                       <AvatarFallback className="rounded-full bg-blue-100 text-blue-700 text-xs text-[10px] font-black uppercase">
                         {user?.full_name 
-                          ? user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
+                          ? user.full_name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
                           : user?.username?.substring(0, 2).toUpperCase() || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -209,15 +209,13 @@ export function AppSidebar() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <SidebarMenuButton 
-                render={<Link href="/login" />}
-                size="lg" 
-                className="w-full bg-blue-600 hover:!bg-blue-700 text-white justify-center rounded-full group-data-[collapsible=icon]:rounded-full"
-                tooltip="Login to Report"
+              <Link
+                href="/login"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition-colors group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:mx-auto"
               >
-                <LogIn className="group-data-[state=expanded]:mr-2 h-4 w-4 shrink-0 font-bold" />
+                <LogIn className="h-4 w-4 shrink-0 font-bold" />
                 <span className="group-data-[collapsible=icon]:hidden font-bold uppercase tracking-tighter text-[11px]">Login to Report</span>
-              </SidebarMenuButton>
+              </Link>
             )}
           </SidebarMenuItem>
         </SidebarMenu>
