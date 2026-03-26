@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { Bar, BarChart, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { useClosures } from '@/context/ClosuresContext';
+import DemoControlPanel from '@/components/Demo/DemoControlPanel';
 
 export default function DashboardPage() {
   const { state } = useClosures();
@@ -74,6 +75,11 @@ export default function DashboardPage() {
         </div>
         <div className="flex-1">
           <h1 className="text-lg font-semibold md:text-xl">Dashboard</h1>
+        </div>
+        <div className="flex items-center space-x-4">
+          <div className="hidden md:block">
+            <DemoControlPanel />
+          </div>
         </div>
       </header>
 
