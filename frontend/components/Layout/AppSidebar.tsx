@@ -65,12 +65,12 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader className="bg-white border-b border-gray-100 p-4 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:h-[64px] group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
         <div className="flex items-center w-full h-full">
-          <div className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden min-w-0 flex-1">
+          <Link href="/" className="flex items-center space-x-2 group-data-[collapsible=icon]:hidden min-w-0 flex-1 hover:opacity-80 transition-opacity">
             <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg shrink-0">
               <Construction className="w-6 h-6 text-white" />
             </div>
             <span className="font-bold text-base text-gray-900 tracking-tight truncate">OSM Road Closures</span>
-          </div>
+          </Link>
           <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 text-gray-500 hover:text-gray-700 hover:bg-gray-100" />
         </div>
       </SidebarHeader>
