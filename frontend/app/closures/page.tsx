@@ -33,7 +33,6 @@ const Layout = dynamic(() => import('@/components/Layout/Layout'), { ssr: false 
 const ClosureForm = dynamic(() => import('@/components/Forms/ClosureForm'), { ssr: false });
 const EditClosureForm = dynamic(() => import('@/components/Forms/EditClosureForm'), { ssr: false });
 const MapComponent = dynamic(() => import('@/components/Map/MapComponent'), { ssr: false });
-const DemoControlPanel = dynamic(() => import('@/components/Demo/DemoControlPanel'), { ssr: false });
 
 // Loading component
 const LoadingSpinner = () => (
@@ -519,10 +518,7 @@ function ClosuresPageContent() {
         geometryType={geometryType}
       />
 
-      {/* Demo Control Panel - Client-side only */}
-      <ClientOnly>
-        <DemoControlPanel />
-      </ClientOnly>
+
 
       {/* Point Selection Status - Fixed position when create form is open */}
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
