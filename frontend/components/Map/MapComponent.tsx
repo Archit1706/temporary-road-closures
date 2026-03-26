@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 
 // Import the hook (you'll need to create this file in your hooks directory)
 import { useChicagoMapCenter } from '@/hooks/useMapCenter';
+import { useLocationStatus } from '@/context/LocationContext';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -665,7 +666,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const { fetchClosures } = useClosures();
 
     // Use the dynamic map center hook with Chicago fallback
-    const mapCenter = useChicagoMapCenter(true); // true = try to use geolocation
+    const mapCenter = useChicagoMapCenter(true);
+    const { setStatus } = useLocationStatus();
+
+    // Publish location status to context for the Header
+    React.useEffect(() => {
+        setStatus({
+            usingGeolocation: mapCenter.usingGeolocation,
+            error: mapCenter.error,
+            loading: mapCenter.loading,
+        });
+    }, [mapCenter.usingGeolocation, mapCenter.error, mapCenter.loading, setStatus]);
 
     // Initial map load - wait for center to be determined
     useEffect(() => {
@@ -877,32 +888,6 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 />
             </MapContainer>
 
-            {/* Location Status Indicator */}
-            <div className="absolute top-20 left-4 z-10">
-                <div className={`px-3 py-2 rounded-lg shadow-lg border text-sm ${mapCenter.usingGeolocation
-                    ? 'bg-green-50 border-green-200 text-green-800'
-                    : mapCenter.error
-                        ? 'bg-orange-50 border-orange-200 text-orange-800'
-                        : 'bg-blue-50 border-blue-200 text-blue-800'
-                    }`}>
-                    {mapCenter.usingGeolocation ? (
-                        <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span>📍 Using your location</span>
-                        </div>
-                    ) : mapCenter.error ? (
-                        <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                            <span>🌍 Using default location</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <span>🗺️ Map centered</span>
-                        </div>
-                    )}
-                </div>
-            </div>
 
             {/* Selection Controls */}
             {isSelecting && (

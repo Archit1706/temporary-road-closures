@@ -4,6 +4,7 @@ import { Construction, TriangleAlert, Menu, X, LogIn, LogOut, User } from 'lucid
 import { useClosures } from '@/context/ClosuresContext';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { useLocationStatus } from '@/context/LocationContext';
 import dynamic from 'next/dynamic';
 
 const DemoControlPanel = dynamic(() => import('@/components/Demo/DemoControlPanel'), { ssr: false });
@@ -17,6 +18,21 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
     const { state, logout } = useClosures();
     const { isAuthenticated, user } = state;
+    const { status: locationStatus } = useLocationStatus();
+
+    const getLocationLabel = () => {
+        if (locationStatus.loading) return 'Locating...';
+        if (locationStatus.usingGeolocation) return 'Your Location';
+        if (locationStatus.error) return 'Default Location';
+        return 'Map Centered';
+    };
+
+    const getLocationDotColor = () => {
+        if (locationStatus.loading) return 'bg-blue-400 animate-pulse';
+        if (locationStatus.usingGeolocation) return 'bg-green-500';
+        if (locationStatus.error) return 'bg-orange-500';
+        return 'bg-blue-500';
+    };
 
     // Get current path for redirect
     const getCurrentPath = () => {
@@ -44,9 +60,14 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
 
                     {/* Navigation and Actions */}
                     <div className="flex items-center space-x-4">
-                        {/* Authentication Status */}
-                        <div className="hidden md:flex items-center space-x-4">
+                        {/* Server Status & Location */}
+                        <div className="hidden md:flex items-center space-x-3">
                             <DemoControlPanel />
+                            <div className="h-4 w-px bg-gray-300"></div>
+                            <div className="flex items-center space-x-1.5 text-sm">
+                                <div className={`w-2 h-2 rounded-full ${getLocationDotColor()}`}></div>
+                                <span className="text-gray-600 font-medium">{getLocationLabel()}</span>
+                            </div>
                         </div>
 
                         {/* Auth Button */}

@@ -9,7 +9,10 @@ import {
   BookOpen, 
   User, 
   LogOut, 
-  LogIn 
+  LogIn,
+  Info,
+  ShieldCheck,
+  Bell
 } from 'lucide-react';
 
 import {
@@ -84,6 +87,61 @@ export function AppSidebar() {
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Alerts Section */}
+        <SidebarGroup className="flex-1">
+          <SidebarGroupLabel>
+            <Bell className="w-3 h-3 mr-1" />
+            Alerts
+          </SidebarGroupLabel>
+          <SidebarGroupContent className="px-2 space-y-2 overflow-y-auto">
+            {!isAuthenticated && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold text-blue-900 mb-1">
+                      Login Required for Full Features
+                    </h4>
+                    <p className="text-xs text-blue-700 leading-relaxed">
+                      You can view closures, but need to log in to report new ones or edit existing closures.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isAuthenticated && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <ShieldCheck className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold text-green-900 mb-1">
+                      Full Access Enabled
+                    </h4>
+                    <p className="text-xs text-green-700 leading-relaxed">
+                      You can create, edit, and delete road closures.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <div className="flex items-start space-x-2">
+                <Bell className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="text-xs font-semibold text-amber-900 mb-1">
+                    Tip
+                  </h4>
+                  <p className="text-xs text-amber-700 leading-relaxed">
+                    Use the &quot;Report Closure&quot; button in the header to add new road closures, or hover over existing closures in the sidebar to edit them.
+                  </p>
+                </div>
+              </div>
+            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
