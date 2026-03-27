@@ -7,10 +7,13 @@ import 'leaflet/dist/leaflet.css';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure, BoundingBox, getDirectionArrowFromCoords } from '@/services/api';
 import { valhallaAPI } from '@/services/valhallaApi';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 // Import the hook (you'll need to create this file in your hooks directory)
 import { useChicagoMapCenter } from '@/hooks/useMapCenter';
+import { useLocationStatus } from '@/context/LocationContext';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 // Fix for default markers in react-leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -326,7 +329,6 @@ const MapEventHandler: React.FC<{
                 // For Point geometry, only allow one point
                 if (geometryType === 'Point' && selectedPoints.length >= 1) {
                     toast('Point closure can only have one location. Clear existing point first.', {
-                        icon: '⚠️',
                         style: { background: '#fbbf24', color: '#92400e' }
                     });
                     return;
@@ -567,7 +569,7 @@ const MapEventHandler: React.FC<{
                     {routingState.error && (
                         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-md">
                             <div className="flex items-center space-x-2">
-                                <span className="text-sm">⚠️ {routingState.error}</span>
+                                <span className="text-sm">Error: {routingState.error}</span>
                             </div>
                         </div>
                     )}
@@ -575,7 +577,7 @@ const MapEventHandler: React.FC<{
                     {routingState.hasRoute && selectedPoints.length >= 2 && (
                         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
                             <div className="flex items-center space-x-2">
-                                <span className="text-sm">✅ Route calculated ({routingState.routeCoordinates.length} points)</span>
+                                <span className="text-sm">Route calculated ({routingState.routeCoordinates.length} points)</span>
                             </div>
                         </div>
                     )}
@@ -586,7 +588,7 @@ const MapEventHandler: React.FC<{
             {geometryType === 'Point' && selectedPoints.length === 1 && (
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-30 bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
                     <div className="flex items-center space-x-2">
-                        <span className="text-sm">📍 Point location selected</span>
+                        <span className="text-sm">Point location selected</span>
                     </div>
                 </div>
             )}
@@ -665,7 +667,17 @@ const MapComponent: React.FC<MapComponentProps> = ({
     const { fetchClosures } = useClosures();
 
     // Use the dynamic map center hook with Chicago fallback
-    const mapCenter = useChicagoMapCenter(true); // true = try to use geolocation
+    const mapCenter = useChicagoMapCenter(true);
+    const { setStatus } = useLocationStatus();
+
+    // Publish location status to context for the Header
+    React.useEffect(() => {
+        setStatus({
+            usingGeolocation: mapCenter.usingGeolocation,
+            error: mapCenter.error,
+            loading: mapCenter.loading,
+        });
+    }, [mapCenter.usingGeolocation, mapCenter.error, mapCenter.loading, setStatus]);
 
     // Initial map load - wait for center to be determined
     useEffect(() => {
@@ -877,61 +889,44 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 />
             </MapContainer>
 
-            {/* Location Status Indicator */}
-            <div className="absolute top-20 left-4 z-10">
-                <div className={`px-3 py-2 rounded-lg shadow-lg border text-sm ${mapCenter.usingGeolocation
-                    ? 'bg-green-50 border-green-200 text-green-800'
-                    : mapCenter.error
-                        ? 'bg-orange-50 border-orange-200 text-orange-800'
-                        : 'bg-blue-50 border-blue-200 text-blue-800'
-                    }`}>
-                    {mapCenter.usingGeolocation ? (
-                        <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span>📍 Using your location</span>
-                        </div>
-                    ) : mapCenter.error ? (
-                        <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                            <span>🌍 Using default location</span>
-                        </div>
-                    ) : (
-                        <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <span>🗺️ Map centered</span>
-                        </div>
-                    )}
-                </div>
-            </div>
 
             {/* Selection Controls */}
             {isSelecting && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white rounded-lg shadow-lg border border-gray-200 p-3">
-                    <div className="flex items-center space-x-4">
-                        <div className="text-sm text-gray-600">
-                            <span className="font-medium">{getSelectionText()}</span>
-                            {geometryType === 'Point' && selectedPoints.length === 0 && (
-                                <div className="text-xs text-orange-600 mt-1">📍 Point closure - select one location</div>
-                            )}
-                            {geometryType === 'LineString' && selectedPoints.length >= 2 && (
-                                <div className="text-xs text-green-600 mt-1">✅ Route will be calculated automatically</div>
-                            )}
+                <div className="absolute md:bottom-4 bottom-20 left-1/2 transform -translate-x-1/2 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-primary/20 p-4 min-w-[320px] animate-in slide-in-from-bottom-4 duration-300">
+                    <div className="flex flex-col space-y-3">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+                                <span className="text-xs font-black uppercase tracking-wider text-gray-900">{getSelectionText()}</span>
+                            </div>
+                            <Badge variant="outline" className="font-mono text-[10px] border-primary/20 bg-primary/5">
+                                {selectedPoints.length} PTS
+                            </Badge>
                         </div>
-                        <div className="flex space-x-2">
-                            {selectedPoints.length > 0 && (
-                                <button
-                                    onClick={onClearPoints}
-                                    className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
-                                >
-                                    Clear ({selectedPoints.length})
-                                </button>
-                            )}
-                            <button
+                        
+                        <div className="text-[11px] font-medium text-gray-500 leading-tight">
+                            {geometryType === 'Point' 
+                                ? 'Click once on the map to pinpoint the exact closure location.' 
+                                : 'Select multiple points along the road to define the closed segment.'}
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={onClearPoints}
+                                disabled={selectedPoints.length === 0}
+                                className="flex-1 h-8 text-[11px] font-bold rounded-lg border-gray-200"
+                            >
+                                Reset
+                            </Button>
+                            <Button
+                                size="sm"
                                 onClick={onFinishSelection}
-                                className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                                className="flex-1 h-8 text-[11px] font-bold rounded-lg bg-primary hover:bg-primary/90 shadow-sm"
                             >
                                 Done
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 </div>
