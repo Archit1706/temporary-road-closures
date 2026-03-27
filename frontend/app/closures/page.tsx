@@ -155,7 +155,7 @@ const RouteStatus: React.FC<{
   if (!isRouting && !hasRoute && !routeError) return null;
 
   return (
-    <div className="fixed top-20 right-4 z-40 flex flex-col items-end gap-2 max-w-sm">
+    <div className="fixed top-20 right-4 z-[1050] flex flex-col items-end gap-2 max-w-sm">
       {isRouting && (
         <Alert className="bg-primary text-primary-foreground border-none shadow-lg py-2 px-3 flex items-center gap-3">
           <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
@@ -177,7 +177,7 @@ const RouteStatus: React.FC<{
       {hasRoute && routeInfo && (
         <Alert className="bg-green-600 text-white border-none shadow-lg py-2 px-3 flex items-center gap-3">
           <RouteIcon className="w-4 h-4" />
-          <AlertDescription className="text-xs font-semibold leading-none">
+          <AlertDescription className="text-xs font-semibold leading-none text-white">
             Route Ready: {routeInfo.distance_km.toFixed(2)}km ({routeInfo.points_count} pts)
           </AlertDescription>
         </Alert>
@@ -195,7 +195,7 @@ const EditStatus: React.FC<{
   if (!isEditing || !editingClosure) return null;
 
   return (
-    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 max-w-md">
+    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1050] max-w-md">
       <Alert className="bg-orange-600 text-white border-none shadow-lg py-2 px-4 flex items-center gap-4">
         <Edit3 className="w-4 h-4" />
         <AlertDescription className="text-sm font-semibold">
@@ -363,6 +363,8 @@ function ClosuresPageContent() {
 
   const handlePointsSelect = () => {
     setIsSelectingPoints(true);
+    setIsFormMinimized(true);
+    setIsEditFormMinimized(true);
     setRouteState({
       isRouting: false,
       hasRoute: false
@@ -388,6 +390,8 @@ function ClosuresPageContent() {
 
   const handleClearPoints = () => {
     setSelectedPoints([]);
+    setIsFormMinimized(false);
+    setIsEditFormMinimized(false);
     setRouteState({
       isRouting: false,
       hasRoute: false
@@ -396,6 +400,8 @@ function ClosuresPageContent() {
 
   const handleFinishSelection = () => {
     setIsSelectingPoints(false);
+    setIsFormMinimized(false);
+    setIsEditFormMinimized(false);
   };
 
   // Handle route calculation from MapComponent
@@ -521,7 +527,7 @@ function ClosuresPageContent() {
 
       {/* Point Selection Status - Fixed position when create form is open */}
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-20 right-4 md:right-[25rem] z-40">
+        <div className="fixed top-20 right-4 md:right-[25rem] z-[1050]">
           <Alert className="bg-primary text-primary-foreground border-none shadow-xl py-2 px-4 flex items-center gap-3">
             {geometryType === 'Point' ? <Target className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
             <span className="text-sm font-bold">
@@ -544,7 +550,7 @@ function ClosuresPageContent() {
 
       {/* Edit Form Status - Fixed position when edit form is open */}
       {isEditFormOpen && editingClosure && (
-        <div className="fixed top-20 right-4 md:right-[25rem] z-40">
+        <div className="fixed top-20 right-4 md:right-[25rem] z-[1050]">
           <Alert className="bg-orange-600 text-white border-none shadow-xl py-2 px-4 flex items-center gap-3">
             <Edit3 className="w-4 h-4" />
             <span className="text-sm font-bold truncate max-w-[200px]">
@@ -556,7 +562,7 @@ function ClosuresPageContent() {
 
       {/* Geometry Type Indicator */}
       {isSelectingPoints && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-[1050]">
           <div className="bg-background/90 backdrop-blur-md border border-border rounded-full shadow-2xl px-6 py-2 flex items-center gap-3">
             {geometryType === 'Point' ? (
               <>
@@ -575,7 +581,7 @@ function ClosuresPageContent() {
 
       {/* Valhalla Integration Notice - Only for LineString */}
       {geometryType === 'LineString' && selectedPoints.length >= 2 && !routeState.hasRoute && !routeState.isRouting && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1050]">
           <Alert className="bg-amber-500 text-amber-950 border-none shadow-lg py-2 px-4 font-bold text-xs ring-2 ring-amber-400/20">
             <RouteIcon className="w-4 h-4 mr-2 inline" />
             Waiting for Valhalla path...
@@ -585,7 +591,7 @@ function ClosuresPageContent() {
 
       {/* Route Success Notice - Only for LineString */}
       {geometryType === 'LineString' && routeState.hasRoute && routeState.routeInfo && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1050]">
           <Alert className="bg-green-600 text-white border-none shadow-lg py-2 px-4 font-bold text-xs">
             <RouteIcon className="w-4 h-4 mr-2 inline" />
             Path optimized: {routeState.routeInfo.distance_km.toFixed(2)}km
@@ -595,7 +601,7 @@ function ClosuresPageContent() {
 
       {/* Point Selection Success Notice - Only for Point */}
       {geometryType === 'Point' && selectedPoints.length === 1 && isFormOpen && !isEditFormOpen && (
-        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1050]">
           <Alert className="bg-orange-600 text-white border-none shadow-lg py-2 px-4 font-bold text-xs">
             <Target className="w-4 h-4 mr-2 inline" />
             Location selected

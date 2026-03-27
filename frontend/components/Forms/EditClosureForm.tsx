@@ -6,6 +6,7 @@ import { useClosures } from '@/context/ClosuresContext';
 import { UpdateClosureData, authApi, Closure } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EditClosureFormProps {
@@ -654,8 +655,16 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
     // --- MOBILE: Bottom Sheet ---
     if (isMobile) {
         return (
-            <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-                <SheetContent side="bottom" className="!h-[85vh] flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none" showCloseButton={true}>
+            <Sheet open={isOpen} onOpenChange={(open) => { if (!open && !isMinimized) onClose(); }} modal={!isMinimized}>
+                <SheetContent 
+                    side="bottom" 
+                    className={cn(
+                        "flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none transition-all duration-500",
+                        isMinimized ? "!h-[12px] opacity-100" : "!h-[85vh]"
+                    )} 
+                    showCloseButton={!isMinimized}
+                    hideOverlay={isMinimized}
+                >
                     {/* Header with Drag handle */}
                     <div className="bg-orange-600 shrink-0">
                         <div className="flex justify-center pt-3 pb-1">

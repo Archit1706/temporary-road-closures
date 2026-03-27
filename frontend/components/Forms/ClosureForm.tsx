@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 interface ClosureFormProps {
     isOpen: boolean;
     onClose: () => void;
@@ -131,12 +132,13 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
         if (!closure.geometry || !closure.geometry.coordinates) return [];
 
         if (closure.geometry.type === 'Point') {
-            const coords = closure.geometry.coordinates[0] || closure.geometry.coordinates;
+            const coords = closure.geometry.coordinates as unknown as number[];
             if (Array.isArray(coords) && coords.length >= 2) {
                 return [L.latLng(coords[1], coords[0])];
             }
         } else if (closure.geometry.type === 'LineString') {
-            return closure.geometry.coordinates.map(coord =>
+            const coords = closure.geometry.coordinates as unknown as number[][];
+            return coords.map(coord =>
                 L.latLng(coord[1], coord[0])
             );
         }
@@ -188,8 +190,8 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
             setValue('transport_mode', editingClosure.transport_mode || 'all');
             setValue('attribution', editingClosure.attribution || '');
             setValue('data_license', editingClosure.data_license || '');
-            setValue('status', editingClosure.status);
-            setValue('geometry_type', editingClosure.geometry.type);
+            setValue('status', editingClosure.status as any);
+            setValue('geometry_type', editingClosure.geometry.type as any);
         }
     }, [isEditMode, editingClosure, setValue]);
 
@@ -1173,8 +1175,16 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     // --- MOBILE: Bottom Sheet ---
     if (isMobile) {
         return (
-            <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-                <SheetContent side="bottom" className="!h-[85vh] flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none" showCloseButton={true}>
+            <Sheet open={isOpen} onOpenChange={(open) => { if (!open && !isMinimized) onClose(); }} modal={!isMinimized}>
+                <SheetContent 
+                    side="bottom" 
+                    className={cn(
+                        "flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none transition-all duration-500",
+                        isMinimized ? "!h-[12px] opacity-100" : "!h-[85vh]"
+                    )} 
+                    showCloseButton={!isMinimized}
+                    hideOverlay={isMinimized}
+                >
                     {/* Header with Drag handle */}
                     <div className="bg-blue-600 shrink-0">
                         <div className="flex justify-center pt-3 pb-1">
