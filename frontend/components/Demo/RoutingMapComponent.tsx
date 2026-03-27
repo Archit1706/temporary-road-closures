@@ -32,23 +32,9 @@ interface CalculatedRoute {
   excludedPoints: [number, number][];
 }
 
-interface Closure {
-  id: number;
-  description: string;
-  closure_type: string;
-  status: 'active' | 'inactive' | 'expired';
-  start_time: string;
-  end_time: string;
-  source: string;
-  confidence_level: number;
-  geometry: {
-    type: 'Point' | 'LineString';
-    coordinates: number[] | number[][];
-  };
-  is_bidirectional?: boolean;
-}
+import { Closure } from '@/services/api';
 
-export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
+import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/lib/routing-utils';
 
 interface RoutingMapComponentProps {
   sourcePoint: RoutePoint | null;
@@ -57,25 +43,10 @@ interface RoutingMapComponentProps {
   route: CalculatedRoute | null;
   directRoute: CalculatedRoute | null;
   closures: Closure[];
-  relevantClosures: Closure[];
   onSourceSelect: (point: RoutePoint) => void;
   onDestinationSelect: (point: RoutePoint) => void;
 }
 
-// Define which closure types affect which transportation modes
-const closureTypeEffects: Record<string, TransportationMode[]> = {
-  'construction': ['auto', 'bicycle'],
-  'accident': ['auto', 'bicycle'],
-  'event': ['auto'],
-  'maintenance': ['auto', 'bicycle'],
-  'weather': ['auto', 'bicycle', 'pedestrian'],
-  'emergency': ['auto', 'bicycle', 'pedestrian'],
-  'other': ['auto', 'bicycle', 'pedestrian'],
-  'sidewalk_repair': ['pedestrian'],
-  'bike_lane_closure': ['bicycle'],
-  'bridge_closure': ['auto', 'bicycle', 'pedestrian'],
-  'tunnel_closure': ['auto', 'bicycle'],
-};
 
 // Component to handle map view updates based on dynamic center
 const MapViewController: React.FC<{
@@ -108,7 +79,6 @@ const MapEventHandler: React.FC<{
   route: CalculatedRoute | null;
   directRoute: CalculatedRoute | null;
   closures: Closure[];
-  relevantClosures: Closure[];
   onSourceSelect: (point: RoutePoint) => void;
   onDestinationSelect: (point: RoutePoint) => void;
   mapCenter: {
@@ -124,7 +94,6 @@ const MapEventHandler: React.FC<{
   route,
   directRoute,
   closures,
-  relevantClosures,
   onSourceSelect,
   onDestinationSelect,
   mapCenter
@@ -151,10 +120,6 @@ const MapEventHandler: React.FC<{
       },
     });
 
-    const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
-      const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
-      return affectedModes.includes(mode);
-    };
 
     const createClosureLayer = (closure: Closure): L.Layer[] => {
       const layers: L.Layer[] = [];
@@ -273,7 +238,7 @@ const MapEventHandler: React.FC<{
       }
 
       return () => { layerGroup.clearLayers(); };
-    }, [sourcePoint, destinationPoint, transportationMode, route, directRoute, closures, relevantClosures, map]);
+    }, [sourcePoint, destinationPoint, transportationMode, route, directRoute, closures, map]);
 
     return null;
   };
@@ -285,7 +250,6 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
   route,
   directRoute,
   closures,
-  relevantClosures,
   onSourceSelect,
   onDestinationSelect
 }) => {
@@ -357,7 +321,6 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
           route={route}
           directRoute={directRoute}
           closures={closures}
-          relevantClosures={relevantClosures}
           onSourceSelect={onSourceSelect}
           onDestinationSelect={onDestinationSelect}
           mapCenter={mapCenter}
@@ -441,17 +404,6 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
         </Popover>
       </div>
 
-      {/* Mode Indicator */}
-      {(sourcePoint || destinationPoint) && (
-        <div className="absolute top-4 right-4 z-10 bg-white/95 backdrop-blur-md shadow-2xl rounded-2xl px-4 py-2.5 border border-white/20">
-          <div className="flex items-center space-x-3 text-xs">
-            <span className="text-gray-500 font-black uppercase tracking-widest opacity-60">Mode:</span>
-            <div className="flex items-center space-x-2 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-              <span className="font-black text-blue-700 uppercase tracking-tighter">{modeInfo.icon} {modeInfo.label}</span>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
