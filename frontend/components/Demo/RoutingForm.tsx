@@ -43,6 +43,9 @@ interface RoutingFormProps {
     route: CalculatedRoute | null;
     directRoute: CalculatedRoute | null;
     error: string | null;
+    isSelectingSource: boolean;
+    isSelectingDestination: boolean;
+    onSelectionToggle: (type: 'source' | 'destination') => void;
 }
 
 interface FormData {
@@ -86,10 +89,11 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
     isCalculating,
     route,
     directRoute,
-    error
+    error,
+    isSelectingSource,
+    isSelectingDestination,
+    onSelectionToggle
 }) => {
-    const [isSelectingSource, setIsSelectingSource] = useState(false);
-    const [isSelectingDestination, setIsSelectingDestination] = useState(false);
 
     const {
         register,
@@ -143,13 +147,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
     };
 
     const handleMapSelection = (type: 'source' | 'destination') => {
-        if (type === 'source') {
-            setIsSelectingSource(true);
-            setIsSelectingDestination(false);
-        } else {
-            setIsSelectingDestination(true);
-            setIsSelectingSource(false);
-        }
+        onSelectionToggle(type);
     };
 
     const handleClear = () => {
@@ -158,8 +156,9 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
         onDestinationChange(null);
         setValue('source', '');
         setValue('destination', '');
-        setIsSelectingSource(false);
-        setIsSelectingDestination(false);
+        if (isSelectingSource || isSelectingDestination) {
+            onSelectionToggle(isSelectingSource ? 'source' : 'destination');
+        }
     };
 
     const formatCoordinate = (lat: number, lng: number) => {
@@ -179,19 +178,22 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
                 <div>
-                    <h2 className="text-xl font-bold text-gray-900">Closure-Aware Routing</h2>
-                    <p className="text-sm text-gray-500">
-                        {transportationMode === 'auto' && 'Avoids road closures'}
-                        {transportationMode === 'bicycle' && 'Avoids bicycle closures'}
-                        {transportationMode === 'pedestrian' && 'Avoids pedestrian closures'}
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Routing Engine</h2>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
+                        {transportationMode === 'auto' && 'Avoiding road closures'}
+                        {transportationMode === 'bicycle' && 'Avoiding bicycle closures'}
+                        {transportationMode === 'pedestrian' && 'Avoiding pedestrian closures'}
                     </p>
+                </div>
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+                    <Route className="w-5 h-5 text-blue-600" />
                 </div>
             </div>
 
             <div className="space-y-4">
-                <Label className="text-sm font-bold text-gray-700 uppercase tracking-tight">Transportation Mode</Label>
+                <Label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Travel Mode</Label>
                 <div className="relative flex w-full bg-muted/40 p-1 rounded-full border border-border/50 overflow-hidden">
                     {/* Sliding Highlight */}
                     <div 
@@ -236,11 +238,11 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
             <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
                 {/* Source */}
                 <div className="space-y-3">
-                    <Label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                        <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                            <MapPin className="w-3.5 h-3.5 text-green-600" />
+                    <Label className="flex items-center space-x-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                        <div className="w-5 h-5 rounded-full bg-green-100 flex items-center justify-center">
+                            <MapPin className="w-3 h-3 text-green-600" />
                         </div>
-                        <span>Start Location</span>
+                        <span>Origin</span>
                     </Label>
 
                     {sourcePoint ? (
@@ -302,9 +304,9 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
 
                 {/* Destination */}
                 <div className="space-y-3">
-                    <Label className="flex items-center space-x-2 text-sm font-semibold text-gray-700">
-                        <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center">
-                            <MapPin className="w-3.5 h-3.5 text-red-600" />
+                    <Label className="flex items-center space-x-2 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">
+                        <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center">
+                            <MapPin className="w-3 h-3 text-red-600" />
                         </div>
                         <span>Destination</span>
                     </Label>
@@ -441,39 +443,42 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                 <div className="space-y-4">
                     <Separator className="my-6" />
                     
-                    <Card className="border-green-100 bg-green-50/30 overflow-hidden">
-                        <CardHeader className="pb-3 flex-row items-center space-y-0 gap-3">
-                            <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-                                <Route className="w-5 h-5 text-green-600" />
+                    <Card className="border-none bg-slate-900 text-white overflow-hidden shadow-2xl relative">
+                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                             <Zap className="w-24 h-24" />
+                        </div>
+                        <CardHeader className="pb-3 flex-row items-center space-y-0 gap-4 relative z-10">
+                            <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                <Route className="w-6 h-6 text-blue-400" />
                             </div>
                             <div>
-                                <CardTitle className="text-base font-bold text-green-900">
-                                    Closure-Aware Route
+                                <CardTitle className="text-lg font-black tracking-tight text-white uppercase">
+                                    Optimized Route
                                 </CardTitle>
-                                <CardDescription className="text-xs text-green-700 font-medium">
-                                    Optimized for {selectedMode?.label}
+                                <CardDescription className="text-[10px] text-blue-300 font-bold uppercase tracking-widest">
+                                    Valhalla Pathing Ready
                                 </CardDescription>
                             </div>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Distance</p>
-                                <div className="flex items-center gap-2">
-                                    <Zap className="w-4 h-4 text-green-600" />
-                                    <span className="text-lg font-bold text-green-900">{route.distance.toFixed(2)} km</span>
+                        <CardContent className="grid grid-cols-2 gap-4 relative z-10">
+                            <div className="space-y-1 p-3 rounded-xl bg-white/5 border border-white/10">
+                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Distance</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xl font-black text-white">{route.distance.toFixed(2)} km</span>
                                 </div>
                             </div>
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Estimated Time</p>
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-4 h-4 text-green-600" />
-                                    <span className="text-lg font-bold text-green-900">{Math.round(route.duration)} min</span>
+                            <div className="space-y-1 p-3 rounded-xl bg-white/5 border border-white/10">
+                                <p className="text-[9px] font-black text-white/50 uppercase tracking-widest">Travel Time</p>
+                                <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xl font-black text-white">{Math.round(route.duration)} min</span>
                                 </div>
                             </div>
-                            <div className="col-span-2 pt-2 border-t border-green-100 flex items-center gap-2">
-                                <AlertTriangle className="w-4 h-4 text-green-600" />
-                                <span className="text-xs font-bold text-green-800">
-                                    {route.avoidedClosures} closure points avoided
+                            <div className="col-span-2 pt-3 flex items-center gap-3">
+                                <div className="w-6 h-6 rounded-full bg-orange-500/20 flex items-center justify-center">
+                                    <AlertTriangle className="w-3.5 h-3.5 text-orange-400" />
+                                </div>
+                                <span className="text-[11px] font-black text-blue-100 uppercase tracking-wide">
+                                    Navigated around {route.avoidedClosures} closure{route.avoidedClosures !== 1 ? 's' : ''}
                                 </span>
                             </div>
                         </CardContent>
