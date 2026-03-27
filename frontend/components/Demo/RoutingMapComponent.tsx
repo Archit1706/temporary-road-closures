@@ -328,7 +328,7 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
       </MapContainer>
 
       {/* Map Legend: Ultra-Compact Circular Icon Button - Positioned top-left, perfectly stacked with zoom controls */}
-      <div className="absolute top-[112px] left-[24px] z-[1000] drop-shadow-lg md:drop-shadow-none">
+      <div className="absolute top-[112px] left-[24px] z-[800] drop-shadow-lg md:drop-shadow-none">
         <Popover>
           <PopoverTrigger className="flex items-center justify-center bg-[#E5484D] hover:bg-[#D64045] active:scale-90 text-white w-9 h-9 rounded-full shadow-2xl border border-black/10 transition-all duration-200 group">
             <Info className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />

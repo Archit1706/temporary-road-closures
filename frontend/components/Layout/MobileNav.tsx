@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Wallet, ArrowLeftRight, Calendar, User } from 'lucide-react';
+import { BarChart3, Map, Route, BookOpen, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useClosures } from '@/context/ClosuresContext';
 
@@ -10,22 +10,22 @@ const mobileNavItems = [
   {
     title: 'Dashboard',
     url: '/dashboard',
-    icon: Home,
+    icon: BarChart3,
   },
   {
     title: 'Map View',
     url: '/closures',
-    icon: Wallet,
+    icon: Map,
   },
   {
     title: 'Routing',
     url: '/closure-aware-routing',
-    icon: ArrowLeftRight,
+    icon: Route,
   },
   {
     title: 'Documentation',
     url: '/docs',
-    icon: Calendar,
+    icon: BookOpen,
   },
   {
     title: 'Profile',
