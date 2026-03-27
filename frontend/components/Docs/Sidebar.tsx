@@ -16,9 +16,10 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const DocsSidebar = ({ activeSection, onSectionChange }: {
+const DocsSidebar = ({ activeSection, onSectionChange, isMobile = false }: {
     activeSection: string;
     onSectionChange: (section: string) => void;
+    isMobile?: boolean;
 }) => {
     const [expandedSections, setExpandedSections] = useState<{ [key: string]: boolean }>({
         'backend-api': true,
@@ -106,6 +107,98 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
         { id: 'acknowledgements', label: 'Acknowledgements', icon: Heart },
     ];
 
+    const renderNavigation = () => (
+        <nav ref={navRef} className="px-3 pb-6 space-y-0.5 relative">
+            {/* Sliding Highlight */}
+            {markerPos.height > 0 && (
+                <div 
+                    className="absolute bg-blue-600 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-sm"
+                    style={{
+                        top: markerPos.top,
+                        height: markerPos.height,
+                        left: markerPos.left,
+                        width: markerPos.width,
+                    }}
+                />
+            )}
+            {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isExpanded = expandedSections[item.id];
+                const isActive = activeSection === item.id;
+
+                if (item.expandable && item.children) {
+                    const isChildActive = item.children.some(c => c.id === activeSection);
+                    return (
+                        <div key={item.id}>
+                            <button
+                                onClick={() => toggleSection(item.id)}
+                                data-active={isActive}
+                                className={cn(
+                                    "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative z-10",
+                                    isActive
+                                        ? "!text-white !bg-transparent hover:!text-white"
+                                        : isChildActive
+                                            ? "text-gray-900 bg-gray-100/50 hover:bg-gray-100/50 font-bold"
+                                            : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
+                                )}
+                            >
+                                <span className="text-[14px]">{item.label}</span>
+                                {isExpanded
+                                    ? <ChevronDown className="w-3 h-3 opacity-50" />
+                                    : <ChevronRight className="w-3 h-3 opacity-50" />
+                                }
+                            </button>
+
+                            {isExpanded && (
+                                <div className="ml-5 mt-0.5 mb-1 border-l border-gray-100 pl-3 space-y-0.5">
+                                    {item.children.map((child) => (
+                                        <button
+                                            key={child.id}
+                                            onClick={() => onSectionChange(child.id)}
+                                            data-active={activeSection === child.id}
+                                            className={cn(
+                                                "w-full text-left px-3 py-1.5 rounded-lg text-[12px] transition-all duration-150 relative z-10 font-medium",
+                                                activeSection === child.id
+                                                    ? "!text-white !bg-transparent hover:!text-white shadow-none"
+                                                    : "text-gray-500 hover:text-gray-500 hover:bg-transparent"
+                                            )}
+                                        >
+                                            {child.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    );
+                }
+
+                return (
+                    <button
+                        key={item.id}
+                        onClick={() => onSectionChange(item.id)}
+                        data-active={isActive}
+                        className={cn(
+                            "w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative z-10",
+                            isActive
+                                ? "!text-white !bg-transparent hover:!text-white shadow-none"
+                                : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
+                        )}
+                    >
+                        <span className="text-[14px]">{item.label}</span>
+                    </button>
+                );
+            })}
+        </nav>
+    );
+
+    if (isMobile) {
+        return (
+            <div className="w-full h-full pb-20 bg-white">
+                {renderNavigation()}
+            </div>
+        );
+    }
+
     return (
         <aside className="w-56 flex-shrink-0 h-[calc(100vh-4rem)] sticky top-16 overflow-y-auto border-r border-gray-100 bg-white">
             <div className="px-5 pt-4 pb-2">
@@ -119,89 +212,7 @@ const DocsSidebar = ({ activeSection, onSectionChange }: {
                     </div>
                 </div>
             </div>
-
-            {/* Nav */}
-            <nav ref={navRef} className="px-3 pb-6 space-y-0.5 relative">
-                {/* Sliding Highlight */}
-                {markerPos.height > 0 && (
-                    <div 
-                        className="absolute bg-blue-600 rounded-lg transition-all duration-300 ease-in-out z-0 pointer-events-none shadow-sm"
-                        style={{
-                            top: markerPos.top,
-                            height: markerPos.height,
-                            left: markerPos.left,
-                            width: markerPos.width,
-                        }}
-                    />
-                )}
-                {sidebarItems.map((item) => {
-                    const Icon = item.icon;
-                    const isExpanded = expandedSections[item.id];
-                    const isActive = activeSection === item.id;
-
-                    if (item.expandable && item.children) {
-                        const isChildActive = item.children.some(c => c.id === activeSection);
-                        return (
-                            <div key={item.id}>
-                                <button
-                                    onClick={() => toggleSection(item.id)}
-                                    data-active={isActive}
-                                    className={cn(
-                                        "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative z-10",
-                                        isActive
-                                            ? "!text-white !bg-transparent hover:!text-white"
-                                            : isChildActive
-                                                ? "text-gray-900 bg-gray-100/50 hover:bg-gray-100/50 font-bold"
-                                                : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
-                                    )}
-                                >
-                                    <span className="text-[14px]">{item.label}</span>
-                                    {isExpanded
-                                        ? <ChevronDown className="w-3 h-3 opacity-50" />
-                                        : <ChevronRight className="w-3 h-3 opacity-50" />
-                                    }
-                                </button>
-
-                                {isExpanded && (
-                                    <div className="ml-5 mt-0.5 mb-1 border-l border-gray-100 pl-3 space-y-0.5">
-                                        {item.children.map((child) => (
-                                            <button
-                                                key={child.id}
-                                                onClick={() => onSectionChange(child.id)}
-                                                data-active={activeSection === child.id}
-                                                className={cn(
-                                                    "w-full text-left px-3 py-1.5 rounded-lg text-[12px] transition-all duration-150 relative z-10 font-medium",
-                                                    activeSection === child.id
-                                                        ? "!text-white !bg-transparent hover:!text-white shadow-none"
-                                                        : "text-gray-500 hover:text-gray-500 hover:bg-transparent"
-                                                )}
-                                            >
-                                                {child.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    }
-
-                    return (
-                        <button
-                            key={item.id}
-                            onClick={() => onSectionChange(item.id)}
-                            data-active={isActive}
-                            className={cn(
-                                "w-full flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150 relative z-10",
-                                isActive
-                                    ? "!text-white !bg-transparent hover:!text-white shadow-none"
-                                    : "text-gray-600 hover:text-gray-600 hover:bg-transparent"
-                            )}
-                        >
-                            <span className="text-[14px]">{item.label}</span>
-                        </button>
-                    );
-                })}
-            </nav>
+            {renderNavigation()}
         </aside>
     );
 };
