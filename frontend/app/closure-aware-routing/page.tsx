@@ -431,7 +431,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
         <>
             {!isMobile && renderRoutingHeader()}
             {/* Routing Form */}
-            <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain pb-6">
+            <div className={cn("flex-1 min-h-0 pb-6", !isMobile && "overflow-y-auto overscroll-contain")}>
                 <RoutingForm
                     sourcePoint={sourcePoint}
                     destinationPoint={destinationPoint}

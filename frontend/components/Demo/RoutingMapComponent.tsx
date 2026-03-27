@@ -65,8 +65,21 @@ const MapViewController: React.FC<{
       console.log(`🗺️ Setting map view to: ${mapCenter.center[0].toFixed(6)}, ${mapCenter.center[1].toFixed(6)} (zoom: ${mapCenter.zoom})`);
       map.setView(mapCenter.center, mapCenter.zoom);
       hasSetInitialView.current = true;
+      
+      // Force invalidateSize to fix rendering issues
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 200);
     }
   }, [map, mapCenter.loading, mapCenter.center, mapCenter.zoom]);
+
+  // Also invalidate on initial mount
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [map]);
 
   return null;
 };

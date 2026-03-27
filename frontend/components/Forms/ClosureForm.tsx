@@ -1067,14 +1067,12 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                     </div>
                 </div>
             </div>
-            {!isMobile && (
-                <button
-                    onClick={onClose}
-                    className="p-1 hover:bg-blue-700 rounded mt-0.5 transition-colors"
-                >
-                    <X className="w-5 h-5" />
-                </button>
-            )}
+            <button
+                onClick={onClose}
+                className="h-8 w-8 rounded-full border-2 border-white flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90 shrink-0"
+            >
+                <X className="w-4 h-4" />
+            </button>
         </div>
     );
 
@@ -1182,7 +1180,7 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
                         "flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none transition-all duration-500",
                         isMinimized ? "!h-[12px] opacity-100" : "!h-[85vh]"
                     )} 
-                    showCloseButton={!isMinimized}
+                    showCloseButton={false}
                     hideOverlay={isMinimized}
                 >
                     {/* Header with Drag handle */}

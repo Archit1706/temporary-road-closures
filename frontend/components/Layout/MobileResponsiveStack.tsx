@@ -76,7 +76,7 @@ export function MobileResponsiveStack({
   return (
     <div 
       className={cn(
-        "fixed left-0 right-0 z-[900] bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.15)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] rounded-t-[32px] overflow-hidden flex flex-col bottom-16",
+        "fixed left-0 right-0 z-[900] bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.15)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] rounded-t-[32px] overflow-hidden flex flex-col bottom-16 overscroll-none",
         getSheetHeight(),
         className
       )}
@@ -85,7 +85,7 @@ export function MobileResponsiveStack({
       <div 
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className="shrink-0"
+        className="shrink-0 touch-none"
       >
         <button 
           onClick={toggleExpand}
@@ -105,16 +105,21 @@ export function MobileResponsiveStack({
         </div>
       </div>
       
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0">
         <div className={cn(
-          "transition-all duration-500 flex flex-col min-h-0",
-          isExpanded ? 'opacity-100 flex-1' : 'opacity-0 h-0 overflow-hidden'
+          "flex-1 flex flex-col min-h-0 transition-all duration-300",
+          isExpanded ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'
         )}>
-          {children}
+          <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain touch-pan-y">
+            {children}
+          </div>
         </div>
 
         {footer && (
-          <div className={isExpanded ? 'mt-auto shrink-0' : 'hidden'}>
+          <div className={cn(
+            "shrink-0",
+            isExpanded ? 'block' : 'hidden'
+          )}>
             {footer}
           </div>
         )}

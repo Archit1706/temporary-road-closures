@@ -1,7 +1,7 @@
 "use client"
 import React from 'react';
 import { Calendar, Clock, MapPin, User, AlertCircle, Zap, Building2, Navigation, Edit3, Trash2, Target, Route as RouteIcon, TriangleAlert } from 'lucide-react';
-import { format, isAfter, isBefore } from 'date-fns';
+import { format, isAfter, isBefore, formatDistanceToNow } from 'date-fns';
 import { useClosures } from '@/context/ClosuresContext';
 import { Closure } from '@/services/api';
 import { Button } from '@/components/ui/button';
@@ -119,102 +119,87 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
 
     // Shared header content
     const renderHeader = () => (
-        <div className={cn("shrink-0", isMobile ? "px-5 py-3 space-y-2" : "p-4 space-y-4")}>
-            <div className="space-y-1">
-                <h2 className="text-xl font-bold tracking-tight text-foreground">
-                    Road Closures
-                </h2>
-                <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="font-mono text-[10px] py-0 rounded-full px-2">
-                        {closures.length} TOTAL
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
-                        Real-time reporting
-                    </span>
+        <div className={cn("shrink-0", isMobile ? "px-5 py-3 space-y-3" : "p-4 space-y-4")}>
+            <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                    <h2 className={cn("font-bold tracking-tight text-foreground", isMobile ? "text-lg" : "text-xl")}>
+                        Road Closures
+                    </h2>
+                    <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-[10px] py-0 rounded-full px-2">
+                            {closures.length} TOTAL
+                        </Badge>
+                        {!isMobile && (
+                            <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tighter">
+                                Real-time reporting
+                            </span>
+                        )}
+                    </div>
                 </div>
+
+                {isAuthenticated && isMobile && (
+                    <Button
+                        onClick={() => {
+                            window.dispatchEvent(new CustomEvent('toggle-closure-form'));
+                            if (isMobile) onClose();
+                        }}
+                        className="h-10 px-4 bg-destructive hover:bg-destructive/90 text-white shadow-none rounded-full shrink-0 flex items-center gap-2"
+                    >
+                        <TriangleAlert className="w-4 h-4" />
+                        <span className="text-xs font-bold uppercase tracking-tighter">Report Closure</span>
+                    </Button>
+                )}
             </div>
 
-            {isAuthenticated && (
+            {isAuthenticated && !isMobile && (
                 <Button
                     onClick={() => {
                         window.dispatchEvent(new CustomEvent('toggle-closure-form'));
-                        if (isMobile) onClose();
                     }}
-                    className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold uppercase tracking-tighter h-11 transition-all shadow-none rounded-full"
+                    className="w-full bg-destructive hover:bg-destructive/90 text-white font-bold uppercase tracking-tighter h-11 transition-all shadow-none rounded-full gap-2"
                 >
                     <TriangleAlert className="w-4 h-4" />
                     <span>Report Closure</span>
                 </Button>
             )}
 
-            {/* Status Summary Grid */}
+            {/* Status Summary Grid - Restored Information */}
             <div className="grid grid-cols-3 gap-2">
-                <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-destructive/10 border border-destructive/20 transition-all hover:bg-destructive/20">
+                <div className="flex flex-col items-center justify-center p-2 rounded-md bg-destructive/10 border border-destructive/20 transition-all hover:bg-destructive/20">
                     <span className="text-base font-bold text-destructive leading-none">{activeClosures}</span>
-                    <span className="text-[9px] font-bold uppercase text-destructive/70 mt-0.5 tracking-tighter">Active</span>
+                    <span className="text-[9px] font-bold uppercase text-destructive/70 mt-1 tracking-tighter">Active</span>
                 </div>
-                <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-amber-500/10 border border-amber-500/20 transition-all hover:bg-amber-500/20">
+                <div className="flex flex-col items-center justify-center p-2 rounded-md bg-amber-500/10 border border-amber-500/20 transition-all hover:bg-amber-500/20">
                     <span className="text-base font-bold text-amber-600 leading-none">{upcomingClosures}</span>
-                    <span className="text-[9px] font-bold uppercase text-amber-600/70 mt-0.5 tracking-tighter">Soon</span>
+                    <span className="text-[9px] font-bold uppercase text-amber-600/70 mt-1 tracking-tighter">Soon</span>
                 </div>
-                <div className="flex flex-col items-center justify-center p-1.5 rounded-md bg-muted border border-border transition-all hover:bg-muted/80">
+                <div className="flex flex-col items-center justify-center p-2 rounded-md bg-muted border border-border transition-all hover:bg-muted/80">
                     <span className="text-base font-bold text-muted-foreground leading-none">{expiredClosures}</span>
-                    <span className="text-[9px] font-bold uppercase text-muted-foreground mt-0.5 tracking-tighter">Old</span>
+                    <span className="text-[9px] font-bold uppercase text-muted-foreground mt-1 tracking-tighter">Old</span>
                 </div>
             </div>
-
-            {/* Geography Type Statistics Cards */}
-            {(pointClosures > 0 || lineStringClosures.length > 0) && (
-                <div className="p-2.5 rounded-md bg-primary/5 border border-primary/20 space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3 h-3 text-primary" />
-                            <span className="font-bold text-primary text-[10px] uppercase tracking-tighter">Geometry Types</span>
-                        </div>
-                        <div className="flex gap-2 text-muted-foreground font-bold font-mono">
-                            {pointClosures > 0 && (
-                                <div className="flex items-center gap-1">
-                                    <Target className="w-3 h-3 text-orange-500" />
-                                    <span>{pointClosures}</span>
-                                </div>
-                            )}
-                            {lineStringClosures.length > 0 && (
-                                <div className="flex items-center gap-1">
-                                    <RouteIcon className="w-3 h-3 text-primary" />
-                                    <span>{lineStringClosures.length}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                    {lineStringClosures.length > 0 && (
-                        <div className="flex items-center justify-between text-xs pt-1.5 border-t border-primary/10">
-                            <div className="flex items-center gap-1.5">
-                                <Navigation className="w-3 h-3 text-primary" />
-                                <span className="font-bold text-primary text-[10px] uppercase tracking-tighter">Direction Info</span>
-                            </div>
-                            <div className="flex gap-2 text-muted-foreground font-bold font-mono">
-                                <span>↔ {bidirectionalClosures}</span>
-                                <span>→ {unidirectionalClosures}</span>
-                            </div>
-                        </div>
-                    )}
+            
+            {/* Geometry Statistics Grid - Restored Information */}
+            <div className="grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-50/50 border border-orange-100 transition-all">
+                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500 shadow-sm animate-pulse" />
+                    <span className="text-[10px] font-bold text-orange-700 uppercase tracking-tighter">
+                        {pointClosures} Point{pointClosures !== 1 ? 's' : ''}
+                    </span>
                 </div>
-            )}
-
-            {!isAuthenticated && (
-                <Alert className="bg-amber-500/10 border-amber-500/20 text-amber-900 py-2">
-                    <div className="flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-amber-600" />
-                        <span className="text-[11px] font-bold uppercase tracking-tight">Demo Mode Active</span>
-                    </div>
-                </Alert>
-            )}
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/5 border border-primary/10 transition-all">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-sm animate-pulse" />
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">
+                        {lineStringClosures.length} Segment{lineStringClosures.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+            </div>
         </div>
     );
 
     // Shared closures list content
     const renderClosuresList = () => (
-        <div className="flex-1 overflow-y-auto min-h-0 overflow-x-hidden scrollbar-thin">
+        <div className={cn("flex-1 min-h-0 overflow-x-hidden scrollbar-thin", !isMobile && "overflow-y-auto")}>
             <div className="px-4 py-2">
                 {loading ? (
                     <div className="space-y-3 py-4">
@@ -297,21 +282,26 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                                                             {closure.confidence_level}/10
                                                         </span>
                                                     </div>
-                                                    <span className="text-xs text-muted-foreground">
+                                                    <span className="text-xs text-muted-foreground font-medium">
                                                         {formatDuration(closure.duration_hours)}
                                                     </span>
-                                                    {canEdit && (
-                                                        <div title="You can edit this closure">
-                                                            <Edit3 className="w-3 h-3 text-green-500" />
-                                                        </div>
-                                                    )}
+                                                    <div className="flex items-center gap-1.5 ml-1 pl-1.5 border-l border-border/50">
+                                                        <Clock className="w-3 h-3 text-muted-foreground/60" />
+                                                        <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-tighter">
+                                                            {formatDistanceToNow(new Date(closure.updated_at))} ago
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
 
                                             {/* Description */}
-                                            <h3 className="text-sm font-bold text-foreground leading-tight mb-3 line-clamp-2">
+                                            <h3 className="text-sm font-bold text-foreground leading-tight mb-1 line-clamp-2">
                                                 {closure.description}
                                             </h3>
+                                            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70 mb-3 ml-0.5">
+                                                <div className="w-1 h-1 rounded-full bg-muted-foreground/30" />
+                                                <span className="font-medium tracking-tight">Source: {closure.source}</span>
+                                            </div>
 
                                             {/* Meta Info Grid */}
                                             <div className="grid grid-cols-2 gap-y-2 text-[10px] items-center">
@@ -397,31 +387,64 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
         </div>
     );
 
-    // Shared footer content
     const renderFooter = () => (
-        <div className={`${isMobile ? 'px-4 py-3' : 'h-[81px] px-4'} border-t border-border bg-muted/30 shrink-0 flex flex-col justify-center`}>
-            <div className="flex flex-col gap-1">
-                <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-tighter">
-                    <span className={isAuthenticated ? "text-green-600" : "text-amber-600"}>
-                        {isAuthenticated ? "● API Connected" : "⚠ Demo Mode"}
-                    </span>
-                    <span className="text-muted-foreground/60">
-                        {pointClosures > 0 && `📍 ${pointClosures} points`}
-                        {pointClosures > 0 && lineStringClosures.length > 0 && ' • '}
-                        {lineStringClosures.length > 0 && `🛣️ ${lineStringClosures.length} segments`}
-                        {lineStringClosures.length > 0 && (
-                            <span className="ml-1 text-[8px]">
-                                (↔ {bidirectionalClosures} • → {unidirectionalClosures})
-                            </span>
-                        )}
-                    </span>
-                </div>
-                {isAuthenticated && !isMobile && (
-                    <div className="text-[10px] text-muted-foreground/70 text-left uppercase tracking-tighter font-bold">
-                        Right-click map or hover items to manage reports
+        <div className={cn(
+            "border-t border-border bg-muted/20 shrink-0 flex flex-col p-4 gap-3",
+            isMobile ? "pb-8" : "pb-4"
+        )}>
+            <div className="bg-background/80 border border-border/50 rounded-xl p-3 space-y-2.5 shadow-sm">
+                <div className="flex items-center justify-between border-b border-border/30 pb-2">
+                    <div className="flex items-center gap-2">
+                        <Target className="w-4 h-4 text-orange-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60">Geometry Types</span>
                     </div>
-                )}
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                            <Target className="w-3.5 h-3.5 text-orange-500/70" />
+                            <span className="text-xs font-bold font-mono">{pointClosures}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <Navigation className="w-3.5 h-3.5 text-primary/70" />
+                            <span className="text-xs font-bold font-mono">{lineStringClosures.length}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Navigation className="w-4 h-4 text-primary" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-foreground/60">Direction Info</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-sm text-muted-foreground/60 opacity-70">↔</span>
+                            <span className="text-xs font-bold font-mono">{bidirectionalClosures}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-sm text-muted-foreground/60 opacity-70">→</span>
+                            <span className="text-xs font-bold font-mono">{unidirectionalClosures}</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            {!isAuthenticated && (
+                <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-3 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="h-8 w-8 rounded-full bg-orange-500/20 flex items-center justify-center shrink-0">
+                        <AlertCircle className="w-4 h-4 text-orange-600" />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-orange-700 leading-none">Demo Mode Active</p>
+                        <p className="text-[8px] text-orange-600/70 uppercase font-bold tracking-tight mt-1">Updates are temporary</p>
+                    </div>
+                </div>
+            )}
+
+            {isAuthenticated && !isMobile && (
+                <div className="text-[9px] text-muted-foreground/50 text-center uppercase tracking-widest font-black py-1">
+                    API Connected & Ready
+                </div>
+            )}
         </div>
     );
 
@@ -433,7 +456,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
                 onClose={onClose}
                 header={renderHeader()}
                 footer={renderFooter()}
-                peekHeight="h-[260px]"
+                peekHeight="h-[310px]"
                 midHeight="h-[40vh]"
                 fullHeight="h-[80vh]"
             >
