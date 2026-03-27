@@ -3,7 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/sonner';
 import { ClosuresProvider } from '@/context/ClosuresContext';
-import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User, ChevronLeft, ChevronRight, Loader2, Target, Check, TriangleAlert } from 'lucide-react';
 import RoutingForm from '@/components/Demo/RoutingForm';
 import ClosuresList from '@/components/Demo/ClosuresList';
 import { Closure } from '@/services/api';
@@ -11,6 +11,7 @@ import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLocationStatus } from '@/context/LocationContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
@@ -63,6 +64,8 @@ const ClosureAwareRoutingPage: React.FC = () => {
     const [closuresInPath, setClosuresInPath] = useState<Closure[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isSelectingSource, setIsSelectingSource] = useState(false);
+    const [isSelectingDestination, setIsSelectingDestination] = useState(false);
     const isMobile = useIsMobile();
 
     const { status: locationStatus } = useLocationStatus();
@@ -257,6 +260,137 @@ const ClosureAwareRoutingPage: React.FC = () => {
         handleClearRoute();
     }, [handleClearRoute]);
 
+    // Handle Selection Toggle from RoutingForm
+    const handleSelectionToggle = useCallback((type: 'source' | 'destination') => {
+        if (type === 'source') {
+            setIsSelectingSource(prev => !prev);
+            setIsSelectingDestination(false);
+        } else {
+            setIsSelectingDestination(prev => !prev);
+            setIsSelectingSource(false);
+        }
+    }, []);
+
+    // Point Selection Instructions Component (Matching Closures Page design)
+    const PointSelectionInstructions: React.FC<{
+        isSelectingSource: boolean;
+        isSelectingDestination: boolean;
+        sourcePoint: RoutePoint | null;
+        destinationPoint: RoutePoint | null;
+        onClear: () => void;
+        onFinish: () => void;
+    }> = ({ isSelectingSource, isSelectingDestination, sourcePoint, destinationPoint, onClear, onFinish }) => {
+        if (!isSelectingSource && !isSelectingDestination) return null;
+
+        const getInstructionText = () => {
+            if (isSelectingSource) {
+                return sourcePoint ? "Starting point selected" : "Click on the map to select starting location";
+            } else {
+                return destinationPoint ? "Destination selected" : "Click on the map to select destination";
+            }
+        };
+
+        const isDone = (isSelectingSource && sourcePoint) || (isSelectingDestination && destinationPoint);
+
+        return (
+            <Card className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[1001] w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-2xl animate-in slide-in-from-bottom-5">
+                <CardContent className="p-4">
+                    <div className="flex flex-col space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                                <div className="w-2 h-2 rounded-full animate-pulse bg-primary"></div>
+                                {isSelectingSource ? <MapPin className="text-green-600" size={18} /> : <Target className="text-red-600" size={18} />}
+                                <span className="font-bold text-sm tracking-tight capitalize">
+                                    {isSelectingSource ? 'Start' : 'Destination'} Selection
+                                </span>
+                            </div>
+                            <Badge variant="secondary" className="font-mono text-[10px] uppercase tracking-widest">
+                                {isSelectingSource ? 'Source' : 'Target'}
+                            </Badge>
+                        </div>
+
+                        <div className="text-sm text-foreground/80 font-semibold italic">
+                            {getInstructionText()}
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                            <div className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.15em]">
+                                {isDone ? (
+                                    <span className="flex items-center gap-1 text-green-600"><Check size={10} /> Location set</span>
+                                ) : (
+                                    "Awaiting map click..."
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    onClick={onClear}
+                                    className="h-8 text-[10px] font-black uppercase tracking-widest hover:bg-destructive/10 hover:text-destructive rounded-full px-4"
+                                >
+                                    Clear
+                                </Button>
+                                <Button 
+                                    size="sm" 
+                                    onClick={onFinish}
+                                    className="h-8 text-[10px] font-black uppercase tracking-widest rounded-full px-6 bg-slate-900 hover:bg-slate-800"
+                                >
+                                    Done
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    };
+
+    // Routing Status Component (Matching Closures Page design)
+    const RoutingStatus: React.FC<{
+        isCalculating: boolean;
+        hasRoute: boolean;
+        error?: string | null;
+        routeInfo?: CalculatedRoute | null;
+    }> = ({ isCalculating, hasRoute, error, routeInfo }) => {
+        if (!isCalculating && !hasRoute && !error) return null;
+
+        return (
+            <div className="fixed top-20 right-4 z-[1000] flex flex-col items-end gap-2 max-w-sm">
+                {isCalculating && (
+                    <Alert className="bg-primary text-primary-foreground border-none shadow-2xl py-2 px-4 flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        <AlertDescription className="text-xs font-black uppercase tracking-widest text-inherit">
+                            Generating Optimal Path...
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {error && (
+                    <Alert variant="destructive" className="shadow-2xl py-2 px-4 border-none flex items-center gap-3 animate-in fade-in slide-in-from-right-4">
+                        <TriangleAlert className="w-4 h-4" />
+                        <AlertDescription className="text-xs font-bold">
+                            {error}
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                {hasRoute && routeInfo && (
+                    <Alert className="bg-green-600 text-white border-none shadow-2xl py-3 px-5 flex items-center gap-4 animate-in fade-in slide-in-from-top-4">
+                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+                            <Route className="w-4 h-4" />
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.2em] opacity-80 leading-none mb-1">Route Optimized</div>
+                            <AlertDescription className="text-sm font-black leading-none text-white">
+                                {routeInfo.distance.toFixed(2)}km ({Math.round(routeInfo.duration)} min)
+                            </AlertDescription>
+                        </div>
+                    </Alert>
+                )}
+            </div>
+        );
+    };
+
     // Get the appropriate icon for the current transportation mode
     const getTransportationIcon = (mode: TransportationMode) => {
         switch (mode) {
@@ -290,6 +424,9 @@ const ClosureAwareRoutingPage: React.FC = () => {
                     route={route}
                     directRoute={directRoute}
                     error={error}
+                    isSelectingSource={isSelectingSource}
+                    isSelectingDestination={isSelectingDestination}
+                    onSelectionToggle={handleSelectionToggle}
                 />
 
                 {/* Closures List */}
@@ -319,35 +456,49 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
     return (
         <div className="h-screen flex flex-col bg-gray-50">
-            <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-2 pr-6 w-full shrink-0">
-                <div className="flex items-center gap-2">
-                    {/* Back to Closures / Home link could go here */}
+            <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
+                <div className="flex items-center gap-4">
+                    {!isMobile && (
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                            className="text-gray-500 rounded-full"
+                        >
+                            {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                        </Button>
+                    )}
+                    <div>
+                        <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase">Closure Routing</h1>
+                    </div>
                 </div>
 
-                <div className="flex items-center gap-3 ml-auto">
+                <div className="flex items-center gap-6">
                     {/* Route Statistics */}
                     {route && (
-                        <div className="flex items-center gap-2 mr-2">
-                            <div className="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-green-100 uppercase tracking-tight">
-                                {route.distance.toFixed(1)} km
+                        <div className="hidden md:flex items-center gap-3">
+                            <div className="flex flex-col items-end">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Est. Distance</span>
+                                <span className="text-sm font-black text-slate-900">{route.distance.toFixed(2)} km</span>
                             </div>
-                            <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-[10px] font-black border border-blue-100 uppercase tracking-tight">
-                                {Math.round(route.duration)} min
+                            <Separator orientation="vertical" className="h-6" />
+                            <div className="flex flex-col items-end">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Est. Duration</span>
+                                <span className="text-sm font-black text-slate-900">{Math.round(route.duration)} min</span>
                             </div>
                         </div>
                     )}
 
-                    <div className="flex items-center gap-1.5">
-                        {/* Mode Indicator */}
-                        <div className="flex items-center gap-2 px-3 py-1 bg-slate-950 border border-slate-800 text-white rounded-full shadow-sm">
-                            <TransportationIcon className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{transportationMode}</span>
+                    <div className="flex items-center gap-3">
+                        {/* Demo Control Panel */}
+                        <div className="hidden md:block">
+                            <DemoControlPanel />
                         </div>
 
-                        <Separator orientation="vertical" className="h-4 bg-gray-200 mx-0.5" />
+                        <Separator orientation="vertical" className="h-4 mx-2" />
 
                         {/* Location Status */}
-                            <LocationIndicator className="hidden sm:flex" />
+                        <LocationIndicator />
                     </div>
                 </div>
             </header>
@@ -389,8 +540,14 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         route={route}
                         directRoute={directRoute}
                         closures={closuresInPath}
-                        onSourceSelect={setSourcePoint}
-                        onDestinationSelect={setDestinationPoint}
+                        onSourceSelect={(p) => {
+                            setSourcePoint(p);
+                            if (isSelectingSource) setIsSelectingSource(false);
+                        }}
+                        onDestinationSelect={(p) => {
+                            setDestinationPoint(p);
+                            if (isSelectingDestination) setIsSelectingDestination(false);
+                        }}
                     />
 
                     {/* Mobile Sheet Toggle Button */}
@@ -405,33 +562,51 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         </Button>
                     )}
 
-                    {/* Routing Status */}
-                    {isCalculating && (
-                        <Card className="absolute top-4 right-4 z-[1000] border-blue-100 bg-white/95 backdrop-blur-sm shadow-xl min-w-[240px] animate-in slide-in-from-top-4">
-                            <CardContent className="p-4 flex items-center gap-3">
-                                <div className="relative">
-                                    <div className="h-10 w-10 rounded-full border-t-2 border-r-2 border-blue-600 animate-spin" />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <TransportationIcon className="w-4 h-4 text-blue-600" />
-                                    </div>
-                                </div>
-                                <div className="space-y-0.5">
-                                    <p className="text-sm font-black text-gray-900 uppercase tracking-tight">Generating Path</p>
-                                    <p className="text-[11px] font-bold text-blue-600/80 uppercase tracking-widest leading-none">
-                                        {transportationMode} Mode
-                                    </p>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                    {/* Point Selection Instructions */}
+                    <PointSelectionInstructions
+                        isSelectingSource={isSelectingSource}
+                        isSelectingDestination={isSelectingDestination}
+                        sourcePoint={sourcePoint}
+                        destinationPoint={destinationPoint}
+                        onClear={() => {
+                            if (isSelectingSource) setSourcePoint(null);
+                            if (isSelectingDestination) setDestinationPoint(null);
+                        }}
+                        onFinish={() => {
+                            setIsSelectingSource(false);
+                            setIsSelectingDestination(false);
+                        }}
+                    />
 
-                    {/* Error Display */}
-                    {error && (
-                        <Alert variant="destructive" className="absolute top-4 right-4 z-[1000] max-w-sm bg-white/95 backdrop-blur-sm shadow-xl border-red-100 animate-in slide-in-from-top-4">
-                            <AlertTriangle className="h-4 w-4" />
-                            <AlertTitle className="font-black uppercase tracking-tight text-xs">Route Error</AlertTitle>
-                            <AlertDescription className="text-xs font-medium">{error}</AlertDescription>
-                        </Alert>
+                    {/* Routing Status Indicators */}
+                    <RoutingStatus
+                        isCalculating={isCalculating}
+                        hasRoute={!!route}
+                        error={error}
+                        routeInfo={route}
+                    />
+
+                    {/* Mode Indicator - Top Center Floating Pill */}
+                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-40 md:left-auto md:right-[26rem] md:transform-none">
+                        <div className="bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-full shadow-2xl px-6 py-2 flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 group">
+                            <TransportationIcon className="w-3.5 h-3.5 text-white animate-pulse" />
+                            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white">
+                                {transportationMode} <span className="text-blue-400">Nav</span>
+                            </span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+                        </div>
+                    </div>
+
+                    {/* Selection Hints */}
+                    {(isSelectingSource || isSelectingDestination) && (
+                        <div className="fixed top-32 left-1/2 transform -translate-x-1/2 z-40">
+                            <div className="bg-white/80 backdrop-blur-sm border border-border rounded-full shadow-xl px-4 py-1.5 flex items-center gap-2 animate-bounce">
+                                <Info className="w-3 h-3 text-primary" />
+                                <span className="text-[9px] font-bold uppercase tracking-tight text-muted-foreground">
+                                    Click map to set {isSelectingSource ? 'start' : 'destination'}
+                                </span>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
