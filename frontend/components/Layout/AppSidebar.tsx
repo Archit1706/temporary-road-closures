@@ -171,21 +171,7 @@ export function AppSidebar() {
               </div>
             )}
 
-            {pathname === '/closure-aware-routing' && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <div className="flex items-start space-x-2">
-                  <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-semibold text-blue-900 mb-1">
-                      Routing Guide
-                    </h4>
-                    <p className="text-xs text-blue-700 leading-relaxed">
-                      Click on the map to set the start location for driving, then click again to set your destination.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {pathname === '/closures' && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">

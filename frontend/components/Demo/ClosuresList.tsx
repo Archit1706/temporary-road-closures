@@ -2,46 +2,15 @@ import React from 'react';
 import { AlertTriangle, Clock, MapPin, Navigation, Building2, Zap, Car, Bike, User, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface Closure {
-    id: number;
-    description: string;
-    closure_type: string;
-    status: 'active' | 'cancelled' | 'expired' | 'planned';
-    start_time: string;
-    end_time: string;
-    source: string;
-    confidence_level: number;
-    geometry: {
-        type: 'Point' | 'LineString';
-        coordinates: number[][];
-    };
-    is_bidirectional?: boolean;
-}
-
-export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
+import { Closure } from '@/services/api';
+import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/lib/routing-utils';
 
 interface ClosuresListProps {
     closures: Closure[];
     transportationMode: TransportationMode;
-    relevantClosures: Closure[];
 }
 
-// Define which closure types affect which transportation modes
-const closureTypeEffects: Record<string, TransportationMode[]> = {
-    'construction': ['auto', 'bicycle'],
-    'accident': ['auto', 'bicycle'],
-    'event': ['auto'],
-    'maintenance': ['auto', 'bicycle'],
-    'weather': ['auto', 'bicycle', 'pedestrian'],
-    'emergency': ['auto', 'bicycle', 'pedestrian'],
-    'other': ['auto', 'bicycle', 'pedestrian'],
-    'sidewalk_repair': ['pedestrian'],
-    'bike_lane_closure': ['bicycle'],
-    'bridge_closure': ['auto', 'bicycle', 'pedestrian'],
-    'tunnel_closure': ['auto', 'bicycle'],
-};
-
-const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMode, relevantClosures }) => {
+const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMode }) => {
     const getClosureTypeIcon = (type: string) => {
         switch (type) {
             case 'construction':
@@ -120,11 +89,6 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
         return now >= start && now <= end;
     };
 
-    // Check if closure affects the selected transportation mode
-    const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
-        const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
-        return affectedModes.includes(mode);
-    };
 
     const getTransportationIcon = (mode: TransportationMode) => {
         switch (mode) {
@@ -391,22 +355,6 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                         })}
                 </div>
 
-                {/* Information Note */}
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                        <Navigation className="w-4 h-4 text-blue-600 mt-0.5" />
-                        <div className="text-sm text-blue-700">
-                            <p className="font-medium mb-1">Smart Transportation Mode Filtering</p>
-                            <p>
-                                Only closures that affect <span className="font-medium capitalize">{transportationMode}</span> traffic
-                                are excluded from route calculation using Valhalla's routing engine.
-                            </p>
-                            <div className="mt-2 text-xs">
-                                <p><strong>Example:</strong> Construction work typically affects cars and bicycles but not pedestrians.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

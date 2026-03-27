@@ -50,28 +50,7 @@ interface CalculatedRoute {
     excludedPoints: [number, number][];
 }
 
-export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
-
-// Define which closure types affect which transportation modes
-const closureTypeEffects: Record<string, TransportationMode[]> = {
-    'construction': ['auto', 'bicycle'], // Road construction affects cars and bicycles but not pedestrians
-    'accident': ['auto', 'bicycle'], // Traffic accidents typically affect vehicles
-    'event': ['auto'], // Street events typically only restrict vehicle access
-    'maintenance': ['auto', 'bicycle'], // Road maintenance affects vehicles
-    'weather': ['auto', 'bicycle', 'pedestrian'], // Weather can affect all modes
-    'emergency': ['auto', 'bicycle', 'pedestrian'], // Emergency closures affect all
-    'other': ['auto', 'bicycle', 'pedestrian'], // Generic closures affect all
-    'sidewalk_repair': ['pedestrian'], // Sidewalk repairs only affect pedestrians
-    'bike_lane_closure': ['bicycle'], // Bike lane closures only affect cyclists
-    'bridge_closure': ['auto', 'bicycle', 'pedestrian'], // Bridge closures affect all
-    'tunnel_closure': ['auto', 'bicycle'], // Tunnel closures typically affect vehicles
-};
-
-// Check if a closure affects a specific transportation mode
-const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
-    const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
-    return affectedModes.includes(mode);
-};
+import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/lib/routing-utils';
 
 const ClosureAwareRoutingPage: React.FC = () => {
     const [sourcePoint, setSourcePoint] = useState<RoutePoint | null>(null);
@@ -81,8 +60,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
     const [directRoute, setDirectRoute] = useState<CalculatedRoute | null>(null);
     const [isCalculating, setIsCalculating] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [closuresInPath, setClosuresInPath] = useState<any[]>([]);
-    const [relevantClosures, setRelevantClosures] = useState<any[]>([]);
+    const [closuresInPath, setClosuresInPath] = useState<Closure[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
     const isMobile = useIsMobile();
@@ -228,7 +206,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
             // 3. Filter closures by transportation mode
             const relevantClosuresForMode = filterClosuresByMode(allClosures, transportationMode);
             console.log(`🚧 Found closures relevant to ${transportationMode}:`, relevantClosuresForMode.length);
-            setRelevantClosures(relevantClosuresForMode);
 
             // 4. Extract exclude locations from relevant closures only
             const excludeLocations: [number, number][] = [];
@@ -270,7 +247,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
         setRoute(null);
         setDirectRoute(null);
         setClosuresInPath([]);
-        setRelevantClosures([]);
         setError(null);
     }, []);
 
@@ -321,7 +297,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
                     <ClosuresList
                         closures={closuresInPath}
                         transportationMode={transportationMode}
-                        relevantClosures={relevantClosures}
                     />
                 )}
             </div>
@@ -335,7 +310,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
                     </div>
                     <div>Uses OpenStreetMap data and transportation-aware closure filtering</div>
                     <div className="font-bold text-gray-600">
-                        {relevantClosures.length} of {closuresInPath.length} closures affect {transportationMode}
+                        {closuresInPath.filter(c => doesClosureAffectMode(c, transportationMode)).length} of {closuresInPath.length} closures affect {transportationMode}
                     </div>
                 </div>
             </div>
@@ -414,7 +389,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         route={route}
                         directRoute={directRoute}
                         closures={closuresInPath}
-                        relevantClosures={relevantClosures}
                         onSourceSelect={setSourcePoint}
                         onDestinationSelect={setDestinationPoint}
                     />
