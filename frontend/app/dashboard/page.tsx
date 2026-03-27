@@ -67,7 +67,7 @@ export default function DashboardPage() {
   }, [closures]);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gray-50/50">
+    <div className="flex flex-col min-h-full bg-gray-50/50 pb-20 md:pb-0">
       {/* Header */}
       <header className="hidden md:flex h-16 items-center gap-4 border-b bg-white px-6 w-full shrink-0">
         <div className="md:hidden">

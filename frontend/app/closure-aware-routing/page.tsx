@@ -477,7 +477,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
     );
 
     return (
-        <div className="h-screen flex flex-col bg-gray-50">
+        <div className="h-[calc(100vh-80px)] md:h-screen flex flex-col bg-gray-50 overflow-hidden">
             <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
                 <div className="flex items-center gap-4">
                 </div>
