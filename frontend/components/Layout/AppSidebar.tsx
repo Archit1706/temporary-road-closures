@@ -84,7 +84,7 @@ export function AppSidebar() {
               <span className="text-[10px] text-gray-500 font-medium">Internal Platform</span>
             </div>
           </Link>
-          <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 transition-colors" />
+          <SidebarTrigger className="hidden md:inline-flex ml-auto group-data-[collapsible=icon]:m-0 group-data-[collapsible=icon]:mx-auto shrink-0 transition-colors" />
         </div>
       </SidebarHeader>
 

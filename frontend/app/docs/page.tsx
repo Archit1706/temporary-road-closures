@@ -10,10 +10,12 @@ const DocsPage = () => {
     return (
         <div className="flex flex-col h-screen overflow-hidden">
             {/* Top bar — same as before */}
-            <DocsHeader
-                onToggleSidebar={() => {}}
-                isSidebarOpen={false}
-            />
+            <div className="hidden md:block">
+                <DocsHeader
+                    onToggleSidebar={() => {}}
+                    isSidebarOpen={false}
+                />
+            </div>
 
             {/* Body: docs sidebar + content */}
             <div className="flex flex-1 overflow-hidden">

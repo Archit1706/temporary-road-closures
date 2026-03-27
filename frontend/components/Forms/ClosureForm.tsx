@@ -1174,14 +1174,16 @@ const ClosureForm: React.FC<ClosureFormProps> = ({
     if (isMobile) {
         return (
             <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-                <SheetContent side="bottom" className="!h-[85vh] flex flex-col p-0 gap-0 rounded-t-2xl overflow-hidden" showCloseButton={true}>
-                    {/* Drag handle */}
-                    <div className="flex justify-center pt-3 pb-1 shrink-0">
-                        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+                <SheetContent side="bottom" className="!h-[85vh] flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none" showCloseButton={true}>
+                    {/* Header with Drag handle */}
+                    <div className="bg-blue-600 shrink-0">
+                        <div className="flex justify-center pt-3 pb-1">
+                            <div className="w-12 h-1.5 rounded-full bg-white/20" />
+                        </div>
+                        {renderFormHeader()}
                     </div>
                     <SheetTitle className="sr-only">{isEditMode ? 'Edit Closure' : 'Report Closure'}</SheetTitle>
                     <SheetDescription className="sr-only">Closure form</SheetDescription>
-                    {renderFormHeader()}
                     {renderProgressSteps()}
                     <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
                         <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-1">
