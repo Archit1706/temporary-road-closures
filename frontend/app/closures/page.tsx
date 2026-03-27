@@ -85,7 +85,7 @@ const PointSelectionInstructions: React.FC<{
   const GeometryIcon = getGeometryIcon();
 
   return (
-    <Card className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-none">
+    <Card className="fixed md:bottom-6 bottom-28 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-none animate-in slide-in-from-bottom-4">
       <CardContent className="p-4">
         <div className="flex flex-col space-y-4">
           <div className="flex items-center justify-between">
@@ -451,6 +451,7 @@ function ClosuresPageContent() {
       <Layout
         onToggleForm={handleToggleForm}
         isFormOpen={isFormOpen}
+        isEditFormOpen={isEditFormOpen}
         isFormMinimized={isFormMinimized || isEditFormMinimized}
         onEditClosure={handleEditClosure}
       >

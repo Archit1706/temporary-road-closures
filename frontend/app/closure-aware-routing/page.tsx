@@ -293,7 +293,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
         const isDone = (isSelectingSource && sourcePoint) || (isSelectingDestination && destinationPoint);
 
         return (
-            <Card className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-[1001] w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-2xl animate-in slide-in-from-bottom-5">
+            <Card className="fixed md:bottom-6 bottom-28 left-1/2 transform -translate-x-1/2 z-[1001] w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-2xl animate-in slide-in-from-bottom-5">
                 <CardContent className="p-4">
                     <div className="flex flex-col space-y-4">
                         <div className="flex items-center justify-between">
@@ -456,7 +456,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
 
     return (
         <div className="h-screen flex flex-col bg-gray-50">
-            <header className="flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
+            <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
                 <div className="flex items-center gap-4">
                     {!isMobile && (
                         <Button 
@@ -518,7 +518,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
                 {/* Mobile Bottom Sheet */}
                 {isMobile && (
                     <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                        <SheetContent side="bottom" className="!h-[85vh] flex flex-col p-0 gap-0 rounded-t-2xl overflow-hidden" showCloseButton={true}>
+                        <SheetContent side="bottom" className="!h-[80vh] flex flex-col p-0 gap-0 rounded-t-2xl overflow-hidden data-[side=bottom]:!bottom-16" showCloseButton={true}>
                             {/* Drag handle */}
                             <div className="flex justify-center pt-3 pb-1 shrink-0">
                                 <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
@@ -554,7 +554,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
                     {isMobile && !isSheetOpen && (
                         <Button
                             onClick={() => setIsSheetOpen(true)}
-                            className="fixed bottom-6 left-4 z-30 bg-background shadow-lg rounded-full p-3 border border-border hover:bg-accent transition-colors"
+                            className="fixed bottom-24 left-6 z-30 bg-background shadow-2xl rounded-full p-3 border border-border hover:bg-accent transition-all duration-300"
                             size="icon"
                             variant="outline"
                         >

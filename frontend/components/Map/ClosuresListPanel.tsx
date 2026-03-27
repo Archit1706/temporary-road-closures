@@ -13,6 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface ClosuresListPanelProps {
     isOpen: boolean;
@@ -117,7 +118,7 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
 
     // Shared header content
     const renderHeader = () => (
-        <div className="p-4 space-y-4 shrink-0">
+        <div className={cn("shrink-0", isMobile ? "px-5 py-3 space-y-2" : "p-4 space-y-4")}>
             <div className="space-y-1">
                 <h2 className="text-xl font-bold tracking-tight text-foreground">
                     Road Closures
@@ -423,23 +424,96 @@ const ClosuresListPanel: React.FC<ClosuresListPanelProps> = ({ isOpen, onClose, 
         </div>
     );
 
-    // --- MOBILE: Bottom Sheet ---
+    // --- MOBILE: 3-Stage Peekable Bottom Sheet with Swipe Control ---
+    const [mobileStage, setMobileStage] = React.useState(0); // 0: Peek, 1: Mid, 2: Full
+    const touchY = React.useRef<number | null>(null);
+
     if (isMobile) {
+        if (!isOpen) return null;
+
+        const toggleExpand = () => {
+            setMobileStage((prev) => (prev + 1) % 3);
+        };
+
+        const handleTouchStart = (e: React.TouchEvent) => {
+            touchY.current = e.touches[0].clientY;
+        };
+
+        const handleTouchEnd = (e: React.TouchEvent) => {
+            if (touchY.current === null) return;
+            const deltaY = touchY.current - e.changedTouches[0].clientY; // Positive = Swipe Up
+            touchY.current = null;
+
+            if (Math.abs(deltaY) > 50) {
+                if (deltaY > 0) {
+                    // Swipe Up -> Increase Stage
+                    setMobileStage((prev) => Math.min(prev + 1, 2));
+                } else {
+                    // Swipe Down -> Decrease Stage
+                    setMobileStage((prev) => Math.max(prev - 1, 0));
+                }
+            }
+        };
+
+        const getSheetHeight = () => {
+            switch (mobileStage) {
+                case 1: return 'h-[40vh]';
+                case 2: return 'h-[80vh]';
+                default: return 'h-[260px]';
+            }
+        };
+
+        const isExpanded = mobileStage > 0;
+
         return (
-            <Sheet open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
-                <SheetContent side="bottom" className="!h-[80vh] sm:!h-[75vh] flex flex-col p-0 gap-0 rounded-t-2xl overflow-hidden" showCloseButton={false}>
-                    {/* Drag handle */}
-                    <div className="flex justify-center pt-3 pb-1 shrink-0">
-                        <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+            <div 
+                className={cn(
+                    "fixed left-0 right-0 z-[1000] bg-white shadow-[0_-12px_40px_rgba(0,0,0,0.15)] transition-all duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] rounded-t-[32px] overflow-hidden flex flex-col bottom-16",
+                    getSheetHeight()
+                )}
+            >
+                {/* Drag Handle Area - Large Click Target & Swipe Source */}
+                <div 
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    className="shrink-0"
+                >
+                    <button 
+                        onClick={toggleExpand}
+                        className="w-full flex flex-col items-center pt-4 pb-2 cursor-pointer hover:bg-slate-50/50 active:bg-slate-100 transition-colors group"
+                        aria-label={mobileStage === 2 ? "Reset closure list" : "Expand closure list"}
+                    >
+                        <div className="w-16 h-1.5 rounded-full bg-slate-200 group-hover:bg-slate-300 transition-colors" />
+                    </button>
+
+                    {/* Header - Clickable and Swipeable too */}
+                    <div onClick={(e) => {
+                        // Avoid toggling if they click the button inside the header
+                        const target = e.target as HTMLElement;
+                        if (target.closest('button')) return;
+                        toggleExpand();
+                    }} className="cursor-pointer">
+                        {renderHeader()}
                     </div>
-                    <SheetTitle className="sr-only">Road Closures</SheetTitle>
-                    <SheetDescription className="sr-only">List of road closures</SheetDescription>
-                    {renderHeader()}
-                    <Separator className="opacity-50 shrink-0" />
-                    {renderClosuresList()}
-                    {renderFooter()}
-                </SheetContent>
-            </Sheet>
+                </div>
+                
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                    <div className={cn(
+                        "transition-all duration-500 flex flex-col min-h-0",
+                        isExpanded ? 'opacity-100 flex-1' : 'opacity-0 h-0 overflow-hidden'
+                    )}>
+                        <div className="px-4 py-2 flex items-center justify-between border-t border-slate-50 mt-2">
+                            <span className="text-xs font-black uppercase tracking-widest text-slate-400">Closure Details</span>
+                            <div className="h-[1px] flex-1 bg-slate-50 ml-4"></div>
+                        </div>
+                        {renderClosuresList()}
+                    </div>
+
+                    <div className={isExpanded ? 'mt-auto shrink-0' : 'hidden'}>
+                        {renderFooter()}
+                    </div>
+                </div>
+            </div>
         );
     }
 

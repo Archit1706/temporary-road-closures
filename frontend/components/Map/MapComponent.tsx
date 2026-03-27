@@ -892,7 +892,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
             {/* Selection Controls */}
             {isSelecting && (
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-primary/20 p-4 min-w-[320px] animate-in slide-in-from-bottom-4 duration-300">
+                <div className="absolute md:bottom-4 bottom-20 left-1/2 transform -translate-x-1/2 z-30 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border border-primary/20 p-4 min-w-[320px] animate-in slide-in-from-bottom-4 duration-300">
                     <div className="flex flex-col space-y-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">

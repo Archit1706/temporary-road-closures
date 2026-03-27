@@ -40,9 +40,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleForm, isFormOpen }) => {
                 <div className="flex justify-between items-center h-full">
                     {/* Left: Branding & Mobile Trigger */}
                     <div className="flex items-center gap-4">
-                        <div className="md:hidden">
-                            <SidebarTrigger className="hover:bg-accent hover:text-accent-foreground" />
-                        </div>
+                        {/* No mobile trigger here, using MobileNav at bottom instead */}
                     </div>
 
                     {/* Right: Actions */}
