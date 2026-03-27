@@ -10,6 +10,7 @@ interface MobileResponsiveStackProps {
   header: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
+  miniHeight?: string; // e.g. "72px"
   peekHeight?: string; // e.g. "260px"
   midHeight?: string;  // e.g. "40vh"
   fullHeight?: string; // e.g. "80vh"
@@ -22,19 +23,23 @@ export function MobileResponsiveStack({
   header,
   children,
   footer,
-  peekHeight = "260px",
-  midHeight = "40vh",
-  fullHeight = "80vh",
+  miniHeight = "h-[72px]",
+  peekHeight = "h-[260px]",
+  midHeight = "h-[50vh]",
+  fullHeight = "h-[80vh]",
   className,
 }: MobileResponsiveStackProps) {
   const isMobile = useIsMobile();
-  const [mobileStage, setMobileStage] = useState(0); // 0: Peek, 1: Mid, 2: Full
+  const [mobileStage, setMobileStage] = useState(1); // 0: Mini, 1: Peek, 2: Mid, 3: Full
   const touchY = useRef<number | null>(null);
 
   if (!isMobile || !isOpen) return null;
 
   const toggleExpand = () => {
-    setMobileStage((prev) => (prev + 1) % 3);
+    setMobileStage((prev) => {
+      if (prev === 0) return 1; // From mini to peek
+      return (prev + 1) % 4;
+    });
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -49,7 +54,7 @@ export function MobileResponsiveStack({
     if (Math.abs(deltaY) > 50) {
       if (deltaY > 0) {
         // Swipe Up -> Increase Stage
-        setMobileStage((prev) => Math.min(prev + 1, 2));
+        setMobileStage((prev) => Math.min(prev + 1, 3));
       } else {
         // Swipe Down -> Decrease Stage
         setMobileStage((prev) => Math.max(prev - 1, 0));
@@ -59,13 +64,14 @@ export function MobileResponsiveStack({
 
   const getSheetHeight = () => {
     switch (mobileStage) {
-      case 1: return midHeight;
-      case 2: return fullHeight;
+      case 0: return miniHeight;
+      case 2: return midHeight;
+      case 3: return fullHeight;
       default: return peekHeight;
     }
   };
 
-  const isExpanded = mobileStage > 0;
+  const isExpanded = mobileStage >= 1;
 
   return (
     <div 
