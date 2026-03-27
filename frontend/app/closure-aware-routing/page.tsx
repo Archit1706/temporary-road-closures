@@ -408,19 +408,28 @@ const ClosureAwareRoutingPage: React.FC = () => {
     const TransportationIcon = getTransportationIcon(transportationMode);
 
     const renderRoutingHeader = () => (
-        <div className="px-6 py-2 flex items-center justify-between shrink-0">
+        <div className="px-4 py-4 flex items-center justify-between shrink-0 border-b border-gray-100 bg-white">
             <div>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Routing</h2>
-                <div className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase mt-1">Optimization Engine</div>
+                <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase leading-none">Routing Engine</h2>
+                <div className="text-[10px] font-black text-slate-400 tracking-[0.2em] uppercase mt-2">
+                    {transportationMode === 'auto' && 'Avoiding road closures'}
+                    {transportationMode === 'bicycle' && 'Avoiding bicycle closures'}
+                    {transportationMode === 'pedestrian' && 'Avoiding pedestrian closures'}
+                </div>
             </div>
-            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
-                <Route className="w-5 h-5 text-blue-600" />
+            <div className="bg-slate-950 border border-slate-800 rounded-full px-4 py-1.5 flex items-center gap-2.5 shadow-lg transition-all active:scale-95 cursor-default">
+                <TransportationIcon className="w-3 h-3 text-white animate-pulse" />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white">
+                    {transportationMode} <span className="text-blue-400">Nav</span>
+                </span>
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
             </div>
         </div>
     );
 
     const renderSidebarContent = () => (
         <>
+            {!isMobile && renderRoutingHeader()}
             {/* Routing Form */}
             <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain pb-6">
                 <RoutingForm
@@ -439,6 +448,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
                     isSelectingSource={isSelectingSource}
                     isSelectingDestination={isSelectingDestination}
                     onSelectionToggle={handleSelectionToggle}
+                    hideHeader={true}
                 />
 
                 {/* Closures List */}
@@ -470,19 +480,6 @@ const ClosureAwareRoutingPage: React.FC = () => {
         <div className="h-screen flex flex-col bg-gray-50">
             <header className="hidden md:flex h-16 items-center justify-between gap-4 border-b border-gray-200 bg-white px-6 w-full shrink-0">
                 <div className="flex items-center gap-4">
-                    {!isMobile && (
-                        <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className="text-gray-500 rounded-full"
-                        >
-                            {isSidebarOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                        </Button>
-                    )}
-                    <div>
-                        <h1 className="text-lg font-black text-slate-900 tracking-tight uppercase">Closure Routing</h1>
-                    </div>
                 </div>
 
                 <div className="flex items-center gap-6">
@@ -593,16 +590,7 @@ const ClosureAwareRoutingPage: React.FC = () => {
                         routeInfo={route}
                     />
 
-                    {/* Mode Indicator - Top Center Floating Pill */}
-                    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-[1050] md:left-auto md:right-[26rem] md:transform-none">
-                        <div className="bg-slate-950/90 backdrop-blur-md border border-slate-800 rounded-full shadow-2xl px-6 py-2 flex items-center gap-3 transition-all duration-300 hover:scale-105 active:scale-95 group">
-                            <TransportationIcon className="w-3.5 h-3.5 text-white animate-pulse" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white">
-                                {transportationMode} <span className="text-blue-400">Nav</span>
-                            </span>
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
-                        </div>
-                    </div>
+
 
                     {/* Selection Hints */}
                     {(isSelectingSource || isSelectingDestination) && (
