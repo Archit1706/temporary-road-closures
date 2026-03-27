@@ -327,13 +327,13 @@ const RoutingMapComponent: React.FC<RoutingMapComponentProps> = ({
         />
       </MapContainer>
 
-      {/* Map Legend: Ultra-Compact Circular Icon Button */}
-      <div className="absolute md:bottom-6 bottom-20 left-6 z-[1000] drop-shadow-lg md:drop-shadow-none">
+      {/* Map Legend: Ultra-Compact Circular Icon Button - Positioned top-left, perfectly stacked with zoom controls */}
+      <div className="absolute top-[112px] left-[24px] z-[1000] drop-shadow-lg md:drop-shadow-none">
         <Popover>
           <PopoverTrigger className="flex items-center justify-center bg-[#E5484D] hover:bg-[#D64045] active:scale-90 text-white w-9 h-9 rounded-full shadow-2xl border border-black/10 transition-all duration-200 group">
             <Info className="w-4 h-4 text-white group-hover:scale-110 transition-transform" />
           </PopoverTrigger>
-          <PopoverContent side="top" align="start" sideOffset={12} className="w-64 p-0 bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl border border-white/40 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <PopoverContent side="bottom" align="start" sideOffset={12} className="w-64 p-0 bg-white/95 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl border border-white/40 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between pb-2 border-b border-gray-100/50">
                 <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Map Legend</h3>

@@ -46,6 +46,7 @@ interface RoutingFormProps {
     isSelectingSource: boolean;
     isSelectingDestination: boolean;
     onSelectionToggle: (type: 'source' | 'destination') => void;
+    hideHeader?: boolean;
 }
 
 interface FormData {
@@ -92,7 +93,8 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
     error,
     isSelectingSource,
     isSelectingDestination,
-    onSelectionToggle
+    onSelectionToggle,
+    hideHeader = false
 }) => {
 
     const {
@@ -178,7 +180,8 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
     return (
         <div className="p-4 space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
+            {!hideHeader && (
+                <div className="flex items-center justify-between pb-2 border-b border-gray-100 mb-2">
                 <div>
                     <h2 className="text-xl font-black text-slate-900 tracking-tight uppercase">Routing Engine</h2>
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-0.5">
@@ -191,6 +194,7 @@ const RoutingForm: React.FC<RoutingFormProps> = ({
                     <Route className="w-5 h-5 text-blue-600" />
                 </div>
             </div>
+        )}
 
             <div className="space-y-4">
                 <Label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Travel Mode</Label>
