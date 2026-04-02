@@ -52,7 +52,10 @@ export function MobileNav() {
           if (item.title === 'Profile') {
             return (
               <Popover key={item.title}>
-                <PopoverTrigger className="flex flex-col items-center justify-center transition-all duration-300 focus:outline-none bg-transparent hover:bg-transparent border-none p-0 h-auto">
+                <PopoverTrigger
+                  id="mobile-profile-menu-trigger"
+                  className="flex flex-col items-center justify-center transition-all duration-300 focus:outline-none bg-transparent hover:bg-transparent border-none p-0 h-auto"
+                >
                     <div className={cn(
                       "p-2 transition-all duration-300 flex items-center justify-center",
                       isActive ? "text-slate-900 active:scale-95" : "text-slate-400 active:scale-95"
