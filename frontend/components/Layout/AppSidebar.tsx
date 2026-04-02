@@ -108,6 +108,7 @@ export function AppSidebar() {
               {navItems.map((item, index) => (
                 <SidebarMenuItem key={item.title} className="relative z-10">
                   <SidebarMenuButton 
+                    id={`sidebar-nav-${item.url.replace(/\//g, "-").replace(/^-+/, "") || "home"}`}
                     render={<Link href={item.url} />}
                     isActive={false}
                     tooltip={item.title}
