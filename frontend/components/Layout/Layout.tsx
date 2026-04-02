@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import Header from './Header';
 import ClosuresListPanel from '../Map/ClosuresListPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MapPin } from 'lucide-react';
 
 interface LayoutProps {
     children: React.ReactNode;

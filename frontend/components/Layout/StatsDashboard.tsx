@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BarChart3, TrendingUp, AlertCircle, CheckCircle, Clock, Activity, Map as MapIcon, Link as LinkIcon } from 'lucide-react';
+import { BarChart3, AlertCircle, CheckCircle, Clock, Activity, Link as LinkIcon } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { closuresApi, ClosureStats } from '@/services/api';
 import {
