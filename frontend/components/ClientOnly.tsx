@@ -1,6 +1,6 @@
 // components/ClientOnly.tsx
 "use client"
-import React, { useEffect, useState } from 'react';
+import React, { useSyncExternalStore } from 'react';
 
 interface ClientOnlyProps {
     children: React.ReactNode;
@@ -8,11 +8,11 @@ interface ClientOnlyProps {
 }
 
 const ClientOnly: React.FC<ClientOnlyProps> = ({ children, fallback = null }) => {
-    const [hasMounted, setHasMounted] = useState(false);
-
-    useEffect(() => {
-        setHasMounted(true);
-    }, []);
+    const hasMounted = useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false
+    );
 
     if (!hasMounted) {
         return <>{fallback}</>;

@@ -1,7 +1,5 @@
 import React from 'react';
-import Link from 'next/link';
 import { useClosures } from '@/context/ClosuresContext';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLocationStatus } from '@/context/LocationContext';
 import dynamic from 'next/dynamic';
 import LocationIndicator from './LocationIndicator';

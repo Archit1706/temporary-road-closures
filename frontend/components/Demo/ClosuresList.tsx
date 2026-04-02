@@ -10,6 +10,12 @@ interface ClosuresListProps {
     transportationMode: TransportationMode;
 }
 
+const transportationIcons = {
+    auto: Car,
+    bicycle: Bike,
+    pedestrian: User,
+} as const;
+
 const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMode }) => {
     const getClosureTypeIcon = (type: string) => {
         switch (type) {
@@ -89,21 +95,7 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
         return now >= start && now <= end;
     };
 
-
-    const getTransportationIcon = (mode: TransportationMode) => {
-        switch (mode) {
-            case 'auto':
-                return Car;
-            case 'bicycle':
-                return Bike;
-            case 'pedestrian':
-                return User;
-            default:
-                return Navigation;
-        }
-    };
-
-    const TransportationIcon = getTransportationIcon(transportationMode);
+    const TransportationIcon = transportationIcons[transportationMode] ?? Navigation;
 
     const activeClosures = closures.filter(isClosureActive);
     const upcomingClosures = closures.filter(c => new Date(c.start_time) > new Date());
@@ -255,7 +247,7 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                                         <span className="text-gray-600">Affects:</span>
                                         <div className="flex items-center space-x-2">
                                             {['auto', 'bicycle', 'pedestrian'].map((mode) => {
-                                                const Icon = getTransportationIcon(mode as TransportationMode);
+                                                const Icon = transportationIcons[mode as TransportationMode] ?? Navigation;
                                                 const isAffected = affectedModes.includes(mode as TransportationMode);
                                                 const isCurrentMode = mode === transportationMode;
 

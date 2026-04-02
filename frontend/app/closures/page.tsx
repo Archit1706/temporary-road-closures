@@ -78,11 +78,7 @@ const PointSelectionInstructions: React.FC<{
     }
   };
 
-  const getGeometryIcon = () => {
-    return geometryType === 'Point' ? Target : RouteIcon;
-  };
-
-  const GeometryIcon = getGeometryIcon();
+  const GeometryIcon = geometryType === 'Point' ? Target : RouteIcon;
 
   return (
     <Card className="fixed md:bottom-6 bottom-28 left-1/2 transform -translate-x-1/2 z-50 w-full max-w-[calc(100vw-2rem)] md:max-w-md border-2 border-primary/50 bg-background/95 backdrop-blur-sm shadow-none animate-in slide-in-from-bottom-4">
@@ -210,7 +206,6 @@ const EditStatus: React.FC<{
 };
 
 function ClosuresPageContent() {
-  const [mounted, setMounted] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
   const [selectedPoints, setSelectedPoints] = useState<L.LatLng[]>([]);
@@ -233,18 +228,6 @@ function ClosuresPageContent() {
     isRouting: false,
     hasRoute: false
   });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Watch for editing state changes
-  useEffect(() => {
-    if (editingClosure && !isEditFormOpen) {
-      setIsEditFormOpen(true);
-      setIsFormOpen(false);
-    }
-  }, [editingClosure, isEditFormOpen]);
 
   // Consolidated event listeners
   useEffect(() => {
@@ -305,11 +288,6 @@ function ClosuresPageContent() {
       window.removeEventListener('toggle-closure-form', handleSidebarToggle);
     };
   }, [geometryType]);
-
-  // Early return after ALL hooks have been called
-  if (!mounted) {
-    return <LoadingSpinner />;
-  }
 
   const handleToggleForm = () => {
     if (isFormOpen) {
@@ -639,5 +617,9 @@ function ClosuresPageContent() {
 }
 
 export default function ClosuresPage() {
-  return <ClosuresPageContent />;
+  return (
+    <ClientOnly fallback={<LoadingSpinner />}>
+      <ClosuresPageContent />
+    </ClientOnly>
+  );
 }

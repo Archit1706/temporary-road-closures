@@ -230,6 +230,34 @@ const MapEventHandler: React.FC<{
         routeCoordinates: []
     });
 
+    // Helper function to calculate route distance
+    function calculateRouteDistance(coordinates: [number, number][]): number {
+        let distance = 0;
+        for (let i = 0; i < coordinates.length - 1; i++) {
+            const [lat1, lng1] = coordinates[i];
+            const [lat2, lng2] = coordinates[i + 1];
+            distance += calculateHaversineDistance(lat1, lng1, lat2, lng2);
+        }
+        return distance;
+    }
+
+    // Helper function to calculate direct distance between two points
+    function calculateDirectDistance(point1: L.LatLng, point2: L.LatLng): number {
+        return calculateHaversineDistance(point1.lat, point1.lng, point2.lat, point2.lng);
+    }
+
+    // Haversine distance formula
+    function calculateHaversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+        const R = 6371; // Earth's radius in kilometers
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLng = (lng2 - lng1) * Math.PI / 180;
+        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    }
+
     // Handle automatic routing when 2+ points are selected for LineString
     useEffect(() => {
         const calculateRoute = async () => {
@@ -293,34 +321,6 @@ const MapEventHandler: React.FC<{
         const debounceTimer = setTimeout(calculateRoute, 500);
         return () => clearTimeout(debounceTimer);
     }, [selectedPoints, onRouteCalculated, geometryType]);
-
-    // Helper function to calculate route distance
-    const calculateRouteDistance = (coordinates: [number, number][]): number => {
-        let distance = 0;
-        for (let i = 0; i < coordinates.length - 1; i++) {
-            const [lat1, lng1] = coordinates[i];
-            const [lat2, lng2] = coordinates[i + 1];
-            distance += calculateHaversineDistance(lat1, lng1, lat2, lng2);
-        }
-        return distance;
-    };
-
-    // Helper function to calculate direct distance between two points
-    const calculateDirectDistance = (point1: L.LatLng, point2: L.LatLng): number => {
-        return calculateHaversineDistance(point1.lat, point1.lng, point2.lat, point2.lng);
-    };
-
-    // Haversine distance formula
-    const calculateHaversineDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-        const R = 6371; // Earth's radius in kilometers
-        const dLat = (lat2 - lat1) * Math.PI / 180;
-        const dLng = (lng2 - lng1) * Math.PI / 180;
-        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-            Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return R * c;
-    };
 
     // Handle map click events with geometry type awareness
     useMapEvents({
