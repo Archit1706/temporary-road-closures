@@ -1,25 +1,23 @@
 "use client"
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { Toaster } from '@/components/ui/sonner';
-import { ClosuresProvider } from '@/context/ClosuresContext';
-import { Navigation, Route, MapPin, Zap, AlertTriangle, Info, X, Car, Bike, User, ChevronLeft, ChevronRight, Loader2, Target, Check, TriangleAlert } from 'lucide-react';
+import { Navigation, Route, MapPin, Info, Car, Bike, User, Target, Check, TriangleAlert } from 'lucide-react';
 import RoutingForm from '@/components/Demo/RoutingForm';
 import ClosuresList from '@/components/Demo/ClosuresList';
 import { Closure } from '@/services/api';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import { useLocationStatus } from '@/context/LocationContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/utils/utils';
 import { Separator } from '@/components/ui/separator';
 import LocationIndicator from '@/components/Layout/LocationIndicator';
 import DemoControlPanel from '@/components/Demo/DemoControlPanel';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { ListFilter } from 'lucide-react';
 import { MobileResponsiveStack } from '@/components/Layout/MobileResponsiveStack';
+import { doesClosureAffectMode, TransportationMode } from '@/utils/routing-utils';
 
 // Dynamically import map to avoid SSR issues
 const RoutingMapComponent = dynamic(
@@ -50,8 +48,6 @@ interface CalculatedRoute {
     avoidedClosures: number;
     excludedPoints: [number, number][];
 }
-
-import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/lib/routing-utils';
 
 const ClosureAwareRoutingPage: React.FC = () => {
     const [sourcePoint, setSourcePoint] = useState<RoutePoint | null>(null);

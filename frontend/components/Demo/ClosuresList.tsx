@@ -3,7 +3,7 @@ import { AlertTriangle, Clock, MapPin, Navigation, Building2, Zap, Car, Bike, Us
 import { format } from 'date-fns';
 
 import { Closure } from '@/services/api';
-import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/lib/routing-utils';
+import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/utils/routing-utils';
 
 interface ClosuresListProps {
     closures: Closure[];

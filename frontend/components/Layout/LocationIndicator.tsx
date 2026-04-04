@@ -1,7 +1,7 @@
 "use client"
 import React from 'react';
 import { useLocationStatus } from '@/context/LocationContext';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface LocationIndicatorProps {

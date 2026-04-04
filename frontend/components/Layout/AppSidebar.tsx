@@ -33,7 +33,7 @@ import {
 import { useClosures } from '@/context/ClosuresContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 
 const navItems = [
   {

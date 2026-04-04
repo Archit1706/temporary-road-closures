@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MobileResponsiveStackProps {

@@ -34,7 +34,7 @@ interface CalculatedRoute {
 
 import { Closure } from '@/services/api';
 
-import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/lib/routing-utils';
+import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/utils/routing-utils';
 
 interface RoutingMapComponentProps {
   sourcePoint: RoutePoint | null;

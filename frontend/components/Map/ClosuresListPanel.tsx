@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileResponsiveStack } from '@/components/Layout/MobileResponsiveStack';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 
 interface ClosuresListPanelProps {
     isOpen: boolean;

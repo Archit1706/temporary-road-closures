@@ -12,7 +12,8 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
+import { TransportationMode } from '@/utils/routing-utils';
 
 interface RoutePoint {
     lat: number;
@@ -27,8 +28,6 @@ interface CalculatedRoute {
     avoidedClosures: number;
     excludedPoints: [number, number][];
 }
-
-export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
 
 interface RoutingFormProps {
     sourcePoint: RoutePoint | null;

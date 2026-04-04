@@ -6,7 +6,7 @@ import { useClosures } from '@/context/ClosuresContext';
 import { UpdateClosureData, authApi, Closure } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { cn } from '@/lib/utils';
+import { cn } from '@/utils/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EditClosureFormProps {
