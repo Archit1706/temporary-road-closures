@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, Wifi, WifiOff, RotateCcw, Info, LogIn, Shield, AlertTriangle } from 'lucide-react';
 import { closuresApi, authApi } from '@/services/api';
 import { useClosures } from '@/context/ClosuresContext';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 
 interface DemoControlPanelProps {
     className?: string;
@@ -67,34 +67,30 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
         if (isAuthenticated && !apiStatus.usingMock) {
             return {
                 icon: Shield,
-                text: 'Backend API',
+                text: 'Backend Connected',
                 color: 'text-green-600',
-                bgColor: 'bg-green-100',
-                borderColor: 'border-green-200'
+                dotBg: 'bg-green-500'
             };
         } else if (apiStatus.backendAvailable && !isAuthenticated) {
             return {
-                icon: LogIn,
-                text: 'Login Required',
-                color: 'text-blue-600',
-                bgColor: 'bg-blue-100',
-                borderColor: 'border-blue-200'
+                icon: Database,
+                text: 'Demo Mode',
+                color: 'text-orange-600',
+                dotBg: 'bg-orange-500'
             };
         } else if (apiStatus.usingMock) {
             return {
                 icon: Database,
                 text: 'Demo Mode',
                 color: 'text-orange-600',
-                bgColor: 'bg-orange-100',
-                borderColor: 'border-orange-200'
+                dotBg: 'bg-orange-500'
             };
         } else {
             return {
                 icon: AlertTriangle,
-                text: 'Offline',
+                text: 'System Offline',
                 color: 'text-red-600',
-                bgColor: 'bg-red-100',
-                borderColor: 'border-red-200'
+                dotBg: 'bg-red-500'
             };
         }
     };
@@ -102,27 +98,23 @@ const DemoControlPanel: React.FC<DemoControlPanelProps> = ({ className = '' }) =
     const connectionStatus = getConnectionStatus();
 
     return (
-        <div className={`fixed bottom-4 left-84 z-50 ${className}`}>
+        <div className={`relative ${className}`}>
             {/* Collapsed state - just the indicator */}
             {!isExpanded && (
                 <button
                     onClick={() => setIsExpanded(true)}
-                    className={`
-                        flex items-center space-x-2 px-3 py-2 rounded-lg shadow-lg backdrop-blur-sm
-                        ${connectionStatus.bgColor} ${connectionStatus.color} border ${connectionStatus.borderColor}
-                        hover:shadow-xl transition-all duration-200
-                    `}
+                    className="flex items-center space-x-2 text-sm hover:opacity-80 transition-opacity whitespace-nowrap"
                 >
-                    <connectionStatus.icon className="w-4 h-4" />
-                    <span className="text-sm font-medium">
-                        {connectionStatus.text}
+                    <div className={`w-2 h-2 rounded-full ${connectionStatus.dotBg} animate-pulse-slow`}></div>
+                    <span className={`font-medium ${connectionStatus.color}`}>
+                        Server Status
                     </span>
                 </button>
             )}
 
             {/* Expanded state - full panel */}
             {isExpanded && (
-                <div className="bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[320px]">
+                <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-2xl border border-gray-200 p-4 min-w-[320px] z-50">
                     {/* Header */}
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-2">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Construction, Menu, X, LogIn, UserPlus, User, LogOut } from 'lucide-react';
@@ -8,6 +8,13 @@ const Navbar: React.FC = () => {
     const { state, logout } = useClosures();
     const { isAuthenticated, user } = state;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
+
+    useEffect(() => {
+        const handleScroll = () => setScrolled(window.scrollY > 0);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
 
     // Get current path for redirect
     const getCurrentPath = () => {
@@ -33,7 +40,13 @@ const Navbar: React.FC = () => {
     ];
 
     return (
-        <nav className="bg-white shadow-lg border-b border-gray-200 sticky top-0 z-50">
+        <nav 
+            className={`sticky top-0 z-50 transition-all duration-300 ${
+                scrolled 
+                ? 'bg-white/70 backdrop-blur-xl border-b border-gray-200/50' 
+                : 'bg-white border-b border-gray-200'
+            }`}
+        >
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex justify-between items-center h-16">
                     {/* Logo and Brand */}
@@ -79,7 +92,7 @@ const Navbar: React.FC = () => {
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium transition-colors"
+                                    className="flex items-center space-x-2 px-4 h-10 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 font-medium transition-all duration-200"
                                 >
                                     <LogOut className="w-4 h-4" />
                                     <span>Logout</span>
@@ -89,14 +102,14 @@ const Navbar: React.FC = () => {
                             <div className="flex items-center space-x-3">
                                 <Link
                                     href={`/login${redirectParam}`}
-                                    className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:text-blue-600 font-medium transition-colors"
+                                    className="flex items-center space-x-2 px-4 h-10 border border-gray-300 text-gray-700 hover:border-blue-600 hover:text-blue-600 rounded-full font-medium transition-all duration-200"
                                 >
                                     <LogIn className="w-4 h-4" />
                                     <span>Sign In</span>
                                 </Link>
                                 <Link
                                     href={`/register${redirectParam}`}
-                                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
+                                    className="flex items-center space-x-2 px-6 h-10 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium transition-all duration-200"
                                 >
                                     <UserPlus className="w-4 h-4" />
                                     <span>Sign Up</span>
@@ -153,17 +166,17 @@ const Navbar: React.FC = () => {
                                         </div>
                                         <button
                                             onClick={handleLogout}
-                                            className="w-full flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium"
+                                            className="w-full flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 font-medium"
                                         >
                                             <LogOut className="w-4 h-4" />
                                             <span>Logout</span>
                                         </button>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2">
+                                    <div className="space-y-3 px-2">
                                         <Link
                                             href={`/login${redirectParam}`}
-                                            className="w-full flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md font-medium"
+                                            className="w-full flex items-center space-x-2 px-4 h-11 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-full font-medium transition-all"
                                             onClick={() => setIsMenuOpen(false)}
                                         >
                                             <LogIn className="w-4 h-4" />
@@ -171,7 +184,7 @@ const Navbar: React.FC = () => {
                                         </Link>
                                         <Link
                                             href={`/register${redirectParam}`}
-                                            className="w-full flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                                            className="w-full flex items-center space-x-2 px-4 h-11 bg-blue-600 text-white rounded-full hover:bg-blue-700 font-medium transition-all"
                                             onClick={() => setIsMenuOpen(false)}
                                         >
                                             <UserPlus className="w-4 h-4" />

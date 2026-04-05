@@ -4,16 +4,22 @@ import { useForm } from 'react-hook-form';
 import { Calendar, Clock, User, TriangleAlert, X, Info, Zap, ChevronLeft, ChevronRight, Shield, Navigation, Route, Edit3 } from 'lucide-react';
 import { useClosures } from '@/context/ClosuresContext';
 import { UpdateClosureData, authApi, Closure } from '@/services/api';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { cn } from '@/utils/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface EditClosureFormProps {
     isOpen: boolean;
     onClose: () => void;
+    isMinimized?: boolean;
+    onToggleMinimize?: () => void;
     closure: Closure;
 }
 
 interface FormData {
     description: string;
-    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other';
+    closure_type: 'construction' | 'accident' | 'event' | 'maintenance' | 'weather' | 'emergency' | 'other' | 'sidewalk_repair' | 'bike_lane_closure' | 'bridge_closure' | 'tunnel_closure';
     source: string;
     start_time: string;
     end_time: string;
@@ -55,12 +61,14 @@ const STATUS_OPTIONS = [
 const EditClosureForm: React.FC<EditClosureFormProps> = ({
     isOpen,
     onClose,
+    isMinimized = false,
+    onToggleMinimize,
     closure
 }) => {
     const { updateClosure, state } = useClosures();
     const { editLoading } = state;
+    const isMobile = useIsMobile();
     const [currentStep, setCurrentStep] = useState(1);
-    const [isMinimized, setIsMinimized] = useState(false);
     const totalSteps = 3;
 
     // Convert timestamps to datetime-local format
@@ -111,7 +119,6 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
 
         if (!isOpen) {
             setCurrentStep(1);
-            setIsMinimized(false);
         }
     }, [closure, isOpen, reset]);
 
@@ -536,16 +543,152 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
         }
     };
 
+    // Shared form header
+    const renderFormHeader = () => (
+        <div className="bg-orange-600 text-white p-4 flex items-start justify-between shrink-0">
+            <div className="flex items-start space-x-3">
+                <div className="mt-0.5">
+                    <Edit3 className="w-5 h-5" />
+                </div>
+                <div>
+                    <h2 className="text-lg font-semibold leading-tight">Edit Closure</h2>
+                    <div className="flex items-center space-x-2 text-xs text-orange-100 mt-1">
+                        <Shield className="w-3 h-3" />
+                        <span>ID: {closure.id} - Updating backend</span>
+                    </div>
+                </div>
+            </div>
+            <button
+                onClick={onClose}
+                className="h-8 w-8 rounded-full border-2 border-white flex items-center justify-center text-white hover:bg-white/10 transition-all active:scale-90 shrink-0"
+            >
+                <X className="w-4 h-4" />
+            </button>
+        </div>
+    );
+
+    // Shared progress steps
+    const renderProgressSteps = () => (
+        <div className="px-4 py-3 border-b border-gray-200 shrink-0">
+            <div className="flex items-center justify-between">
+                {[1, 2, 3].map((step) => (
+                    <div key={step} className="flex items-center">
+                        <div className={`
+                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
+                            ${step <= currentStep
+                                ? 'bg-orange-600 text-white'
+                                : 'bg-gray-200 text-gray-600'
+                            }
+                        `}>
+                            {step}
+                        </div>
+                        {step < 3 && (
+                            <div className={`
+                                w-12 h-1 mx-1
+                                ${step < currentStep ? 'bg-orange-600' : 'bg-gray-200'}
+                            `} />
+                        )}
+                    </div>
+                ))}
+            </div>
+            <div className="mt-2 text-xs text-gray-600">
+                Step {currentStep} of {totalSteps}: {
+                    currentStep === 1 ? 'Basic Information' :
+                        currentStep === 2 ? 'Location & Timing' :
+                            'Review & Update'
+                }
+            </div>
+        </div>
+    );
+
+    // Shared form footer
+    const renderFormFooter = () => (
+        <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
+            <div className="flex items-center justify-between space-x-2">
+                <div className="flex space-x-2">
+                    {currentStep > 1 && (
+                        <button
+                            type="button"
+                            onClick={prevStep}
+                            className="px-6 py-2 text-gray-700 border border-gray-300 rounded-full hover:bg-gray-50 font-medium text-sm transition-colors"
+                        >
+                            Previous
+                        </button>
+                    )}
+                </div>
+
+                <div className="flex space-x-2">
+                    {currentStep < totalSteps ? (
+                        <button
+                            type="button"
+                            onClick={nextStep}
+                            className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 font-medium text-sm transition-colors"
+                        >
+                            Next
+                        </button>
+                    ) : (
+                        <button
+                            type="submit"
+                            disabled={editLoading}
+                            className="px-8 py-2 bg-orange-600 text-white rounded-full hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
+                        >
+                            {editLoading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                                    <span>Updating...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Edit3 className="w-4 h-4" />
+                                    <span>Update Closure</span>
+                                </>
+                            )}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+
+    // --- MOBILE: Bottom Sheet ---
+    if (isMobile) {
+        return (
+            <Sheet open={isOpen} onOpenChange={(open) => { if (!open && !isMinimized) onClose(); }} modal={!isMinimized}>
+                <SheetContent 
+                    side="bottom" 
+                    className={cn(
+                        "flex flex-col p-0 gap-0 rounded-t-[32px] overflow-hidden border-none transition-all duration-500",
+                        isMinimized ? "!h-[12px] opacity-100" : "!h-[85vh]"
+                    )} 
+                    showCloseButton={false}
+                    hideOverlay={isMinimized}
+                >
+                    {/* Header with Drag handle */}
+                    <div className="bg-orange-600 shrink-0">
+                        <div className="flex justify-center pt-3 pb-1">
+                            <div className="w-12 h-1.5 rounded-full bg-white/20" />
+                        </div>
+                        {renderFormHeader()}
+                    </div>
+                    <SheetTitle className="sr-only">Edit Closure</SheetTitle>
+                    <SheetDescription className="sr-only">Edit closure form</SheetDescription>
+                    {renderProgressSteps()}
+                    <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+                        <div className="flex-1 overflow-y-auto min-h-0 overscroll-contain px-1">
+                            <div className="p-4 pb-6">
+                                {renderStepContent()}
+                            </div>
+                        </div>
+                        {renderFormFooter()}
+                    </form>
+                </SheetContent>
+            </Sheet>
+        );
+    }
+
+    // --- DESKTOP: Sidebar ---
     return (
         <>
-            {/* Backdrop for mobile */}
-            {isOpen && (
-                <div
-                    className="fixed inset-0 bg-black bg-opacity-25 z-40 md:hidden"
-                    onClick={onClose}
-                />
-            )}
-
             {/* Form Sidebar */}
             <div className={`
                 fixed top-16 right-0 h-[calc(100vh-4rem)] bg-white shadow-xl transform transition-all duration-300 ease-in-out z-50 border-l border-gray-200
@@ -556,7 +699,7 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
                 {/* Minimize/Expand Button */}
                 <div className="absolute -left-8 top-4 z-10">
                     <button
-                        onClick={() => setIsMinimized(!isMinimized)}
+                        onClick={onToggleMinimize}
                         className="bg-white border border-gray-200 rounded-l-lg p-2 shadow-md hover:bg-gray-50 transition-colors"
                     >
                         {isMinimized ? (
@@ -569,127 +712,32 @@ const EditClosureForm: React.FC<EditClosureFormProps> = ({
 
                 {/* Minimized State */}
                 {isMinimized ? (
-                    <div className="p-4 border-b border-gray-200 bg-orange-600 text-white flex flex-col items-center space-y-2">
-                        <Edit3 className="w-5 h-5" />
-                        <div className="text-xs text-center font-medium transform -rotate-90 whitespace-nowrap">
+                    <div className="p-4 border-b border-gray-200 bg-orange-600 text-white flex flex-col items-center gap-4">
+                        <Edit3 className="w-5 h-5 flex-shrink-0" />
+                        <div 
+                            className="text-xs text-center font-medium whitespace-nowrap tracking-wider py-2"
+                            style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                        >
                             Edit Closure
                         </div>
                         <button
                             onClick={onClose}
-                            className="p-1 hover:bg-orange-700 rounded"
+                            className="p-1 hover:bg-orange-700 rounded flex-shrink-0"
                         >
                             <X className="w-4 h-4" />
                         </button>
                     </div>
                 ) : (
                     <>
-                        {/* Header */}
-                        <div className="bg-orange-600 text-white p-4 flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Edit3 className="w-5 h-5" />
-                                <div>
-                                    <h2 className="text-lg font-semibold">Edit Closure</h2>
-                                    <div className="flex items-center space-x-2 text-xs text-orange-100">
-                                        <Shield className="w-3 h-3" />
-                                        <span>ID: {closure.id} - Updating backend</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <button
-                                onClick={onClose}
-                                className="p-1 hover:bg-orange-700 rounded"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Progress Steps */}
-                        <div className="px-4 py-3 border-b border-gray-200">
-                            <div className="flex items-center justify-between">
-                                {[1, 2, 3].map((step) => (
-                                    <div key={step} className="flex items-center">
-                                        <div className={`
-                                            w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium
-                                            ${step <= currentStep
-                                                ? 'bg-orange-600 text-white'
-                                                : 'bg-gray-200 text-gray-600'
-                                            }
-                                        `}>
-                                            {step}
-                                        </div>
-                                        {step < 3 && (
-                                            <div className={`
-                                                w-12 h-1 mx-1
-                                                ${step < currentStep ? 'bg-orange-600' : 'bg-gray-200'}
-                                            `} />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="mt-2 text-xs text-gray-600">
-                                Step {currentStep} of {totalSteps}: {
-                                    currentStep === 1 ? 'Basic Information' :
-                                        currentStep === 2 ? 'Location & Timing' :
-                                            'Review & Update'
-                                }
-                            </div>
-                        </div>
-
-                        {/* Form Content */}
+                        {renderFormHeader()}
+                        {renderProgressSteps()}
                         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-                            {/* Scrollable Content Area */}
                             <div className="flex-1 overflow-y-auto min-h-0">
                                 <div className="p-4 pb-6">
                                     {renderStepContent()}
                                 </div>
                             </div>
-
-                            {/* Fixed Footer - Always Visible */}
-                            <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-gray-50 shadow-lg">
-                                <div className="flex items-center justify-between space-x-2">
-                                    <div className="flex space-x-2">
-                                        {currentStep > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={prevStep}
-                                                className="px-3 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium text-sm transition-colors"
-                                            >
-                                                Previous
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <div className="flex space-x-2">
-                                        {currentStep < totalSteps ? (
-                                            <button
-                                                type="button"
-                                                onClick={nextStep}
-                                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-medium text-sm transition-colors"
-                                            >
-                                                Next
-                                            </button>
-                                        ) : (
-                                            <button
-                                                type="submit"
-                                                disabled={editLoading}
-                                                className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-medium flex items-center space-x-2 text-sm transition-colors"
-                                            >
-                                                {editLoading ? (
-                                                    <>
-                                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                                                        <span>Updating...</span>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Edit3 className="w-4 h-4" />
-                                                        <span>Update Closure</span>
-                                                    </>
-                                                )}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
+                            {renderFormFooter()}
                         </form>
                     </>
                 )}

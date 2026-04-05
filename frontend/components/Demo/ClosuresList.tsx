@@ -2,46 +2,21 @@ import React from 'react';
 import { AlertTriangle, Clock, MapPin, Navigation, Building2, Zap, Car, Bike, User, CheckCircle, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface Closure {
-    id: number;
-    description: string;
-    closure_type: string;
-    status: 'active' | 'cancelled' | 'expired' | 'planned';
-    start_time: string;
-    end_time: string;
-    source: string;
-    confidence_level: number;
-    geometry: {
-        type: 'Point' | 'LineString';
-        coordinates: number[][];
-    };
-    is_bidirectional?: boolean;
-}
-
-export type TransportationMode = 'auto' | 'bicycle' | 'pedestrian';
+import { Closure } from '@/services/api';
+import { TransportationMode, doesClosureAffectMode, closureTypeEffects } from '@/utils/routing-utils';
 
 interface ClosuresListProps {
     closures: Closure[];
     transportationMode: TransportationMode;
-    relevantClosures: Closure[];
 }
 
-// Define which closure types affect which transportation modes
-const closureTypeEffects: Record<string, TransportationMode[]> = {
-    'construction': ['auto', 'bicycle'],
-    'accident': ['auto', 'bicycle'],
-    'event': ['auto'],
-    'maintenance': ['auto', 'bicycle'],
-    'weather': ['auto', 'bicycle', 'pedestrian'],
-    'emergency': ['auto', 'bicycle', 'pedestrian'],
-    'other': ['auto', 'bicycle', 'pedestrian'],
-    'sidewalk_repair': ['pedestrian'],
-    'bike_lane_closure': ['bicycle'],
-    'bridge_closure': ['auto', 'bicycle', 'pedestrian'],
-    'tunnel_closure': ['auto', 'bicycle'],
-};
+const transportationIcons = {
+    auto: Car,
+    bicycle: Bike,
+    pedestrian: User,
+} as const;
 
-const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMode, relevantClosures }) => {
+const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMode }) => {
     const getClosureTypeIcon = (type: string) => {
         switch (type) {
             case 'construction':
@@ -120,26 +95,7 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
         return now >= start && now <= end;
     };
 
-    // Check if closure affects the selected transportation mode
-    const doesClosureAffectMode = (closure: Closure, mode: TransportationMode): boolean => {
-        const affectedModes = closureTypeEffects[closure.closure_type] || ['auto', 'bicycle', 'pedestrian'];
-        return affectedModes.includes(mode);
-    };
-
-    const getTransportationIcon = (mode: TransportationMode) => {
-        switch (mode) {
-            case 'auto':
-                return Car;
-            case 'bicycle':
-                return Bike;
-            case 'pedestrian':
-                return User;
-            default:
-                return Navigation;
-        }
-    };
-
-    const TransportationIcon = getTransportationIcon(transportationMode);
+    const TransportationIcon = transportationIcons[transportationMode] ?? Navigation;
 
     const activeClosures = closures.filter(isClosureActive);
     const upcomingClosures = closures.filter(c => new Date(c.start_time) > new Date());
@@ -156,13 +112,12 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
     return (
         <div className="border-t border-gray-200 bg-white">
             <div className="p-4">
-                <div className="flex items-center space-x-2 mb-4">
-                    <AlertTriangle className="w-5 h-5 text-orange-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">
-                        Closures in Route Area
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">
+                        Road Closures <span className="text-slate-400">({closures.length})</span>
                     </h3>
-                    <span className="text-sm text-gray-500">({closures.length})</span>
                 </div>
+                <p className="text-sm font-medium text-slate-500 mb-6 leading-none">Click on a closure to view on map</p>
 
                 {/* Transportation Mode Header */}
                 <div className="flex items-center space-x-2 mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
@@ -200,23 +155,29 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                 </div>
 
                 {/* Secondary Stats */}
-                <div className="grid grid-cols-3 gap-2 mb-4">
-                    <div className="text-center p-2 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-800">{activeClosures.length}</div>
-                        <div className="text-xs text-gray-600">Active Now</div>
+                <div className="grid grid-cols-3 gap-2 mt-4 mb-6">
+                    <div className="text-center p-2 bg-red-50/50 rounded-xl border border-red-100/50">
+                        <div className="text-sm font-bold text-red-700 leading-tight">
+                            {activeClosures.length}
+                        </div>
+                        <div className="text-[8px] font-bold text-red-600 uppercase tracking-tight">Active</div>
                     </div>
-                    <div className="text-center p-2 bg-yellow-50 rounded-lg">
-                        <div className="text-sm font-semibold text-yellow-800">{upcomingClosures.length}</div>
-                        <div className="text-xs text-yellow-600">Upcoming</div>
+                    <div className="text-center p-2 bg-amber-50/50 rounded-xl border border-amber-100/50">
+                        <div className="text-sm font-bold text-amber-700 leading-tight">
+                            {upcomingClosures.length}
+                        </div>
+                        <div className="text-[8px] font-bold text-amber-600 uppercase tracking-tight">Upcoming</div>
                     </div>
-                    <div className="text-center p-2 bg-gray-50 rounded-lg">
-                        <div className="text-sm font-semibold text-gray-800">{expiredClosures.length}</div>
-                        <div className="text-xs text-gray-600">Expired</div>
+                    <div className="text-center p-2 bg-slate-50/50 rounded-xl border border-slate-100/50">
+                        <div className="text-sm font-bold text-slate-700 leading-tight">
+                            {expiredClosures.length}
+                        </div>
+                        <div className="text-[8px] font-bold text-slate-600 uppercase tracking-tight">Expired</div>
                     </div>
                 </div>
 
                 {/* Closures List */}
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-3">
                     {closures
                         .sort((a, b) => {
                             // Sort by relevance first, then by status, then by start time
@@ -286,7 +247,7 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                                         <span className="text-gray-600">Affects:</span>
                                         <div className="flex items-center space-x-2">
                                             {['auto', 'bicycle', 'pedestrian'].map((mode) => {
-                                                const Icon = getTransportationIcon(mode as TransportationMode);
+                                                const Icon = transportationIcons[mode as TransportationMode] ?? Navigation;
                                                 const isAffected = affectedModes.includes(mode as TransportationMode);
                                                 const isCurrentMode = mode === transportationMode;
 
@@ -386,22 +347,6 @@ const ClosuresList: React.FC<ClosuresListProps> = ({ closures, transportationMod
                         })}
                 </div>
 
-                {/* Information Note */}
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="flex items-start space-x-2">
-                        <Navigation className="w-4 h-4 text-blue-600 mt-0.5" />
-                        <div className="text-sm text-blue-700">
-                            <p className="font-medium mb-1">Smart Transportation Mode Filtering</p>
-                            <p>
-                                Only closures that affect <span className="font-medium capitalize">{transportationMode}</span> traffic
-                                are excluded from route calculation using Valhalla's routing engine.
-                            </p>
-                            <div className="mt-2 text-xs">
-                                <p><strong>Example:</strong> Construction work typically affects cars and bicycles but not pedestrians.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

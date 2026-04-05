@@ -74,7 +74,7 @@ const DocsContent: React.FC<DocsContentProps> = ({ activeSection }) => {
 
     if (SectionComponent) {
         return (
-            <div className="flex-1 md:ml-80 p-6 max-w-5xl">
+            <div className="flex-1 overflow-y-auto p-8 w-full">
                 <SectionComponent />
             </div>
         );
@@ -82,7 +82,7 @@ const DocsContent: React.FC<DocsContentProps> = ({ activeSection }) => {
 
     // Fallback for unknown sections
     return (
-        <div className="flex-1 md:ml-80 p-6 max-w-5xl">
+        <div className="flex-1 overflow-y-auto p-8">
             <div className="text-center py-12">
                 <Construction className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Coming Soon</h2>
