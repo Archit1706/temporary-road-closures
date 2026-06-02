@@ -33,7 +33,7 @@ export default function HomePage() {
           title="Contribute to the Project"
           description="Help us improve the OSM road closures system. Contribute code, report issues, or suggest features"
           buttonText="View on GitHub"
-          buttonLink="https://github.com/Archit1706/temporary-road-closures"
+          buttonLink="https://github.com/sosm/temporary-road-closures"
           variant="tertiary"
           isExternal
         />
