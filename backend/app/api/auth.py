@@ -77,9 +77,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     summary="User login",
     description="Authenticate user and return access token (OAuth2 compatible).",
 )
-async def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
-):
+async def login(form_data: UserLogin = Depends(), db: Session = Depends(get_db)):
     """
     Authenticate user with username/email and password (OAuth2 compatible).
 
