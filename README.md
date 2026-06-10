@@ -38,22 +38,22 @@ OpenStreetMap provides excellent static map data, but temporary road closures (c
 
 ```
 temporary-road-closures/
-├── backend/                 # FastAPI backend service ✅
+├── backend/                # FastAPI backend service ✅
 │   ├── app/                # Application code with OpenLR integration
 │   ├── docker-compose.yml  # Development environment
 │   ├── requirements.txt    # Python dependencies
-│   └── README.md          # Detailed backend documentation
+│   └── README.md           # Detailed backend documentation
 ├── frontend/               # Next.js web application ✅
-│   ├── app/               # Next.js 15 App Router structure
-│   ├── components/        # React components for UI
-│   ├── services/          # API clients and utilities
-│   ├── context/           # State management
-│   ├── public/            # Static assets
-│   ├── package.json       # Node.js dependencies
-│   └── README.md          # Detailed frontend documentation
-├── docs/                  # Project documentation
-├── LICENSE                # GNU AGPL v3.0 license
-└── README.md             # This file
+│   ├── app/                # Next.js 15 App Router structure
+│   ├── components/         # React components for UI
+│   ├── services/           # API clients and utilities
+│   ├── context/            # State management
+│   ├── public/             # Static assets
+│   ├── package.json        # Node.js dependencies
+│   └── README.md           # Detailed frontend documentation
+├── docs/                   # Project documentation
+├── LICENSE                 # GNU AGPL v3.0 license
+└── README.md               # This file
 ```
 
 ### 🛠️ Backend (Fully Implemented) ✅
