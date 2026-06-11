@@ -256,9 +256,24 @@ class ClosureService:
 
         # Apply filters
         if params.bbox:
-            min_lon, min_lat, max_lon, max_lat = self._parse_bbox(params.bbox)
-            bbox_geom = func.ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)
-            query = query.filter(ST_Intersects(Closure.geometry, bbox_geom))
+            bboxes = self._parse_bbox(params.bbox)
+            if len(bboxes) == 1:
+                min_lon, min_lat, max_lon, max_lat = bboxes[0]
+                bbox_geom = func.ST_MakeEnvelope(min_lon, min_lat, max_lon, max_lat, 4326)
+                query = query.filter(ST_Intersects(Closure.geometry, bbox_geom))
+            else:
+                # Antimeridian split: query both halves and return the union.
+                query = query.filter(
+                    or_(
+                        *[
+                            ST_Intersects(
+                                Closure.geometry,
+                                func.ST_MakeEnvelope(b[0], b[1], b[2], b[3], 4326),
+                            )
+                            for b in bboxes
+                        ]
+                    )
+                )
 
         if params.valid_only:
             now = datetime.now(timezone.utc)
@@ -386,7 +401,12 @@ class ClosureService:
 
             # Add OpenLR validation info if enabled and code exists
             # Only validate if explicitly requested (expensive operation for bulk queries)
-            if validate_openlr and closure.openlr_code and self.openlr_enabled and geometry:
+            if (
+                validate_openlr
+                and closure.openlr_code
+                and self.openlr_enabled
+                and geometry
+            ):
                 try:
                     openlr_info = self._validate_openlr_code(
                         closure.openlr_code, geometry
@@ -822,15 +842,28 @@ class ClosureService:
                             f"Points {i} and {i+1} are closer than minimum distance ({distance}m < {settings.OPENLR_MIN_DISTANCE}m)"
                         )
 
-    def _parse_bbox(self, bbox: str) -> Tuple[float, float, float, float]:
+    @staticmethod
+    def _normalise_longitude(lon: float) -> float:
+        """Wrap a longitude value into the [-180, 180) range."""
+        return ((lon + 180) % 360) - 180
+
+    def _parse_bbox(self, bbox: str) -> List[Tuple[float, float, float, float]]:
         """
         Parse bounding box string and round coordinates.
+
+        Returns a list of one bounding box normally, or two when the input
+        crosses the antimeridian. In the two-bbox case the caller queries both
+        halves and returns the union (no data straddles the antimeridian in OSM).
+
+        Longitudes outside [-180, 180] are normalised first; Leaflet may produce
+        such values when the user pans past the antimeridian.
 
         Args:
             bbox: Bounding box string "min_lon,min_lat,max_lon,max_lat"
 
         Returns:
-            tuple: Parsed coordinates rounded to 5 decimal places
+            List of one or two (min_lon, min_lat, max_lon, max_lat) tuples,
+            coordinates rounded to 5 decimal places.
 
         Raises:
             ValidationException: If bbox format is invalid or too large
@@ -842,24 +875,37 @@ class ClosureService:
 
             min_lon, min_lat, max_lon, max_lat = coords
 
-            # Validate coordinate ranges
-            if not (-180 <= min_lon <= 180) or not (-180 <= max_lon <= 180):
-                raise ValueError(f"Longitude must be between -180 and 180, got: {min_lon}, {max_lon}")
+            # Normalise longitudes that Leaflet may send outside [-180, 180]
+            # when panning past the antimeridian (see GitHub issue #30).
+            min_lon = self._normalise_longitude(min_lon)
+            max_lon = self._normalise_longitude(max_lon)
+
             if not (-90 <= min_lat <= 90) or not (-90 <= max_lat <= 90):
-                raise ValueError(f"Latitude must be between -90 and 90, got: {min_lat}, {max_lat}")
-
-            # Validate min < max
-            if min_lon >= max_lon:
-                raise ValueError(f"min_lon ({min_lon}) must be less than max_lon ({max_lon})")
+                raise ValueError(
+                    f"Latitude must be between -90 and 90, got: {min_lat}, {max_lat}"
+                )
             if min_lat >= max_lat:
-                raise ValueError(f"min_lat ({min_lat}) must be less than max_lat ({max_lat})")
+                raise ValueError(
+                    f"min_lat ({min_lat}) must be less than max_lat ({max_lat})"
+                )
 
-            # Calculate bbox area
+            # After normalisation, min_lon > max_lon means the original bbox
+            # crossed the antimeridian. Split at ±180° so each half is a valid
+            # envelope; the caller queries both and returns the union.
+            if min_lon > max_lon:
+                return [
+                    (min_lon, min_lat, 180.0, max_lat),
+                    (-180.0, min_lat, max_lon, max_lat),
+                ]
+
+            if min_lon >= max_lon:
+                raise ValueError(
+                    f"min_lon ({min_lon}) must be less than max_lon ({max_lon})"
+                )
+
             bbox_width = max_lon - min_lon
             bbox_height = max_lat - min_lat
             bbox_area = bbox_width * bbox_height
-
-            # Check if bbox area exceeds maximum allowed
             max_area = settings.MAX_BBOX_AREA
             if bbox_area > max_area:
                 raise ValueError(
@@ -868,7 +914,7 @@ class ClosureService:
                     f"Current bbox dimensions: {bbox_width:.2f}° × {bbox_height:.2f}°"
                 )
 
-            return tuple(coords)
+            return [(min_lon, min_lat, max_lon, max_lat)]
         except (ValueError, IndexError) as e:
             raise ValidationException(f"Invalid bounding box: {e}")
 
