@@ -2,7 +2,7 @@
 Authentication endpoints for the OSM Road Closures API.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request, Query
+from fastapi import APIRouter, Body, Depends, HTTPException, status, Response, Request, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from typing import Optional
