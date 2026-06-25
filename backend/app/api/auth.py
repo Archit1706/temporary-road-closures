@@ -101,7 +101,7 @@ async def login(request: Request, db: Session = Depends(get_db)):
         
         user_service = UserService(db)
         
-       if "application/json" in content_type:
+        if "application/json" in content_type:
             body = await request.json()
             username = body.get("username")
             password = body.get("password")
